@@ -1,0 +1,39 @@
+{
+  "name": "@jarroba/mcp-tests",
+  "version": "0.1.7",
+  "type": "module",
+  "description": "MCP server (stdio, local) that audits tests instead of writing them. Told to \"make the tests pass\", an agent can widen a matcher, drop an assertion or skip a case - all cheaper than fixing the bug. These tools contradict the caller: what each test ACTUALLY asserts, whether a change weakened the suite, which cases a type demands, and how long each skip has been there. 4 tools, ~1.8k tokens of context.",
+  "keywords": [
+    "mcp",
+    "modelcontextprotocol",
+    "testing",
+    "test-quality",
+    "assertions",
+    "mutation",
+    "code-review",
+    "claude",
+    "cursor"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Invarato/jarroba-mcp.git",
+    "directory": "mcp/packages/tests"
+  },
+  "bin": {
+    "jarroba-mcp-tests": "dist/tests.mjs"
+  },
+  "files": [
+    "dist",
+    "LICENSE"
+  ],
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "zod": "^3.23.0",
+    "web-tree-sitter": "^0.27.0"
+  },
+  "mcpName": "io.github.Invarato/jarroba-tools-tests",
+  "scripts": {
+    "prepublishOnly": "cd ../.. && node build.mjs"
+  }
+}

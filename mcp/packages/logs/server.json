@@ -1,0 +1,31 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.Invarato/jarroba-tools-logs",
+  "description": "Lets your AI read a CI log far too big for its context. 11 tools, takes a file path.",
+  "repository": {
+    "url": "https://github.com/Invarato/jarroba-mcp",
+    "source": "github",
+    "subfolder": "mcp/packages/logs"
+  },
+  "version": "0.1.7",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@jarroba/mcp-logs",
+      "version": "0.1.7",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "description": "Which tool domains to publish, comma-separated. Defaults to what this package is for. Valid: core, calc, diagram, kg, db, ai, logs, queue, project, tests, api, chip, chem, access, archsim, security, experiments. Fewer domains means less of your context window spent on tool definitions.",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false,
+          "name": "JARROBA_MCP_DOMAINS"
+        }
+      ]
+    }
+  ],
+  "title": "Jarroba Tools · Logs"
+}

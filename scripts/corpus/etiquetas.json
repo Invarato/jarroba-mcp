@@ -1,0 +1,94 @@
+{
+  "_lee_esto_antes_de_tocar": [
+    "Verdad etiquetada A MANO. NO es lo que dice el clasificador: es lo que concluye una persona",
+    "leyendo EXACTAMENTE el mismo fichero que ve la tool, sin abrir ningún otro. Por eso hay casos",
+    "etiquetados 'indeterminado': cuando el test llama a un helper de otro módulo, un humano con",
+    "este fichero delante tampoco puede saber si afirma. Etiquetar ahí 'afirma' sería premiar al",
+    "clasificador por adivinar, y etiquetar 'sin-asercion' sería exigirle que acuse sin pruebas.",
+    "",
+    "Si cambias una etiqueta, el número que publica la tool cambia. Justifícalo en el commit."
+  ],
+  "javascript/adversario.js": {
+    "tape afirma con t.equal": "afirma",
+    "tape con deepEqual": "afirma",
+    "helper del mismo fichero": "afirma",
+    "expect casero de hpack.js": "indeterminado",
+    "helper importado": "indeterminado",
+    "no afirma nada de nada": "sin-asercion",
+    "solo comprueba que existe": "solo-debil",
+    "expect casero con nombre en español": "indeterminado",
+    "protobufjs afirma con test.equal": "afirma"
+  },
+  "typescript/jasmine.spec.ts": {
+    "exacta: afirma qué vale": "afirma",
+    "parcial: afirma que contiene": "afirma",
+    "umbral: afirma que cae en un rango": "afirma",
+    "debil: afirma que existe": "solo-debil",
+    "llamada: solo que se llamó": "solo-llamada",
+    "sin nada": "sin-asercion",
+    "expectAsync resuelto": "afirma",
+    "expectAsync rechazado": "afirma",
+    "desactivado con xit": "inactivo",
+    "desactivado con it.skip": "inactivo",
+    "afirma a traves de helper local": "afirma",
+    "helper importado de modulo local": "indeterminado",
+    "toBeTrue de jasmine": "afirma",
+    "toBeFalse de jasmine": "afirma",
+    "withContext en medio de la cadena": "afirma",
+    "matcher de un framework que no conocemos": "indeterminado"
+  },
+  "python/test_dialectos.py": {
+    "test_exacta": "afirma",
+    "test_parcial": "afirma",
+    "test_umbral": "afirma",
+    "test_debil": "solo-debil",
+    "test_llamada": "solo-llamada",
+    "test_sin_asercion": "sin-asercion",
+    "test_desactivado": "inactivo",
+    "test_pytest_exacta": "afirma",
+    "test_pytest_parcial": "afirma",
+    "test_pytest_umbral": "afirma",
+    "test_pytest_debil": "solo-debil",
+    "test_pytest_sin_asercion": "sin-asercion",
+    "test_pytest_desactivado": "inactivo",
+    "test_helper_importado": "indeterminado"
+  },
+  "java/DialectosTest.java": {
+    "testExacta": "afirma",
+    "testParcial": "afirma",
+    "testUmbral": "afirma",
+    "testDebil": "solo-debil",
+    "testLlamada": "solo-llamada",
+    "testSinAsercion": "sin-asercion",
+    "testDesactivado": "inactivo"
+  },
+  "go/dialectos_test.go": {
+    "TestExacta": "afirma",
+    "TestParcial": "afirma",
+    "TestUmbral": "afirma",
+    "TestDebil": "solo-debil",
+    "TestSinAsercion": "sin-asercion",
+    "TestDesactivado": "inactivo"
+  },
+  "java/SpringMvcTest.java": {
+    "devuelveElRecursoConSusCampos": "afirma",
+    "rechazaLaPeticionSinPermiso": "afirma",
+    "fallaConAlgunErrorDeCliente": "afirma",
+    "devuelveElCuerpoExacto": "afirma",
+    "usaUnMatcherQueNoConocemos": "indeterminado",
+    "soloPreparaLaPeticion": "sin-asercion",
+    "encadenaUnMatcherDesconocidoDeAssertJ": "indeterminado",
+    "miraUnGetterLlamadoValue": "solo-debil",
+    "describeElFalloConAs": "solo-debil",
+    "afirmaSobreUnBooleano": "afirma",
+    "soloMiraQueNoEsNulo": "solo-debil",
+    "escondeLaComparacionDentroDelBooleano": "afirma",
+    "compruebaConQueSeGuardo": "afirma",
+    "compruebaSoloQueSeLlamo": "solo-llamada"
+  },
+  "java/LegadoJUnit3Test.java": {
+    "testSumaDosNumeros": "afirma",
+    "testConstruyeAlgo": "solo-debil"
+  },
+  "java/ControladorRest.java": {}
+}

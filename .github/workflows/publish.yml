@@ -1,0 +1,71 @@
+name: publish
+# Only on a version tag, and only after the maintainer approves the `npm` environment.
+# No npm token anywhere: npm trusts this workflow (trusted publishing, OIDC) and signs provenance.
+# Staged publishing: this workflow only STAGES the packages; they go live when the maintainer approves
+# them on npmjs.com with 2FA. A compromised GitHub account alone cannot publish.
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: read
+concurrency:
+  group: publish
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      - name: Tag matches every package version
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          for p in mcp mcp/packages/logs mcp/packages/tests mcp/packages/calc; do
+            v=$(node -p "require('./$p/package.json').version")
+            echo "$p: $v"
+            [ "v$v" = "$TAG" ] || [ "$p" != mcp ] || { echo "::error::tag $TAG but mcp is $v"; exit 1; }
+          done
+      - run: npm ci --no-audit --no-fund
+      - name: Build and test
+        working-directory: mcp
+        run: |
+          npm ci --no-audit --no-fund
+          npm run typecheck
+          npm run build
+          npm test
+          npm run test:paquete
+      - name: Stage on npm (only versions not yet published)
+        working-directory: mcp
+        run: |
+          for d in . packages/logs packages/tests packages/calc; do
+            n=$(node -p "require('./$d/package.json').name"); v=$(node -p "require('./$d/package.json').version")
+            if npm view "$n@$v" version >/dev/null 2>&1; then echo "$n@$v already published"; continue; fi
+            (cd "$d" && npm stage publish . --access public)
+          done
+          echo "::notice::Staged. Approve each package on npmjs.com (2FA); this job waits up to 2 hours."
+      - name: Wait until the maintainer approves them and npm serves them
+        env:
+          REGISTRO_LISTO_MIN: 120
+        run: node scripts/registro-listo.mjs
+      - name: Publish to the MCP registry
+        working-directory: mcp
+        env:
+          V: 1.8.1
+        run: |
+          B=https://github.com/modelcontextprotocol/registry/releases/download/v$V
+          t=$(mktemp -d)
+          curl -sSfL -o $t/p.tgz $B/mcp-publisher_linux_amd64.tar.gz
+          curl -sSfL $B/registry_${V}_checksums.txt | grep 'mcp-publisher_linux_amd64.tar.gz$' | sed "s#mcp-publisher_linux_amd64.tar.gz#$t/p.tgz#" | sha256sum -c -
+          tar xzf $t/p.tgz -C $t mcp-publisher
+          $t/mcp-publisher login github-oidc
+          for d in . packages/logs packages/tests packages/calc; do (cd "$d" && $t/mcp-publisher publish); done

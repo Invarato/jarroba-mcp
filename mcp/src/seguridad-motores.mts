@@ -1,0 +1,14 @@
+export { analizarTexto } from "../../src/app/services/texto-oculto.service";
+export { analizarPegado } from "../../src/app/services/pegar-seguro.service";
+export { auditarAcciones } from "../../src/app/services/github-actions-audit.service";
+export { analizarCabeceras } from "../../src/app/services/headers-audit.service";
+export { analizarCorreo } from "../../src/app/services/email-audit.service";
+export { analizarSaml } from "../../src/app/services/saml-audit.service";
+export { auditar as auditarAgente } from "../../src/app/services/agente-audit.service";
+export { auditAuthorizeUrl } from "../../src/app/services/oauth-checklist";
+export { auditOidcMetadata } from "../../src/app/services/oidc-metadata";
+export { avisosJwt, estadoTemporal, esAvisoGrave } from "../../src/app/shared/jwt-audit";
+export { leer as leerK8s, matriz as matrizK8s, explicar as explicarK8s, hallazgos as hallazgosK8s, EXTERNO as EXTERNO_K8S } from "../../src/app/services/k8s-network";
+export { validarManifiestos } from "../../src/app/services/k8s-esquema";
+export { evaluarPss, hallazgosPss } from "../../src/app/services/k8s-pss";
+export { analizarRbac, hallazgosRbac } from "../../src/app/services/k8s-rbac";

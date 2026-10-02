@@ -1,0 +1,4460 @@
+{
+ "practicas": [
+  {
+   "id": "angular-build-application",
+   "titulo": {
+    "es": "Compilar Angular con los builders de @angular/build (esbuild)",
+    "en": "Building Angular with the @angular/build builders (esbuild)"
+   },
+   "area": "desarrollo",
+   "temas": [
+    "angular",
+    "build",
+    "esbuild"
+   ],
+   "estado": "vigente",
+   "porque": {
+    "es": "Es el paquete de builders vigente y no arrastra Webpack. En este repo, migrar los cuatro builders bajó las vulnerabilidades de npm audit de 39 a 16.",
+    "en": "It is the current builders package and does not pull in Webpack. In this repo, migrating the four builders cut npm audit vulnerabilities from 39 to 16."
+   },
+   "certeza": "medido",
+   "evidencia": [
+    {
+     "tipo": "medida",
+     "donde": "CLAUDE.md",
+     "commit": "abb8c8d8",
+     "fecha": "2026-09-11"
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2026-09-11",
+     "precision": "dia",
+     "registrado": "2026-09-11",
+     "estado": "vigente",
+     "certeza": "medido",
+     "evidencia": [
+      0
+     ],
+     "nota": {
+      "es": "Migración de application, dev-server, extract-i18n y karma.",
+      "en": "Migration of application, dev-server, extract-i18n and karma."
+     }
+    }
+   ],
+   "revisado": "2026-10-02",
+   "caduca": "2027-04-02",
+   "recomprobar": "git grep -q \"@angular/build:application\" angular.json"
+  },
+  {
+   "id": "angular-devkit-build-angular",
+   "titulo": {
+    "es": "Compilar Angular con @angular-devkit/build-angular",
+    "en": "Building Angular with @angular-devkit/build-angular"
+   },
+   "area": "desarrollo",
+   "temas": [
+    "angular",
+    "build",
+    "webpack"
+   ],
+   "estado": "superada",
+   "superadaPor": "angular-build-application",
+   "porque": {
+    "es": "El paquete está deprecado y arrastra la cadena de Webpack aunque no se use.",
+    "en": "The package is deprecated and pulls in the Webpack chain even when unused."
+   },
+   "certeza": "medido",
+   "evidencia": [
+    {
+     "tipo": "medida",
+     "donde": "CLAUDE.md",
+     "commit": "abb8c8d8",
+     "fecha": "2026-09-11"
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2024",
+     "precision": "aprox",
+     "registrado": "2026-10-02",
+     "estado": "vigente",
+     "certeza": "opinion",
+     "sinFuente": true,
+     "nota": {
+      "es": "Era el builder por defecto hasta que apareció @angular/build. Fecha aproximada y SIN fuente: falta la nota de versión de Angular que lo diga.",
+      "en": "It was the default builder until @angular/build appeared. Approximate date with NO source: the Angular release note saying so is missing."
+     }
+    },
+    {
+     "fecha": "2026-09-11",
+     "precision": "dia",
+     "registrado": "2026-09-11",
+     "estado": "superada",
+     "certeza": "medido",
+     "evidencia": [
+      0
+     ],
+     "nota": {
+      "es": "El builder de karma avisaba de la deprecación; migrado y medido.",
+      "en": "The karma builder warned about the deprecation; migrated and measured."
+     }
+    }
+   ],
+   "revisado": "2026-10-02"
+  },
+  {
+   "id": "corpus-entero-en-contexto-en-vez-de-rag",
+   "titulo": {
+    "es": "Meter el corpus entero en el contexto, con caché, en vez de hacer RAG",
+    "en": "Putting the whole corpus in context, with caching, instead of doing RAG"
+   },
+   "area": "ia",
+   "temas": [
+    "rag",
+    "cag",
+    "cache",
+    "costes"
+   ],
+   "estado": "depende",
+   "porque": {
+    "es": "Con ventanas grandes y caché de prompt, recuperar ya no es la única opción, pero la cuenta depende de cuánto acierta la caché: dura unos minutos, y con consultas espaciadas casi siempre se paga el corpus entero.",
+    "en": "With large windows and prompt caching, retrieval is no longer the only option, but the maths depends on the cache hit rate: it lasts minutes, and with spaced-out queries you nearly always pay for the whole corpus."
+   },
+   "ambito": [
+    {
+     "cuando": {
+      "es": "el corpus es estable, compartido, cabe con holgura y las consultas llegan seguidas",
+      "en": "the corpus is stable, shared, fits comfortably and queries arrive close together"
+     },
+     "estado": "vigente",
+     "porque": {
+      "es": "La caché acierta casi siempre y te ahorras el fallo de recuperación.",
+      "en": "The cache nearly always hits and you avoid retrieval failures."
+     }
+    },
+    {
+     "cuando": {
+      "es": "el corpus es grande y las consultas espaciadas (más de unos minutos entre ellas)",
+      "en": "the corpus is large and queries are spaced out (more than a few minutes apart)"
+     },
+     "estado": "antipatron",
+     "porque": {
+      "es": "212 500 tokens y 10 000 consultas al mes: 1 627 $ esperados frente a 6 $ con RAG de 3 fragmentos.",
+      "en": "212,500 tokens and 10,000 queries a month: $1,627 expected vs $6 with 3-chunk RAG."
+     }
+    },
+    {
+     "cuando": {
+      "es": "el corpus es distinto para cada usuario",
+      "en": "the corpus is different for each user"
+     },
+     "estado": "antipatron",
+     "porque": {
+      "es": "La caché no se comparte entre usuarios y su ahorro desaparece.",
+      "en": "The cache is not shared across users, so its savings disappear."
+     }
+    }
+   ],
+   "certeza": "medido",
+   "evidencia": [
+    {
+     "tipo": "medida",
+     "donde": "src/app/services/rag-decision.service.spec.ts",
+     "commit": "3f4d4606",
+     "fecha": "2026-10-01"
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2026-10-01",
+     "precision": "dia",
+     "registrado": "2026-10-01",
+     "estado": "depende",
+     "certeza": "medido",
+     "evidencia": [
+      0
+     ],
+     "nota": {
+      "es": "Con llegadas al azar y caché de 5 minutos, 10 000 consultas al mes aciertan el 69 %, no siempre.",
+      "en": "With random arrivals and a 5-minute cache, 10,000 queries a month hit 69% of the time, not always."
+     }
+    }
+   ],
+   "revisado": "2026-10-02",
+   "caduca": "2027-01-02"
+  },
+  {
+   "id": "lo-critico-en-los-extremos-del-contexto",
+   "titulo": {
+    "es": "Poner lo importante al principio o al final de un contexto largo, no en medio",
+    "en": "Putting what matters at the start or end of a long context, not in the middle"
+   },
+   "area": "ia",
+   "temas": [
+    "contexto",
+    "rag",
+    "prompt",
+    "lost-in-the-middle"
+   ],
+   "estado": "vigente",
+   "porque": {
+    "es": "Los modelos usan peor lo que queda en el centro de un contexto largo, y rinden peor a medida que la entrada crece, de forma irregular. Reordenar no cuesta nada y no quita información.",
+    "en": "Models make worse use of what sits in the middle of a long context, and perform worse, unevenly, as input grows. Reordering costs nothing and removes no information."
+   },
+   "certeza": "documentado",
+   "evidencia": [
+    {
+     "tipo": "web",
+     "url": "https://arxiv.org/pdf/2307.03172v3",
+     "titulo": "Lost in the Middle: How Language Models Use Long Contexts (Liu et al.)",
+     "fecha": "2023-07",
+     "consultado": "2026-09-30",
+     "primaria": true,
+     "cita": "For example, GPT-3.5-Turbo's multi-document QA performance can drop by more than 20%"
+    },
+    {
+     "tipo": "web",
+     "url": "https://www.trychroma.com/research/context-rot",
+     "titulo": "Context Rot: How Increasing Input Tokens Impacts LLM Performance (Chroma)",
+     "fecha": "2025-07-14",
+     "consultado": "2026-09-30",
+     "primaria": true,
+     "cita": "Across all experiments, model performance consistently degrades with increasing input length"
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2023-07",
+     "precision": "mes",
+     "registrado": "2026-10-02",
+     "estado": "vigente",
+     "certeza": "documentado",
+     "evidencia": [
+      0
+     ],
+     "nota": {
+      "es": "Liu et al. describen la curva en U: lo del medio se recupera peor.",
+      "en": "Liu et al. describe the U-shaped curve: the middle is retrieved worse."
+     }
+    },
+    {
+     "fecha": "2025-07-14",
+     "precision": "dia",
+     "registrado": "2026-10-02",
+     "estado": "vigente",
+     "certeza": "documentado",
+     "evidencia": [
+      1
+     ],
+     "nota": {
+      "es": "Chroma lo extiende a 18 modelos: con ventanas de un millón de tokens, la degradación con la longitud sigue.",
+      "en": "Chroma extends it to 18 models: with million-token windows, degradation with length remains."
+     }
+    }
+   ],
+   "revisado": "2026-10-02",
+   "caduca": "2027-04-02",
+   "enlaces": [
+    {
+     "nombre": "Chroma — Context Rot",
+     "url": "https://www.trychroma.com/research/context-rot"
+    }
+   ]
+  },
+  {
+   "id": "o200k-como-tokens-de-claude",
+   "titulo": {
+    "es": "Contar los tokens de Claude con el tokenizador de OpenAI (o200k) y darlo por bueno",
+    "en": "Counting Claude tokens with OpenAI's tokenizer (o200k) and taking it as exact"
+   },
+   "area": "ia",
+   "temas": [
+    "tokens",
+    "claude",
+    "mcp",
+    "contexto"
+   ],
+   "estado": "antipatron",
+   "porque": {
+    "es": "El tokenizador de los Claude actuales no es público, y no cuenta como o200k: en definiciones de herramientas MCP, Claude Code (Opus 5.5) cuenta entre 1,38 y 2,00 veces más, con mediana 1,74. Usar o200k a pelo infravalora el contexto que ocupas casi a la mitad.",
+    "en": "Current Claude models' tokenizer is not public and does not count like o200k: on MCP tool definitions, Claude Code (Opus 5.5) counts 1.38 to 2.00 times more, median 1.74. Using raw o200k underestimates the context you use by almost half."
+   },
+   "certeza": "medido",
+   "evidencia": [
+    {
+     "tipo": "medida",
+     "donde": "conocimiento/mcp-tokens-claude-code.md",
+     "commit": "ba029dec",
+     "fecha": "2026-09-30"
+    },
+    {
+     "tipo": "medida",
+     "donde": "src/app/shared/factor-claude.ts",
+     "fecha": "2026-09-30"
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2026-09-30",
+     "precision": "dia",
+     "registrado": "2026-09-30",
+     "estado": "antipatron",
+     "certeza": "medido",
+     "evidencia": [
+      0
+     ],
+     "nota": {
+      "es": "Medido con /context all de Claude Code 2.1.281 sobre 120 herramientas: 41 996 tokens frente a 24 120 de o200k.",
+      "en": "Measured with Claude Code 2.1.281 /context all over 120 tools: 41,996 tokens vs 24,120 with o200k."
+     }
+    }
+   ],
+   "revisado": "2026-10-02",
+   "caduca": "2027-01-02",
+   "recomprobar": "git grep -q \"factor: 1.74\" src/app/shared/factor-claude.ts"
+  },
+  {
+   "id": "regex-del-usuario-sin-tope",
+   "titulo": {
+    "es": "Ejecutar en el hilo principal una expresión regular que escribe el usuario, sin límite de tiempo",
+    "en": "Running a user-written regular expression on the main thread with no time limit"
+   },
+   "area": "ia",
+   "temas": [
+    "regex",
+    "redos",
+    "navegador",
+    "seguridad"
+   ],
+   "estado": "antipatron",
+   "porque": {
+    "es": "Un patrón con backtracking catastrófico, como (a+)+$, tarda el doble por cada carácter que no casa: no es lentitud, es un cuelgue. Ni un setTimeout ni un try/catch lo cortan; solo sacarlo a un Worker que se pueda terminar.",
+    "en": "A pattern with catastrophic backtracking, such as (a+)+$, doubles its time with every non-matching character: it is a hang, not slowness. Neither setTimeout nor try/catch stops it; only running it in a Worker that can be terminated."
+   },
+   "certeza": "medido",
+   "evidencia": [
+    {
+     "tipo": "medida",
+     "donde": "docs/regex-usuario.md",
+     "commit": "9364f720",
+     "fecha": "2026-09-29"
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2026-09-29",
+     "precision": "dia",
+     "registrado": "2026-09-30",
+     "estado": "antipatron",
+     "certeza": "medido",
+     "evidencia": [
+      0
+     ],
+     "nota": {
+      "es": "(a+)+$ con 28 caracteres: 13,3 s con la pestaña congelada en /logs; con 34, no contesta en 40 s.",
+      "en": "(a+)+$ with 28 characters: 13.3 s with the tab frozen in /logs; with 34, no answer in 40 s."
+     }
+    }
+   ],
+   "revisado": "2026-10-02",
+   "caduca": "2027-04-02"
+  },
+  {
+   "id": "cabecera-x-xss-protection",
+   "titulo": {
+    "es": "Activar el filtro XSS del navegador con la cabecera X-XSS-Protection",
+    "en": "Turning on the browser XSS filter with the X-XSS-Protection header"
+   },
+   "area": "seguridad",
+   "temas": [
+    "xss",
+    "x-xss-protection",
+    "xss-auditor",
+    "http-headers",
+    "csp"
+   ],
+   "estado": "superada",
+   "superadaPor": "content-security-policy-contra-xss",
+   "porque": {
+    "es": "Chrome quitó su filtro (XSS Auditor) en la versión 78, en 2019, porque abría fugas de información entre sitios y se podía esquivar. Hoy la cabecera puede incluso crear vulnerabilidades: OWASP pide no ponerla o ponerla a 0 y usar CSP.",
+    "en": "Chrome removed its filter (XSS Auditor) in version 78 in 2019, because it caused cross-site leaks and was easy to bypass. Today the header can even create vulnerabilities: OWASP says not to set it, or set it to 0, and use CSP."
+   },
+   "certeza": "documentado",
+   "evidencia": [
+    {
+     "tipo": "web",
+     "url": "https://chromestatus.com/feature/5021976655560704",
+     "titulo": "XSS Auditor (Chrome Platform Status)",
+     "fecha": "2019-08-27",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "The XSS Auditor can introduce cross-site information leaks and mechanisms to bypass the Auditor are widely known."
+    },
+    {
+     "tipo": "web",
+     "url": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/X-XSS-Protection",
+     "titulo": "X-XSS-Protection (MDN)",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "in some cases, X-XSS-Protection can create XSS vulnerabilities in otherwise safe websites."
+    },
+    {
+     "tipo": "web",
+     "url": "https://cheatsheetseries.owasp.org/cheatsheets/HTTP_Headers_Cheat_Sheet.html",
+     "titulo": "HTTP Security Response Headers Cheat Sheet (OWASP)",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "Use a Content Security Policy (CSP) that disables the use of inline JavaScript. Do not set this header or explicitly turn it off."
+    },
+    {
+     "tipo": "web",
+     "url": "https://chromiumdash.appspot.com/fetch_milestone_schedule?mstone=78",
+     "titulo": "Chromium Dash — calendario de la versión 78",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "\"stable_date\":\"2019-10-22T00:00:00\""
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2019-10",
+     "precision": "mes",
+     "registrado": "2026-10-02",
+     "estado": "superada",
+     "certeza": "documentado",
+     "evidencia": [
+      0,
+      3
+     ],
+     "nota": {
+      "es": "Chrome 78 sale sin el XSS Auditor (la ficha de Chrome lo da como eliminado en la 78).",
+      "en": "Chrome 78 ships without the XSS Auditor (Chrome’s feature entry lists it as removed in 78)."
+     }
+    }
+   ],
+   "revisado": "2026-10-02"
+  },
+  {
+   "id": "caducidad-forzada-de-contrasenas",
+   "titulo": {
+    "es": "Obligar a cambiar la contraseña cada cierto tiempo (cada 90 días, por ejemplo)",
+    "en": "Forcing password changes periodically (e.g. every 90 days)"
+   },
+   "area": "seguridad",
+   "temas": [
+    "passwords",
+    "password-expiration",
+    "password-rotation",
+    "nist",
+    "password-policy"
+   ],
+   "estado": "antipatron",
+   "porque": {
+    "es": "NIST lo desaconsejó en 2017 y lo prohíbe desde 2025; el cambio solo se fuerza si hay indicios de que la contraseña está comprometida.",
+    "en": "NIST advised against it in 2017 and forbids it since 2025; a change is only forced if there is evidence of compromise."
+   },
+   "certeza": "documentado",
+   "evidencia": [
+    {
+     "tipo": "web",
+     "url": "https://csrc.nist.gov/pubs/sp/800/63/b/final",
+     "titulo": "NIST SP 800-63B (rev. 3) — ficha de publicación (CSRC)",
+     "fecha": "2017-06",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "06/22/17: SP 800-63B (Final)"
+    },
+    {
+     "tipo": "web",
+     "url": "https://pages.nist.gov/800-63-3/sp800-63b.html",
+     "titulo": "NIST SP 800-63B, rev. 3 (texto con las actualizaciones hasta 2020-03-02)",
+     "fecha": "2017-06",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "Verifiers SHOULD NOT require memorized secrets to be changed arbitrarily (e.g., periodically). However, verifiers SHALL force a change if there is evidence of compromise of the authenticator."
+    },
+    {
+     "tipo": "web",
+     "url": "https://csrc.nist.gov/pubs/sp/800/63/b/4/final",
+     "titulo": "NIST SP 800-63B-4 — ficha de publicación (CSRC)",
+     "fecha": "2025-07",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "07/31/25: SP 800-63B-4 (Final)"
+    },
+    {
+     "tipo": "web",
+     "url": "https://pages.nist.gov/800-63-4/sp800-63b.html",
+     "titulo": "NIST SP 800-63B-4",
+     "fecha": "2025-07",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "Verifiers and CSPs SHALL NOT require subscribers to change passwords periodically. However, verifiers SHALL force a change if there is evidence that the authenticator has been compromised."
+    },
+    {
+     "tipo": "web",
+     "url": "https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html",
+     "titulo": "Authentication Cheat Sheet (OWASP)",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "Avoid requiring periodic password changes; instead, encourage users to pick strong passwords and enable Multifactor Authentication"
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2017-06-22",
+     "precision": "dia",
+     "registrado": "2026-10-02",
+     "estado": "antipatron",
+     "certeza": "documentado",
+     "evidencia": [
+      0,
+      1
+     ],
+     "nota": {
+      "es": "NIST SP 800-63B: «SHOULD NOT» exigir cambios periódicos.",
+      "en": "NIST SP 800-63B: periodic changes \"SHOULD NOT\" be required."
+     }
+    },
+    {
+     "fecha": "2025-07-31",
+     "precision": "dia",
+     "registrado": "2026-10-02",
+     "estado": "antipatron",
+     "certeza": "documentado",
+     "evidencia": [
+      2,
+      3
+     ],
+     "nota": {
+      "es": "NIST SP 800-63B-4 (versión final, tras borradores en 2022 y 2024) lo endurece a «SHALL NOT».",
+      "en": "NIST SP 800-63B-4 (final, after drafts in 2022 and 2024) hardens it to \"SHALL NOT\"."
+     },
+     "matiz": "endurece"
+    }
+   ],
+   "revisado": "2026-10-02",
+   "caduca": "2027-10-01",
+   "enlaces": [
+    {
+     "nombre": "NIST SP 800-63B-4",
+     "url": "https://pages.nist.gov/800-63-4/sp800-63b.html"
+    }
+   ]
+  },
+  {
+   "id": "cifrado-rc4-en-tls",
+   "titulo": {
+    "es": "Permitir el cifrado RC4 en TLS",
+    "en": "Allowing the RC4 cipher in TLS"
+   },
+   "area": "seguridad",
+   "temas": [
+    "rc4",
+    "tls",
+    "ciphers",
+    "cryptography"
+   ],
+   "estado": "antipatron",
+   "porque": {
+    "es": "RC4 tiene sesgos que permiten recuperar el texto en claro de mensajes cifrados repetidamente; el IETF prohibió negociarlo en TLS en febrero de 2015 (RFC 7465).",
+    "en": "RC4 has biases that allow recovering plaintext; the IETF forbade negotiating it in TLS in February 2015 (RFC 7465)."
+   },
+   "certeza": "documentado",
+   "evidencia": [
+    {
+     "tipo": "web",
+     "url": "https://www.rfc-editor.org/rfc/rfc7465.txt",
+     "titulo": "RFC 7465 — Prohibiting RC4 Cipher Suites",
+     "fecha": "2015-02",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "TLS clients MUST NOT include RC4 cipher suites in the ClientHello message."
+    },
+    {
+     "tipo": "web",
+     "url": "https://www.rfc-editor.org/rfc/rfc7465.txt",
+     "titulo": "RFC 7465 — Prohibiting RC4 Cipher Suites",
+     "fecha": "2015-02",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "TLS servers MUST NOT select an RC4 cipher suite when a TLS client sends such a cipher suite in the ClientHello message."
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2015-02",
+     "precision": "mes",
+     "registrado": "2026-10-02",
+     "estado": "antipatron",
+     "certeza": "documentado",
+     "evidencia": [
+      0,
+      1
+     ],
+     "nota": {
+      "es": "RFC 7465 prohíbe las suites RC4 en clientes y servidores TLS.",
+      "en": "RFC 7465 forbids RC4 suites in TLS clients and servers."
+     }
+    }
+   ],
+   "revisado": "2026-10-02",
+   "caduca": "2027-10-01"
+  },
+  {
+   "id": "comprobar-contrasenas-contra-listas-filtradas",
+   "titulo": {
+    "es": "Rechazar las contraseñas que estén en listas de contraseñas filtradas o comunes",
+    "en": "Rejecting passwords found on lists of breached or common passwords"
+   },
+   "area": "seguridad",
+   "temas": [
+    "passwords",
+    "breached-passwords",
+    "blocklist",
+    "nist",
+    "password-policy"
+   ],
+   "estado": "vigente",
+   "porque": {
+    "es": "Frena los intentos con las contraseñas más usadas o ya filtradas. NIST lo exige desde 2017, explicando al usuario por qué se rechaza; desde 2025, además, hay que comparar la contraseña entera.",
+    "en": "It stops guesses with the most common or already breached passwords. NIST has required it since 2017, telling the user why it was rejected; since 2025 the whole password must also be compared."
+   },
+   "certeza": "documentado",
+   "evidencia": [
+    {
+     "tipo": "web",
+     "url": "https://csrc.nist.gov/pubs/sp/800/63/b/final",
+     "titulo": "NIST SP 800-63B (rev. 3) — ficha de publicación (CSRC)",
+     "fecha": "2017-06",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "06/22/17: SP 800-63B (Final)"
+    },
+    {
+     "tipo": "web",
+     "url": "https://pages.nist.gov/800-63-3/sp800-63b.html",
+     "titulo": "NIST SP 800-63B, rev. 3 (texto con las actualizaciones hasta 2020-03-02)",
+     "fecha": "2017-06",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "When processing requests to establish and change memorized secrets, verifiers SHALL compare the prospective secrets against a list that contains values known to be commonly-used, expected, or compromised."
+    },
+    {
+     "tipo": "web",
+     "url": "https://pages.nist.gov/800-63-3/sp800-63b.html",
+     "titulo": "NIST SP 800-63B, rev. 3 (texto con las actualizaciones hasta 2020-03-02)",
+     "fecha": "2017-06",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "If the chosen secret is found in the list, the CSP or verifier SHALL advise the subscriber that they need to select a different secret, SHALL provide the reason for rejection, and SHALL require the subscriber to choose a different value."
+    },
+    {
+     "tipo": "web",
+     "url": "https://csrc.nist.gov/pubs/sp/800/63/b/4/final",
+     "titulo": "NIST SP 800-63B-4 — ficha de publicación (CSRC)",
+     "fecha": "2025-07",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "07/31/25: SP 800-63B-4 (Final)"
+    },
+    {
+     "tipo": "web",
+     "url": "https://pages.nist.gov/800-63-4/sp800-63b.html",
+     "titulo": "NIST SP 800-63B-4",
+     "fecha": "2025-07",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "The entire password SHALL be subject to comparison, not substrings or words that might be contained therein."
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2017-06-22",
+     "precision": "dia",
+     "registrado": "2026-10-02",
+     "estado": "vigente",
+     "certeza": "documentado",
+     "evidencia": [
+      0,
+      1,
+      2
+     ],
+     "nota": {
+      "es": "NIST SP 800-63B lo hace obligatorio («SHALL»), con el motivo del rechazo.",
+      "en": "NIST SP 800-63B makes it mandatory (\"SHALL\"), with the reason for rejection."
+     }
+    },
+    {
+     "fecha": "2025-07-31",
+     "precision": "dia",
+     "registrado": "2026-10-02",
+     "estado": "vigente",
+     "certeza": "documentado",
+     "evidencia": [
+      3,
+      4
+     ],
+     "nota": {
+      "es": "NIST SP 800-63B-4: hay que comparar la contraseña entera, no trozos.",
+      "en": "NIST SP 800-63B-4: the whole password must be compared, not substrings."
+     }
+    }
+   ],
+   "revisado": "2026-10-02",
+   "caduca": "2027-10-01",
+   "enlaces": [
+    {
+     "nombre": "NIST SP 800-63B-4",
+     "url": "https://pages.nist.gov/800-63-4/sp800-63b.html"
+    }
+   ]
+  },
+  {
+   "id": "confiar-solo-en-samesite-contra-csrf",
+   "titulo": {
+    "es": "Confiar solo en las cookies SameSite como defensa contra CSRF",
+    "en": "Relying only on SameSite cookies as the CSRF defence"
+   },
+   "area": "seguridad",
+   "temas": [
+    "csrf",
+    "samesite",
+    "cookies",
+    "csrf-token"
+   ],
+   "estado": "depende",
+   "porque": {
+    "es": "Chrome trata como Lax las cookies sin SameSite desde 2020 (tras una marcha atrás por la COVID-19), pero OWASP lo considera defensa en profundidad: solo basta en despliegues que cumplan todas sus condiciones.",
+    "en": "Chrome has treated cookies without SameSite as Lax since 2020 (after a COVID-19 rollback), but OWASP sees it as defence in depth: it is only enough for deployments that meet all its conditions."
+   },
+   "ambito": [
+    {
+     "cuando": {
+      "es": "la aplicación cumple todas las condiciones que enumera OWASP para que SameSite baste (entre ellas, fijar SameSite de forma explícita y verificar Origin/Referer); el Lax por defecto del navegador nunca basta",
+      "en": "the app meets every condition OWASP lists for SameSite to be enough (including setting SameSite explicitly and checking Origin/Referer); the browser’s default Lax is never enough"
+     },
+     "estado": "vigente"
+    },
+    {
+     "cuando": {
+      "es": "en cualquier otro caso",
+      "en": "in any other case"
+     },
+     "estado": "antipatron",
+     "porque": {
+      "es": "SameSite se combina con un token CSRF o el patrón de doble envío, no lo sustituye.",
+      "en": "SameSite is combined with a CSRF token or the double-submit pattern, not used instead of it."
+     }
+    }
+   ],
+   "certeza": "documentado",
+   "evidencia": [
+    {
+     "tipo": "web",
+     "url": "https://www.chromium.org/updates/same-site/",
+     "titulo": "SameSite Updates (The Chromium Projects)",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "Aug 11, 2020: The target rollout population has been increased to 100% of users on Chrome Stable versions 80 and above, and the actual proportion of users with the new behavior enabled is now ramping up to 100% gradually."
+    },
+    {
+     "tipo": "web",
+     "url": "https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html",
+     "titulo": "Cross-Site Request Forgery Prevention Cheat Sheet (OWASP)",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "For any application that does not meet all of the above, `SameSite` should be treated as a defense-in-depth layer and combined with a CSRF token or a double-submit pattern rather than relied on alone."
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2020-08-11",
+     "precision": "dia",
+     "registrado": "2026-10-02",
+     "estado": "depende",
+     "certeza": "documentado",
+     "evidencia": [
+      0
+     ],
+     "nota": {
+      "es": "Chrome sube al 100 % el objetivo de SameSite=Lax por defecto (previsto para Chrome 80 en febrero y aplazado en abril por la COVID-19). Ayuda, pero no convierte a SameSite en defensa suficiente.",
+      "en": "Chrome raises the target for SameSite=Lax by default to 100% (planned for Chrome 80 in February, rolled back in April due to COVID-19). It helps, but does not make SameSite a sufficient defence."
+     }
+    }
+   ],
+   "revisado": "2026-10-02",
+   "caduca": "2027-10-01"
+  },
+  {
+   "id": "content-security-policy-contra-xss",
+   "titulo": {
+    "es": "Añadir una Content-Security-Policy estricta (nonce o hash, sin unsafe-inline) como segunda capa contra XSS",
+    "en": "Adding a strict Content-Security-Policy (nonce or hash, no unsafe-inline) as a second layer against XSS"
+   },
+   "area": "seguridad",
+   "temas": [
+    "xss",
+    "csp",
+    "content-security-policy",
+    "http-headers"
+   ],
+   "estado": "vigente",
+   "porque": {
+    "es": "Hace mucho más difícil explotar un XSS que se haya colado, y es lo que MDN recomienda en lugar del filtro XSS del navegador. No sustituye a codificar bien la salida: OWASP avisa de que no debe ser la única defensa y de que una política demasiado permisiva se puede esquivar.",
+    "en": "It makes an XSS that slipped through much harder to exploit, and it is what MDN recommends instead of the browser XSS filter. It does not replace proper output encoding: OWASP warns it must not be the only defence and that an overly permissive policy can be bypassed."
+   },
+   "certeza": "documentado",
+   "evidencia": [
+    {
+     "tipo": "web",
+     "url": "https://www.w3.org/TR/CSP2/",
+     "titulo": "Content Security Policy Level 2 (W3C)",
+     "fecha": "2016-12-15",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "Content Security Policy Level 2 W3C Recommendation, 15 December 2016"
+    },
+    {
+     "tipo": "web",
+     "url": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/X-XSS-Protection",
+     "titulo": "X-XSS-Protection (MDN)",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "It is recommended that you use Content-Security-Policy instead of XSS filtering."
+    },
+    {
+     "tipo": "web",
+     "url": "https://cheatsheetseries.owasp.org/cheatsheets/Content_Security_Policy_Cheat_Sheet.html",
+     "titulo": "Content Security Policy Cheat Sheet (OWASP)",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "CSP should not be relied upon as the only defensive mechanism against XSS."
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2016-12-15",
+     "precision": "dia",
+     "registrado": "2026-10-02",
+     "estado": "vigente",
+     "certeza": "documentado",
+     "evidencia": [
+      0
+     ],
+     "nota": {
+      "es": "CSP Level 2 es Recomendación del W3C.",
+      "en": "CSP Level 2 becomes a W3C Recommendation."
+     }
+    }
+   ],
+   "revisado": "2026-10-02",
+   "caduca": "2027-10-01",
+   "enlaces": [
+    {
+     "nombre": "OWASP — Content Security Policy Cheat Sheet",
+     "url": "https://cheatsheetseries.owasp.org/cheatsheets/Content_Security_Policy_Cheat_Sheet.html"
+    }
+   ]
+  },
+  {
+   "id": "contrasenas-con-hash-lento",
+   "titulo": {
+    "es": "Guardar las contraseñas con una función lenta y con sal: Argon2id (o scrypt, bcrypt, PBKDF2)",
+    "en": "Storing passwords with a slow, salted function: Argon2id (or scrypt, bcrypt, PBKDF2)"
+   },
+   "area": "seguridad",
+   "temas": [
+    "passwords",
+    "hashing",
+    "argon2",
+    "argon2id",
+    "bcrypt",
+    "scrypt",
+    "pbkdf2",
+    "password-storage"
+   ],
+   "estado": "vigente",
+   "porque": {
+    "es": "El coste por intento hace inviable el ataque masivo. OWASP las ordena: Argon2id, luego scrypt, bcrypt solo en sistemas heredados y PBKDF2 (600 000 iteraciones o más) si se exige FIPS-140.",
+    "en": "The per-guess cost makes mass guessing infeasible. OWASP ranks them: Argon2id, then scrypt, bcrypt only for legacy systems, and PBKDF2 (600,000+ iterations) when FIPS-140 is required."
+   },
+   "certeza": "documentado",
+   "evidencia": [
+    {
+     "tipo": "web",
+     "url": "https://www.password-hashing.net/",
+     "titulo": "Password Hashing Competition",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "In July 2015 we announced Argon2 as a winner"
+    },
+    {
+     "tipo": "web",
+     "url": "https://www.rfc-editor.org/rfc/rfc9106.txt",
+     "titulo": "RFC 9106 — Argon2 Memory-Hard Function for Password Hashing and Proof-of-Work Applications (IRTF, Informational)",
+     "fecha": "2021-09",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "The Argon2id variant with t=1 and 2 GiB memory is the FIRST RECOMMENDED option and is suggested as a default setting for all environments."
+    },
+    {
+     "tipo": "web",
+     "url": "https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html",
+     "titulo": "Password Storage Cheat Sheet (OWASP)",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "Use Argon2id with a minimum configuration of 19 MiB of memory, an iteration count of 2, and 1 degree of parallelism."
+    },
+    {
+     "tipo": "web",
+     "url": "https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html",
+     "titulo": "Password Storage Cheat Sheet (OWASP)",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "If FIPS-140 compliance is required, use PBKDF2 with a work factor of 600,000 or more and set with an internal hash function of HMAC-SHA-256."
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2015-07",
+     "precision": "mes",
+     "registrado": "2026-10-02",
+     "estado": "vigente",
+     "certeza": "documentado",
+     "evidencia": [
+      0
+     ],
+     "nota": {
+      "es": "Argon2 gana la Password Hashing Competition.",
+      "en": "Argon2 wins the Password Hashing Competition."
+     }
+    },
+    {
+     "fecha": "2021-09",
+     "precision": "mes",
+     "registrado": "2026-10-02",
+     "estado": "vigente",
+     "certeza": "documentado",
+     "evidencia": [
+      1
+     ],
+     "nota": {
+      "es": "RFC 9106 publica Argon2 y recomienda la variante Argon2id por defecto.",
+      "en": "RFC 9106 publishes Argon2 and recommends the Argon2id variant by default."
+     }
+    }
+   ],
+   "revisado": "2026-10-02",
+   "caduca": "2027-10-01",
+   "enlaces": [
+    {
+     "nombre": "OWASP — Password Storage Cheat Sheet",
+     "url": "https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html"
+    }
+   ]
+  },
+  {
+   "id": "contrasenas-con-hash-rapido",
+   "titulo": {
+    "es": "Guardar las contraseñas con un hash rápido (MD5, SHA-1, SHA-256 a secas), con o sin sal",
+    "en": "Storing passwords with a fast hash (MD5, SHA-1, plain SHA-256), salted or not"
+   },
+   "area": "seguridad",
+   "temas": [
+    "passwords",
+    "hashing",
+    "md5",
+    "sha1",
+    "sha256",
+    "password-storage"
+   ],
+   "estado": "superada",
+   "superadaPor": "contrasenas-con-hash-lento",
+   "porque": {
+    "es": "Un hash rápido permite al atacante probar miles de millones de candidatas si roba la base de datos. NIST exige desde 2017 una función de derivación con sal y factor de coste.",
+    "en": "A fast hash lets an attacker try billions of guesses if they steal the database. Since 2017 NIST requires a salted key derivation function with a cost factor."
+   },
+   "certeza": "documentado",
+   "evidencia": [
+    {
+     "tipo": "web",
+     "url": "https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html",
+     "titulo": "Password Storage Cheat Sheet (OWASP)",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "Fast hashing algorithms such as SHA‑256 are not suitable for password storage because they allow attackers to perform large numbers of guesses quickly."
+    },
+    {
+     "tipo": "web",
+     "url": "https://csrc.nist.gov/pubs/sp/800/63/b/final",
+     "titulo": "NIST SP 800-63B (rev. 3) — ficha de publicación (CSRC)",
+     "fecha": "2017-06",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "06/22/17: SP 800-63B (Final)"
+    },
+    {
+     "tipo": "web",
+     "url": "https://pages.nist.gov/800-63-3/sp800-63b.html",
+     "titulo": "NIST SP 800-63B, rev. 3 (texto con las actualizaciones hasta 2020-03-02)",
+     "fecha": "2017-06",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "Memorized secrets SHALL be salted and hashed using a suitable one-way key derivation function. Key derivation functions take a password, a salt, and a cost factor as inputs then generate a password hash."
+    },
+    {
+     "tipo": "web",
+     "url": "https://csrc.nist.gov/pubs/sp/800/63/b/4/final",
+     "titulo": "NIST SP 800-63B-4 — ficha de publicación (CSRC)",
+     "fecha": "2025-07",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "07/31/25: SP 800-63B-4 (Final)"
+    },
+    {
+     "tipo": "web",
+     "url": "https://pages.nist.gov/800-63-4/sp800-63b.html",
+     "titulo": "NIST SP 800-63B-4",
+     "fecha": "2025-07",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "Passwords SHALL be salted and hashed using a suitable password hashing scheme. Password hashing schemes take a password, a salt, and a cost factor as inputs and generate a password hash."
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2017-06-22",
+     "precision": "dia",
+     "registrado": "2026-10-02",
+     "estado": "superada",
+     "certeza": "documentado",
+     "evidencia": [
+      1,
+      2
+     ],
+     "nota": {
+      "es": "NIST SP 800-63B: las contraseñas, con sal y una función de derivación con factor de coste.",
+      "en": "NIST SP 800-63B: passwords salted and processed by a key derivation function with a cost factor."
+     }
+    },
+    {
+     "fecha": "2025-07-31",
+     "precision": "dia",
+     "registrado": "2026-10-02",
+     "estado": "superada",
+     "certeza": "documentado",
+     "evidencia": [
+      3,
+      4
+     ],
+     "nota": {
+      "es": "NIST SP 800-63B-4 lo mantiene («password hashing scheme») y pide subir el coste con el tiempo.",
+      "en": "NIST SP 800-63B-4 keeps it (\"password hashing scheme\") and asks to raise the cost over time."
+     }
+    }
+   ],
+   "revisado": "2026-10-02"
+  },
+  {
+   "id": "http-public-key-pinning",
+   "titulo": {
+    "es": "Fijar las claves del certificado con la cabecera Public-Key-Pins (HPKP)",
+    "en": "Pinning certificate keys with the Public-Key-Pins header (HPKP)"
+   },
+   "area": "seguridad",
+   "temas": [
+    "hpkp",
+    "public-key-pins",
+    "certificate-pinning",
+    "http-headers",
+    "tls"
+   ],
+   "estado": "antipatron",
+   "porque": {
+    "es": "Un error al fijar claves deja el sitio inaccesible durante el tiempo del pin, y un atacante puede fijar claves suyas. Casi nadie lo adoptó y Chrome lo eliminó en la versión 72 (enero de 2019).",
+    "en": "A pinning mistake leaves the site unreachable for the pin lifetime, and an attacker can pin their own keys. Almost nobody adopted it and Chrome removed it in version 72 (January 2019)."
+   },
+   "certeza": "documentado",
+   "evidencia": [
+    {
+     "tipo": "web",
+     "url": "https://www.rfc-editor.org/rfc/rfc7469.txt",
+     "titulo": "RFC 7469 — Public Key Pinning Extension for HTTP",
+     "fecha": "2015-04",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "This document defines a new HTTP header that allows web host operators to instruct user agents to remember (\"pin\") the hosts' cryptographic identities over a period of time."
+    },
+    {
+     "tipo": "web",
+     "url": "https://chromestatus.com/feature/5903385005916160",
+     "titulo": "Remove HTTP-Based Public Key Pinning (Chrome Platform Status)",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "It has very low adoption, and although it provides security against certificate misissuance, it also creates risks of denial of service and hostile pinning."
+    },
+    {
+     "tipo": "web",
+     "url": "https://chromiumdash.appspot.com/fetch_milestone_schedule?mstone=72",
+     "titulo": "Chromium Dash — calendario de la versión 72",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "\"stable_date\":\"2019-01-29T00:00:00\""
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2015-04",
+     "precision": "mes",
+     "registrado": "2026-10-02",
+     "estado": "vigente",
+     "certeza": "documentado",
+     "evidencia": [
+      0
+     ],
+     "nota": {
+      "es": "RFC 7469 define la cabecera Public-Key-Pins.",
+      "en": "RFC 7469 defines the Public-Key-Pins header."
+     }
+    },
+    {
+     "fecha": "2019-01",
+     "precision": "mes",
+     "registrado": "2026-10-02",
+     "estado": "antipatron",
+     "certeza": "documentado",
+     "evidencia": [
+      1,
+      2
+     ],
+     "nota": {
+      "es": "Chrome 72 (estable el 29 de enero de 2019) lo elimina por su riesgo de denegación de servicio y de fijación hostil.",
+      "en": "Chrome 72 (stable on 29 January 2019) removes it because of denial-of-service and hostile-pinning risks."
+     }
+    }
+   ],
+   "revisado": "2026-10-02",
+   "caduca": "2027-10-01"
+  },
+  {
+   "id": "oauth-authorization-code-con-pkce",
+   "titulo": {
+    "es": "Usar el flujo de código de autorización de OAuth con PKCE, también en aplicaciones públicas",
+    "en": "Using the OAuth authorization code flow with PKCE, also for public clients"
+   },
+   "area": "seguridad",
+   "temas": [
+    "oauth",
+    "oauth2",
+    "pkce",
+    "authorization-code",
+    "spa",
+    "tokens"
+   ],
+   "estado": "vigente",
+   "porque": {
+    "es": "El token sale del punto de token y no de la URL, y PKCE impide que quien intercepte el código lo canjee. Es lo que recomienda el BCP de seguridad de OAuth.",
+    "en": "The token comes from the token endpoint, not the URL, and PKCE stops whoever intercepts the code from redeeming it. It is what the OAuth security BCP recommends."
+   },
+   "certeza": "documentado",
+   "evidencia": [
+    {
+     "tipo": "web",
+     "url": "https://www.rfc-editor.org/rfc/rfc7636.txt",
+     "titulo": "RFC 7636 — Proof Key for Code Exchange by OAuth Public Clients",
+     "fecha": "2015-09",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "OAuth 2.0 public clients utilizing the Authorization Code Grant are susceptible to the authorization code interception attack."
+    },
+    {
+     "tipo": "web",
+     "url": "https://www.rfc-editor.org/rfc/rfc9700.txt",
+     "titulo": "RFC 9700 (BCP 240) — Best Current Practice for OAuth 2.0 Security",
+     "fecha": "2025-01",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "Public clients MUST use PKCE [RFC7636] to this end, as motivated in Section 4."
+    },
+    {
+     "tipo": "web",
+     "url": "https://www.rfc-editor.org/rfc/rfc9700.txt",
+     "titulo": "RFC 9700 (BCP 240) — Best Current Practice for OAuth 2.0 Security",
+     "fecha": "2025-01",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "Clients SHOULD instead use the response type code (i.e., authorization code grant type) as specified in Section 2.1.1 or any other response type that causes the authorization server to issue access tokens in the token response, such as the code id_token response type."
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2015-09",
+     "precision": "mes",
+     "registrado": "2026-10-02",
+     "estado": "vigente",
+     "certeza": "documentado",
+     "evidencia": [
+      0
+     ],
+     "nota": {
+      "es": "RFC 7636 publica PKCE contra la interceptación del código en clientes públicos.",
+      "en": "RFC 7636 publishes PKCE against code interception in public clients."
+     }
+    },
+    {
+     "fecha": "2025-01",
+     "precision": "mes",
+     "registrado": "2026-10-02",
+     "estado": "vigente",
+     "certeza": "documentado",
+     "evidencia": [
+      1,
+      2
+     ],
+     "nota": {
+      "es": "RFC 9700 da el código de autorización como sustituto del flujo implícito y hace PKCE obligatorio en clientes públicos.",
+      "en": "RFC 9700 names the authorization code the replacement for the implicit grant and makes PKCE mandatory for public clients."
+     }
+    }
+   ],
+   "revisado": "2026-10-02",
+   "caduca": "2027-10-01",
+   "enlaces": [
+    {
+     "nombre": "RFC 9700 — OAuth 2.0 Security BCP",
+     "url": "https://www.rfc-editor.org/rfc/rfc9700.html"
+    }
+   ]
+  },
+  {
+   "id": "oauth-implicit-grant",
+   "titulo": {
+    "es": "Usar el flujo implícito de OAuth 2.0 (token en la URL) en aplicaciones de navegador",
+    "en": "Using the OAuth 2.0 implicit grant (token in the URL) in browser apps"
+   },
+   "area": "seguridad",
+   "temas": [
+    "oauth",
+    "oauth2",
+    "implicit-grant",
+    "spa",
+    "pkce",
+    "tokens"
+   ],
+   "estado": "superada",
+   "superadaPor": "oauth-authorization-code-con-pkce",
+   "porque": {
+    "es": "El token viaja en la respuesta de autorización, donde se puede filtrar o inyectar. El BCP de seguridad de OAuth (RFC 9700, enero de 2025) pide no usarlo y pasar al código de autorización; el borrador de OAuth 2.1 lo elimina.",
+    "en": "The token travels in the authorization response, where it can leak or be injected. The OAuth security BCP (RFC 9700, January 2025) says not to use it and to switch to the authorization code; the OAuth 2.1 draft removes it."
+   },
+   "certeza": "documentado",
+   "evidencia": [
+    {
+     "tipo": "web",
+     "url": "https://www.rfc-editor.org/rfc/rfc6749.txt",
+     "titulo": "RFC 6749 — The OAuth 2.0 Authorization Framework",
+     "fecha": "2012-10",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "The implicit grant type is used to obtain access tokens (it does not support the issuance of refresh tokens) and is optimized for public clients known to operate a particular redirection URI."
+    },
+    {
+     "tipo": "web",
+     "url": "https://www.ietf.org/archive/id/draft-ietf-oauth-v2-1-16.txt",
+     "titulo": "The OAuth 2.1 Authorization Framework, draft-ietf-oauth-v2-1-16 (Internet-Draft, no es norma)",
+     "fecha": "2026-09-03",
+     "consultado": "2026-10-02",
+     "primaria": false,
+     "cita": "The OAuth 2.0 Implicit grant is omitted from OAuth 2.1 as it was deprecated in [RFC9700]."
+    },
+    {
+     "tipo": "web",
+     "url": "https://www.rfc-editor.org/rfc/rfc9700.txt",
+     "titulo": "RFC 9700 (BCP 240) — Best Current Practice for OAuth 2.0 Security",
+     "fecha": "2025-01",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "In order to avoid these issues, clients SHOULD NOT use the implicit grant (response type token) or other response types issuing access tokens in the authorization response, unless access token injection in the authorization response is prevented and the aforementioned token leakage vectors are mitigated."
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2012-10",
+     "precision": "mes",
+     "registrado": "2026-10-02",
+     "estado": "vigente",
+     "certeza": "documentado",
+     "evidencia": [
+      0
+     ],
+     "nota": {
+      "es": "RFC 6749 lo define pensado para clientes que corren en el navegador.",
+      "en": "RFC 6749 defines it for clients running in the browser."
+     }
+    },
+    {
+     "fecha": "2025-01",
+     "precision": "mes",
+     "registrado": "2026-10-02",
+     "estado": "superada",
+     "certeza": "documentado",
+     "evidencia": [
+      2
+     ],
+     "nota": {
+      "es": "RFC 9700 (BCP): «SHOULD NOT», salvo que se eviten la inyección y las fugas del token.",
+      "en": "RFC 9700 (BCP): \"SHOULD NOT\", unless token injection and leakage are prevented."
+     }
+    },
+    {
+     "fecha": "2026-09-03",
+     "precision": "dia",
+     "registrado": "2026-10-02",
+     "estado": "superada",
+     "certeza": "documentado",
+     "evidencia": [
+      1
+     ],
+     "nota": {
+      "es": "El borrador 16 de OAuth 2.1 lo omite por completo. Es un Internet-Draft, todavía no una norma.",
+      "en": "OAuth 2.1 draft 16 omits it entirely. It is an Internet-Draft, not yet a standard."
+     },
+     "tipo": "borrador"
+    }
+   ],
+   "revisado": "2026-10-02"
+  },
+  {
+   "id": "oauth-password-grant",
+   "titulo": {
+    "es": "Usar el grant de contraseña de OAuth (Resource Owner Password Credentials)",
+    "en": "Using the OAuth password grant (Resource Owner Password Credentials)"
+   },
+   "area": "seguridad",
+   "temas": [
+    "oauth",
+    "oauth2",
+    "ropc",
+    "password-grant",
+    "credentials"
+   ],
+   "estado": "antipatron",
+   "porque": {
+    "es": "La aplicación ve la contraseña del usuario y el flujo no admite segundo factor ni pasos interactivos. RFC 9700 dice que no se debe usar («MUST NOT»).",
+    "en": "The app sees the user’s password and the flow does not support a second factor or interactive steps. RFC 9700 says it \"MUST NOT\" be used."
+   },
+   "certeza": "documentado",
+   "evidencia": [
+    {
+     "tipo": "web",
+     "url": "https://www.rfc-editor.org/rfc/rfc9700.txt",
+     "titulo": "RFC 9700 (BCP 240) — Best Current Practice for OAuth 2.0 Security",
+     "fecha": "2025-01",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "The resource owner password credentials grant [RFC6749] MUST NOT be used. This grant type insecurely exposes the credentials of the resource owner to the client."
+    },
+    {
+     "tipo": "web",
+     "url": "https://www.rfc-editor.org/rfc/rfc9700.txt",
+     "titulo": "RFC 9700 (BCP 240) — Best Current Practice for OAuth 2.0 Security",
+     "fecha": "2025-01",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "Furthermore, the resource owner password credentials grant is not designed to work with two-factor authentication and authentication processes that require multiple user interaction steps."
+    },
+    {
+     "tipo": "web",
+     "url": "https://www.ietf.org/archive/id/draft-ietf-oauth-v2-1-16.txt",
+     "titulo": "The OAuth 2.1 Authorization Framework, draft-ietf-oauth-v2-1-16 (Internet-Draft, no es norma)",
+     "fecha": "2026-09-03",
+     "consultado": "2026-10-02",
+     "primaria": false,
+     "cita": "The Resource Owner Password Credentials grant is omitted from this specification as per Section 2.4 of [RFC9700]"
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2025-01",
+     "precision": "mes",
+     "registrado": "2026-10-02",
+     "estado": "antipatron",
+     "certeza": "documentado",
+     "evidencia": [
+      0,
+      1
+     ],
+     "nota": {
+      "es": "RFC 9700 (BCP): «MUST NOT».",
+      "en": "RFC 9700 (BCP): \"MUST NOT\"."
+     }
+    },
+    {
+     "fecha": "2026-09-03",
+     "precision": "dia",
+     "registrado": "2026-10-02",
+     "estado": "antipatron",
+     "certeza": "documentado",
+     "evidencia": [
+      2
+     ],
+     "nota": {
+      "es": "El borrador 16 de OAuth 2.1 lo omite. Es un Internet-Draft, todavía no una norma.",
+      "en": "OAuth 2.1 draft 16 omits it. It is an Internet-Draft, not yet a standard."
+     },
+     "tipo": "borrador"
+    }
+   ],
+   "revisado": "2026-10-02",
+   "caduca": "2027-10-01"
+  },
+  {
+   "id": "ofrecer-ssl-3",
+   "titulo": {
+    "es": "Ofrecer SSL 3.0 en un servidor o cliente",
+    "en": "Offering SSL 3.0 on a server or client"
+   },
+   "area": "seguridad",
+   "temas": [
+    "ssl",
+    "sslv3",
+    "tls",
+    "poodle",
+    "protocols"
+   ],
+   "estado": "superada",
+   "superadaPor": "usar-tls-1-2-y-1-3",
+   "porque": {
+    "es": "El IETF lo declaró inseguro y prohibió usarlo en junio de 2015 (RFC 7568), señalando TLS 1.2 como sustituto.",
+    "en": "The IETF declared it insecure and forbade its use in June 2015 (RFC 7568), pointing to TLS 1.2 as the replacement."
+   },
+   "certeza": "documentado",
+   "evidencia": [
+    {
+     "tipo": "web",
+     "url": "https://www.rfc-editor.org/rfc/rfc7568.txt",
+     "titulo": "RFC 7568 — Deprecating Secure Sockets Layer Version 3.0",
+     "fecha": "2015-06",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "SSLv3 MUST NOT be used."
+    },
+    {
+     "tipo": "web",
+     "url": "https://www.rfc-editor.org/rfc/rfc7568.txt",
+     "titulo": "RFC 7568 — Deprecating Secure Sockets Layer Version 3.0",
+     "fecha": "2015-06",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "The replacement versions, in particular, Transport Layer Security (TLS) 1.2 (RFC 5246), are considerably more secure and capable protocols."
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2015-06",
+     "precision": "mes",
+     "registrado": "2026-10-02",
+     "estado": "superada",
+     "certeza": "documentado",
+     "evidencia": [
+      0,
+      1
+     ],
+     "nota": {
+      "es": "RFC 7568: SSLv3 «MUST NOT be used».",
+      "en": "RFC 7568: SSLv3 \"MUST NOT be used\"."
+     }
+    }
+   ],
+   "revisado": "2026-10-02"
+  },
+  {
+   "id": "ofrecer-tls-1-0-y-1-1",
+   "titulo": {
+    "es": "Ofrecer TLS 1.0 y TLS 1.1",
+    "en": "Offering TLS 1.0 and TLS 1.1"
+   },
+   "area": "seguridad",
+   "temas": [
+    "tls",
+    "tls-1-0",
+    "tls-1-1",
+    "protocols",
+    "deprecation"
+   ],
+   "estado": "superada",
+   "superadaPor": "usar-tls-1-2-y-1-3",
+   "porque": {
+    "es": "Dependen de MD5 y SHA-1 y no admiten los cifrados autenticados actuales. El IETF los prohibió en marzo de 2021 (RFC 8996); Chrome había anunciado en 2018 que los desactivaría.",
+    "en": "They rely on MD5 and SHA-1 and do not support current authenticated ciphers. The IETF forbade them in March 2021 (RFC 8996); Chrome had announced in 2018 it would disable them."
+   },
+   "certeza": "documentado",
+   "evidencia": [
+    {
+     "tipo": "web",
+     "url": "https://security.googleblog.com/2018/10/modernizing-transport-security.html",
+     "titulo": "Modernizing Transport Security (Google Security Blog)",
+     "fecha": "2018-10-15",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "TLS 1.0 and 1.1 will be disabled altogether in Chrome 81."
+    },
+    {
+     "tipo": "web",
+     "url": "https://www.rfc-editor.org/rfc/rfc8996.txt",
+     "titulo": "RFC 8996 — Deprecating TLS 1.0 and TLS 1.1 (BCP 195)",
+     "fecha": "2021-03",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "TLS 1.0 MUST NOT be used."
+    },
+    {
+     "tipo": "web",
+     "url": "https://www.rfc-editor.org/rfc/rfc8996.txt",
+     "titulo": "RFC 8996 — Deprecating TLS 1.0 and TLS 1.1 (BCP 195)",
+     "fecha": "2021-03",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "TLS 1.1 MUST NOT be used."
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2018-10-15",
+     "precision": "dia",
+     "registrado": "2026-10-02",
+     "estado": "superada",
+     "certeza": "documentado",
+     "evidencia": [
+      0
+     ],
+     "nota": {
+      "es": "Chrome anuncia que desactivará TLS 1.0 y 1.1 (entonces solo el 0,5 % de sus conexiones HTTPS los usaba); Apple, Microsoft y Mozilla anuncian lo mismo. Es un anuncio, no la fecha de la retirada.",
+      "en": "Chrome announces it will disable TLS 1.0 and 1.1 (then used by only 0.5% of its HTTPS connections); Apple, Microsoft and Mozilla announce the same. This is the announcement, not the removal date."
+     },
+     "tipo": "anuncio",
+     "para": "2020"
+    },
+    {
+     "fecha": "2021-03",
+     "precision": "mes",
+     "registrado": "2026-10-02",
+     "estado": "superada",
+     "certeza": "documentado",
+     "evidencia": [
+      1,
+      2
+     ],
+     "nota": {
+      "es": "RFC 8996 (BCP 195): TLS 1.0 y 1.1 «MUST NOT be used».",
+      "en": "RFC 8996 (BCP 195): TLS 1.0 and 1.1 \"MUST NOT be used\"."
+     }
+    }
+   ],
+   "revisado": "2026-10-02"
+  },
+  {
+   "id": "passkeys-webauthn-resistentes-al-phishing",
+   "titulo": {
+    "es": "Autenticar con passkeys (FIDO2 / WebAuthn), resistentes al phishing",
+    "en": "Authenticating with passkeys (FIDO2 / WebAuthn), which resist phishing"
+   },
+   "area": "seguridad",
+   "temas": [
+    "passkeys",
+    "webauthn",
+    "fido2",
+    "mfa",
+    "phishing",
+    "passwordless"
+   ],
+   "estado": "vigente",
+   "porque": {
+    "es": "La credencial va ligada al dominio, así que una web falsa no puede pedirla. Desde 2025 NIST exige a los verificadores bajo sus directrices (ámbito federal de EE. UU.) ofrecer al menos una opción resistente al phishing en AAL2, con WebAuthn como ejemplo; CISA llama «estándar de oro» al segundo factor resistente al phishing, del que FIDO/WebAuthn es un tipo.",
+    "en": "The credential is bound to the domain, so a fake site cannot ask for it. Since 2025 NIST requires verifiers under its guidelines (US federal scope) to offer at least one phishing-resistant option at AAL2, with WebAuthn as the example; CISA calls phishing-resistant MFA, of which FIDO/WebAuthn is one kind, the \"gold standard\"."
+   },
+   "certeza": "documentado",
+   "evidencia": [
+    {
+     "tipo": "web",
+     "url": "https://www.w3.org/TR/webauthn-1/",
+     "titulo": "Web Authentication: An API for accessing Public Key Credentials Level 1 (W3C)",
+     "fecha": "2019-03-04",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "W3C Recommendation, 4 March 2019"
+    },
+    {
+     "tipo": "web",
+     "url": "https://www.cisa.gov/sites/default/files/publications/fact-sheet-implementing-phishing-resistant-mfa-508c.pdf",
+     "titulo": "Implementing Phishing-Resistant MFA (CISA fact sheet)",
+     "fecha": "2022-10",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "While any form of MFA is better than no MFA and will reduce an organization’s attack surface, phishing-resistant MFA is the gold standard and organizations should make migrating to it a high priority effort"
+    },
+    {
+     "tipo": "web",
+     "url": "https://blog.google/technology/safety-security/passkeys-default-google-accounts/",
+     "titulo": "Passkeys por defecto en las cuentas personales de Google (blog de Google)",
+     "fecha": "2023-10-10",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "today we’re making passkeys even more accessible by offering them as the default option across personal Google Accounts."
+    },
+    {
+     "tipo": "web",
+     "url": "https://csrc.nist.gov/pubs/sp/800/63/b/4/final",
+     "titulo": "NIST SP 800-63B-4 — ficha de publicación (CSRC)",
+     "fecha": "2025-07",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "07/31/25: SP 800-63B-4 (Final)"
+    },
+    {
+     "tipo": "web",
+     "url": "https://pages.nist.gov/800-63-4/sp800-63b.html",
+     "titulo": "NIST SP 800-63B-4",
+     "fecha": "2025-07",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "Verifiers SHALL offer at least one phishing-resistant authentication option at AAL2, as described in Sec. 3.2.5."
+    },
+    {
+     "tipo": "web",
+     "url": "https://pages.nist.gov/800-63-4/sp800-63b.html",
+     "titulo": "NIST SP 800-63B-4",
+     "fecha": "2025-07",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "WebAuthn [WebAuthn], which is used by authenticators that implement the Fast Identity Online 2 (FIDO2) specifications [FIDO2], is an example of a standard that provides phishing resistance through verifier name binding by choosing an authenticator secret based on the authenticated domain name of the verifier."
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2019-03-04",
+     "precision": "dia",
+     "registrado": "2026-10-02",
+     "estado": "vigente",
+     "certeza": "documentado",
+     "evidencia": [
+      0
+     ],
+     "nota": {
+      "es": "WebAuthn Level 1 es Recomendación del W3C.",
+      "en": "WebAuthn Level 1 becomes a W3C Recommendation."
+     }
+    },
+    {
+     "fecha": "2022-10",
+     "precision": "mes",
+     "registrado": "2026-10-02",
+     "estado": "vigente",
+     "certeza": "documentado",
+     "evidencia": [
+      1
+     ],
+     "nota": {
+      "es": "CISA llama «estándar de oro» al segundo factor resistente al phishing (FIDO/WebAuthn o PKI).",
+      "en": "CISA calls phishing-resistant MFA (FIDO/WebAuthn or PKI) the \"gold standard\"."
+     }
+    },
+    {
+     "fecha": "2023-10-10",
+     "precision": "dia",
+     "registrado": "2026-10-02",
+     "estado": "vigente",
+     "certeza": "documentado",
+     "evidencia": [
+      2
+     ],
+     "nota": {
+      "es": "Google pone las passkeys como opción por defecto en las cuentas personales.",
+      "en": "Google makes passkeys the default option for personal accounts."
+     }
+    },
+    {
+     "fecha": "2025-07-31",
+     "precision": "dia",
+     "registrado": "2026-10-02",
+     "estado": "vigente",
+     "certeza": "documentado",
+     "evidencia": [
+      3,
+      4,
+      5
+     ],
+     "nota": {
+      "es": "NIST SP 800-63B-4 exige ofrecer al menos una opción resistente al phishing en AAL2.",
+      "en": "NIST SP 800-63B-4 requires offering at least one phishing-resistant option at AAL2."
+     }
+    }
+   ],
+   "revisado": "2026-10-02",
+   "caduca": "2027-10-01",
+   "enlaces": [
+    {
+     "nombre": "W3C — Web Authentication (última versión)",
+     "url": "https://www.w3.org/TR/webauthn/"
+    }
+   ]
+  },
+  {
+   "id": "preguntas-de-seguridad-para-recuperar-la-cuenta",
+   "titulo": {
+    "es": "Usar preguntas de seguridad («¿cómo se llamaba tu primera mascota?») para autenticar o recuperar la cuenta",
+    "en": "Using security questions (\"what was your first pet’s name?\") to authenticate or recover an account"
+   },
+   "area": "seguridad",
+   "temas": [
+    "security-questions",
+    "kba",
+    "account-recovery",
+    "nist",
+    "authentication"
+   ],
+   "estado": "antipatron",
+   "porque": {
+    "es": "Las respuestas se adivinan o se averiguan con facilidad: Google midió en 2015 que dan mucha menos seguridad que una contraseña. NIST prohíbe pedirlas al elegir la contraseña y su lista de métodos de recuperación de 2025 no las incluye.",
+    "en": "Answers are easy to guess or look up: Google measured in 2015 that they give far less security than a password. NIST forbids asking for them when choosing a password, and its 2025 list of recovery methods does not include them."
+   },
+   "certeza": "documentado",
+   "evidencia": [
+    {
+     "tipo": "web",
+     "url": "https://research.google/pubs/secrets-lies-and-account-recovery-lessons-from-the-use-of-personal-knowledge-questions-at-google/",
+     "titulo": "Secrets, Lies, and Account Recovery: Lessons from the Use of Personal Knowledge Questions at Google (WWW 2015)",
+     "fecha": "2015",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "Our analysis confirms that secret questions generally offer a security level that is far lower than user-chosen passwords."
+    },
+    {
+     "tipo": "web",
+     "url": "https://csrc.nist.gov/pubs/sp/800/63/b/final",
+     "titulo": "NIST SP 800-63B (rev. 3) — ficha de publicación (CSRC)",
+     "fecha": "2017-06",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "06/22/17: SP 800-63B (Final)"
+    },
+    {
+     "tipo": "web",
+     "url": "https://pages.nist.gov/800-63-3/sp800-63b.html",
+     "titulo": "NIST SP 800-63B, rev. 3 (texto con las actualizaciones hasta 2020-03-02)",
+     "fecha": "2017-06",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "Verifiers SHALL NOT prompt subscribers to use specific types of information (e.g., “What was the name of your first pet?”) when choosing memorized secrets."
+    },
+    {
+     "tipo": "web",
+     "url": "https://csrc.nist.gov/pubs/sp/800/63/b/4/final",
+     "titulo": "NIST SP 800-63B-4 — ficha de publicación (CSRC)",
+     "fecha": "2025-07",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "07/31/25: SP 800-63B-4 (Final)"
+    },
+    {
+     "tipo": "web",
+     "url": "https://pages.nist.gov/800-63-4/sp800-63b.html",
+     "titulo": "NIST SP 800-63B-4",
+     "fecha": "2025-07",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "Verifiers and CSPs SHALL NOT prompt subscribers to use knowledge-based authentication (KBA) (e.g., “What was the name of your first pet?”) or security questions when choosing passwords."
+    },
+    {
+     "tipo": "web",
+     "url": "https://pages.nist.gov/800-63-4/sp800-63b.html",
+     "titulo": "NIST SP 800-63B-4",
+     "fecha": "2025-07",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "Four general classes of account recovery methods are recognized: Saved recovery codes Issued recovery codes Use of recovery contacts Repeated identity proofing"
+    },
+    {
+     "tipo": "web",
+     "url": "https://cheatsheetseries.owasp.org/cheatsheets/Choosing_and_Using_Security_Questions_Cheat_Sheet.html",
+     "titulo": "Choosing and Using Security Questions Cheat Sheet (OWASP)",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "WARNING: Security questions are no longer recognized as an acceptable authentication factor per NIST SP 800-63."
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2015",
+     "precision": "año",
+     "registrado": "2026-10-02",
+     "estado": "antipatron",
+     "certeza": "documentado",
+     "evidencia": [
+      0
+     ],
+     "nota": {
+      "es": "Google publica su medición: las preguntas personales son mucho más débiles que las contraseñas.",
+      "en": "Google publishes its measurement: personal questions are far weaker than passwords."
+     }
+    },
+    {
+     "fecha": "2017-06-22",
+     "precision": "dia",
+     "registrado": "2026-10-02",
+     "estado": "antipatron",
+     "certeza": "documentado",
+     "evidencia": [
+      1,
+      2
+     ],
+     "nota": {
+      "es": "NIST SP 800-63B prohíbe pistas visibles y pedir datos personales al elegir la contraseña.",
+      "en": "NIST SP 800-63B forbids visible hints and asking for personal facts when choosing a password."
+     }
+    },
+    {
+     "fecha": "2025-07-31",
+     "precision": "dia",
+     "registrado": "2026-10-02",
+     "estado": "antipatron",
+     "certeza": "documentado",
+     "evidencia": [
+      3,
+      4,
+      5
+     ],
+     "nota": {
+      "es": "NIST SP 800-63B-4 nombra expresamente las preguntas de seguridad; la recuperación queda en códigos, contactos o repetir la verificación de identidad.",
+      "en": "NIST SP 800-63B-4 names security questions explicitly; recovery is left to codes, contacts or repeated identity proofing."
+     }
+    }
+   ],
+   "revisado": "2026-10-02",
+   "caduca": "2027-10-01",
+   "enlaces": [
+    {
+     "nombre": "NIST SP 800-63B-4",
+     "url": "https://pages.nist.gov/800-63-4/sp800-63b.html"
+    }
+   ]
+  },
+  {
+   "id": "reglas-de-composicion-de-contrasenas",
+   "titulo": {
+    "es": "Imponer reglas de composición en las contraseñas (mayúscula, número, símbolo…)",
+    "en": "Imposing password composition rules (uppercase, digit, symbol…)"
+   },
+   "area": "seguridad",
+   "temas": [
+    "passwords",
+    "composition-rules",
+    "nist",
+    "password-policy"
+   ],
+   "estado": "antipatron",
+   "porque": {
+    "es": "Las personas responden de forma predecible («password» pasa a ser «Password1») y la contraseña apenas se vuelve más difícil de adivinar. NIST lo desaconsejó en 2017 y lo prohíbe desde 2025; lo que cuenta es la longitud y no estar en listas de filtradas.",
+    "en": "People respond predictably (\"password\" becomes \"Password1\") and the password gets barely harder to guess. NIST advised against it in 2017 and forbids it since 2025; what counts is length and not being on breached lists."
+   },
+   "certeza": "documentado",
+   "evidencia": [
+    {
+     "tipo": "web",
+     "url": "https://csrc.nist.gov/pubs/sp/800/63/b/final",
+     "titulo": "NIST SP 800-63B (rev. 3) — ficha de publicación (CSRC)",
+     "fecha": "2017-06",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "06/22/17: SP 800-63B (Final)"
+    },
+    {
+     "tipo": "web",
+     "url": "https://pages.nist.gov/800-63-3/sp800-63b.html",
+     "titulo": "NIST SP 800-63B, rev. 3 (texto con las actualizaciones hasta 2020-03-02)",
+     "fecha": "2017-06",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "Verifiers SHOULD NOT impose other composition rules (e.g., requiring mixtures of different character types or prohibiting consecutively repeated characters) for memorized secrets."
+    },
+    {
+     "tipo": "web",
+     "url": "https://csrc.nist.gov/pubs/sp/800/63/b/4/final",
+     "titulo": "NIST SP 800-63B-4 — ficha de publicación (CSRC)",
+     "fecha": "2025-07",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "07/31/25: SP 800-63B-4 (Final)"
+    },
+    {
+     "tipo": "web",
+     "url": "https://pages.nist.gov/800-63-4/sp800-63b.html",
+     "titulo": "NIST SP 800-63B-4",
+     "fecha": "2025-07",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "Verifiers and CSPs SHALL NOT impose other composition rules (e.g., requiring mixtures of different character types) for passwords."
+    },
+    {
+     "tipo": "web",
+     "url": "https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html",
+     "titulo": "Authentication Cheat Sheet (OWASP)",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "There should be no password composition rules limiting the type of characters permitted. There should be no requirement for upper or lower case or numbers or special characters."
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2017-06-22",
+     "precision": "dia",
+     "registrado": "2026-10-02",
+     "estado": "antipatron",
+     "certeza": "documentado",
+     "evidencia": [
+      0,
+      1
+     ],
+     "nota": {
+      "es": "NIST SP 800-63B: «SHOULD NOT» imponer reglas de composición.",
+      "en": "NIST SP 800-63B: composition rules \"SHOULD NOT\" be imposed."
+     }
+    },
+    {
+     "fecha": "2025-07-31",
+     "precision": "dia",
+     "registrado": "2026-10-02",
+     "estado": "antipatron",
+     "certeza": "documentado",
+     "evidencia": [
+      2,
+      3
+     ],
+     "nota": {
+      "es": "NIST SP 800-63B-4 lo endurece a «SHALL NOT».",
+      "en": "NIST SP 800-63B-4 hardens it to \"SHALL NOT\"."
+     },
+     "matiz": "endurece"
+    }
+   ],
+   "revisado": "2026-10-02",
+   "caduca": "2027-10-01",
+   "enlaces": [
+    {
+     "nombre": "NIST SP 800-63B-4",
+     "url": "https://pages.nist.gov/800-63-4/sp800-63b.html"
+    }
+   ]
+  },
+  {
+   "id": "sms-como-segundo-factor",
+   "titulo": {
+    "es": "Usar códigos por SMS como segundo factor de autenticación",
+    "en": "Using SMS codes as a second authentication factor"
+   },
+   "area": "seguridad",
+   "temas": [
+    "mfa",
+    "2fa",
+    "sms",
+    "otp",
+    "phishing",
+    "sim-swap",
+    "nist"
+   ],
+   "estado": "depende",
+   "porque": {
+    "es": "Cualquier segundo factor es mejor que ninguno, pero el SMS se puede robar con phishing o duplicando la SIM. NIST lo marca como «restringido» desde 2017 y CISA lo deja como último recurso.",
+    "en": "Any second factor beats none, but SMS can be stolen through phishing or SIM swapping. NIST has marked it \"restricted\" since 2017 and CISA keeps it as a last resort."
+   },
+   "ambito": [
+    {
+     "cuando": {
+      "es": "no hay otra opción de segundo factor, o como paso temporal mientras se migra",
+      "en": "there is no other second-factor option, or as a stopgap while migrating"
+     },
+     "estado": "vigente",
+     "porque": {
+      "es": "Reduce el riesgo frente a no tener segundo factor.",
+      "en": "It reduces risk compared with no second factor."
+     }
+    },
+    {
+     "cuando": {
+      "es": "se puede ofrecer un factor resistente al phishing (passkeys, FIDO/WebAuthn)",
+      "en": "a phishing-resistant factor can be offered (passkeys, FIDO/WebAuthn)"
+     },
+     "estado": "superada",
+     "porque": {
+      "es": "El SMS no resiste el phishing; las passkeys (WebAuthn) sí: ver passkeys-webauthn-resistentes-al-phishing.",
+      "en": "SMS does not resist phishing; passkeys (WebAuthn) do: see passkeys-webauthn-resistentes-al-phishing."
+     }
+    }
+   ],
+   "certeza": "documentado",
+   "evidencia": [
+    {
+     "tipo": "web",
+     "url": "https://pages.nist.gov/800-63-3/sp800-63b.html",
+     "titulo": "NIST SP 800-63B, rev. 3 (texto con las actualizaciones hasta 2020-03-02)",
+     "fecha": "2017-06",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "Use of the PSTN for out-of-band verification is RESTRICTED as described in this section and in Section 5.2.10."
+    },
+    {
+     "tipo": "web",
+     "url": "https://www.cisa.gov/sites/default/files/publications/fact-sheet-implementing-phishing-resistant-mfa-508c.pdf",
+     "titulo": "Implementing Phishing-Resistant MFA (CISA fact sheet)",
+     "fecha": "2022-10",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "This form of MFA should only be used as a last resort MFA option. However, it can serve as a temporary solution while organizations transition to a stronger MFA implementation."
+    },
+    {
+     "tipo": "web",
+     "url": "https://csrc.nist.gov/pubs/sp/800/63/b/4/final",
+     "titulo": "NIST SP 800-63B-4 — ficha de publicación (CSRC)",
+     "fecha": "2025-07",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "07/31/25: SP 800-63B-4 (Final)"
+    },
+    {
+     "tipo": "web",
+     "url": "https://pages.nist.gov/800-63-4/sp800-63b.html",
+     "titulo": "NIST SP 800-63B-4",
+     "fecha": "2025-07",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "Authenticators that involve the manual entry of an authenticator output (e.g., out-of-band and OTP authenticators) SHALL NOT be considered phishing-resistant"
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2017-06",
+     "precision": "mes",
+     "registrado": "2026-10-02",
+     "estado": "depende",
+     "certeza": "documentado",
+     "evidencia": [
+      0
+     ],
+     "nota": {
+      "es": "NIST SP 800-63B marca el SMS (PSTN) como autenticador restringido.",
+      "en": "NIST SP 800-63B marks SMS (PSTN) as a restricted authenticator."
+     }
+    },
+    {
+     "fecha": "2022-10",
+     "precision": "mes",
+     "registrado": "2026-10-02",
+     "estado": "depende",
+     "certeza": "documentado",
+     "evidencia": [
+      1
+     ],
+     "nota": {
+      "es": "CISA: solo como último recurso o paso temporal hacia un factor más fuerte.",
+      "en": "CISA: only as a last resort or a stopgap towards a stronger factor."
+     }
+    },
+    {
+     "fecha": "2025-07-31",
+     "precision": "dia",
+     "registrado": "2026-10-02",
+     "estado": "depende",
+     "certeza": "documentado",
+     "evidencia": [
+      2,
+      3
+     ],
+     "nota": {
+      "es": "NIST SP 800-63B-4 lo mantiene como el único autenticador restringido y no lo considera resistente al phishing.",
+      "en": "NIST SP 800-63B-4 keeps it as the only restricted authenticator and does not consider it phishing-resistant."
+     }
+    }
+   ],
+   "revisado": "2026-10-02",
+   "caduca": "2027-10-01"
+  },
+  {
+   "id": "usar-tls-1-2-y-1-3",
+   "titulo": {
+    "es": "Usar TLS 1.2 como mínimo, y TLS 1.3 cuando se pueda",
+    "en": "Using TLS 1.2 as the minimum, and TLS 1.3 where possible"
+   },
+   "area": "seguridad",
+   "temas": [
+    "tls",
+    "tls-1-2",
+    "tls-1-3",
+    "protocols",
+    "https"
+   ],
+   "estado": "vigente",
+   "porque": {
+    "es": "Son las únicas versiones que el IETF no ha retirado. Desde 2022 el BCP 195 pide soportar TLS 1.2 y preferir TLS 1.3 cuando esté disponible.",
+    "en": "They are the only versions the IETF has not retired. Since 2022 BCP 195 requires supporting TLS 1.2 and preferring TLS 1.3 where available."
+   },
+   "certeza": "documentado",
+   "evidencia": [
+    {
+     "tipo": "web",
+     "url": "https://www.rfc-editor.org/rfc/rfc8446.txt",
+     "titulo": "RFC 8446 — The Transport Layer Security (TLS) Protocol Version 1.3",
+     "fecha": "2018-08",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "TLS allows client/server applications to communicate over the Internet in a way that is designed to prevent eavesdropping, tampering, and message forgery."
+    },
+    {
+     "tipo": "web",
+     "url": "https://www.rfc-editor.org/rfc/rfc8996.txt",
+     "titulo": "RFC 8996 — Deprecating TLS 1.0 and TLS 1.1 (BCP 195)",
+     "fecha": "2021-03",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "superseded by TLS 1.2 [RFC5246] in 2008, which has now itself been superseded by TLS 1.3 [RFC8446]"
+    },
+    {
+     "tipo": "web",
+     "url": "https://www.rfc-editor.org/rfc/rfc9325.txt",
+     "titulo": "RFC 9325 — Recommendations for Secure Use of TLS and DTLS (BCP 195)",
+     "fecha": "2022-11",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "Implementations SHOULD support TLS 1.3 [RFC8446] and, if implemented, MUST prefer to negotiate TLS 1.3 over earlier versions of TLS."
+    },
+    {
+     "tipo": "web",
+     "url": "https://www.rfc-editor.org/rfc/rfc9325.txt",
+     "titulo": "RFC 9325 — Recommendations for Secure Use of TLS and DTLS (BCP 195)",
+     "fecha": "2022-11",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "Implementations MUST support TLS 1.2 [RFC5246]."
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2018-08",
+     "precision": "mes",
+     "registrado": "2026-10-02",
+     "estado": "vigente",
+     "certeza": "documentado",
+     "evidencia": [
+      0
+     ],
+     "nota": {
+      "es": "Se publica TLS 1.3 (RFC 8446).",
+      "en": "TLS 1.3 is published (RFC 8446)."
+     }
+    },
+    {
+     "fecha": "2021-03",
+     "precision": "mes",
+     "registrado": "2026-10-02",
+     "estado": "vigente",
+     "certeza": "documentado",
+     "evidencia": [
+      1
+     ],
+     "nota": {
+      "es": "Con TLS 1.0 y 1.1 prohibidos, TLS 1.2 y 1.3 quedan como las versiones admitidas.",
+      "en": "With TLS 1.0 and 1.1 forbidden, TLS 1.2 and 1.3 remain the allowed versions."
+     }
+    },
+    {
+     "fecha": "2022-11",
+     "precision": "mes",
+     "registrado": "2026-10-02",
+     "estado": "vigente",
+     "certeza": "documentado",
+     "evidencia": [
+      2,
+      3
+     ],
+     "nota": {
+      "es": "RFC 9325 (BCP 195): soportar TLS 1.2 obligatoriamente y preferir TLS 1.3. Prevé que una versión futura retire TLS 1.2.",
+      "en": "RFC 9325 (BCP 195): TLS 1.2 support is mandatory and TLS 1.3 preferred. It expects a future version to deprecate TLS 1.2."
+     }
+    }
+   ],
+   "revisado": "2026-10-02",
+   "caduca": "2027-10-01"
+  },
+  {
+   "id": "appcache-para-funcionar-sin-conexion",
+   "titulo": {
+    "es": "Usar Application Cache (AppCache, atributo manifest) para que la web funcione sin conexión",
+    "en": "Using Application Cache (AppCache, the manifest attribute) to make a site work offline"
+   },
+   "area": "web",
+   "temas": [
+    "appcache",
+    "offline",
+    "manifest",
+    "service-worker",
+    "pwa"
+   ],
+   "estado": "superada",
+   "superadaPor": "service-worker-para-funcionar-sin-conexion",
+   "porque": {
+    "es": "La especificación HTML la declaró sustituida por los service workers en 2015 y la eliminó en 2020. Firefox 84 la quitó ese año, y Chrome anunció desactivarla por defecto en la 85 (2020) y quitarla del todo en octubre de 2021.",
+    "en": "The HTML spec declared it superseded by service workers in 2015 and removed it in 2020. Firefox 84 dropped it that year, and Chrome announced disabling it by default in 85 (2020) and full removal for October 2021."
+   },
+   "certeza": "documentado",
+   "evidencia": [
+    {
+     "tipo": "web",
+     "url": "https://github.com/whatwg/html/commit/1b438067d84da2ee95988842cdd8fe2655444936",
+     "titulo": "Deprecate <keygen> and appcache (WHATWG HTML, commit)",
+     "fecha": "2015-08-28",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "Appcache is superseded by service workers."
+    },
+    {
+     "tipo": "web",
+     "url": "https://web.dev/articles/appcache-removal",
+     "titulo": "Preparing for AppCache removal (web.dev)",
+     "fecha": "2020-05-18",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "Chrome 85 removes support for AppCache by default. Most developers should migrate off AppCache now, and not wait any longer."
+    },
+    {
+     "tipo": "web",
+     "url": "https://github.com/whatwg/html/pull/6153",
+     "titulo": "Remove AppCache (WHATWG HTML, pull request #6153)",
+     "fecha": "2020-12-01",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "This removes the manifest attribute on the html element, the text/cache-manifest format, the integration of application caches with navigation, the monkey patching of what is now Fetch, and the window.applicationCache API."
+    },
+    {
+     "tipo": "web",
+     "url": "https://developer.mozilla.org/en-US/docs/Mozilla/Firefox/Releases/84",
+     "titulo": "Firefox 84 release notes for developers (MDN)",
+     "fecha": "2020-12-15",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "The application cache has been removed — developers should use the Service Worker API instead"
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2015-08-28",
+     "precision": "dia",
+     "registrado": "2026-10-02",
+     "estado": "superada",
+     "certeza": "documentado",
+     "evidencia": [
+      0
+     ],
+     "nota": {
+      "es": "La especificación HTML de WHATWG la marca como obsoleta: la sustituyen los service workers.",
+      "en": "The WHATWG HTML spec marks it obsolete: service workers supersede it."
+     }
+    },
+    {
+     "fecha": "2020-05-18",
+     "precision": "dia",
+     "registrado": "2026-10-02",
+     "estado": "superada",
+     "certeza": "documentado",
+     "evidencia": [
+      1
+     ],
+     "nota": {
+      "es": "Chrome anuncia que la 85 la desactivará por defecto (solo quedaría para un origin trial temporal) y pide migrar ya.",
+      "en": "Chrome announces version 85 will disable it by default (kept only for a temporary origin trial) and asks to migrate now."
+     },
+     "tipo": "anuncio",
+     "para": "2020-08"
+    },
+    {
+     "fecha": "2020-12-01",
+     "precision": "dia",
+     "registrado": "2026-10-02",
+     "estado": "superada",
+     "certeza": "documentado",
+     "evidencia": [
+      2
+     ],
+     "nota": {
+      "es": "Se elimina de la especificación HTML.",
+      "en": "Removed from the HTML spec."
+     }
+    },
+    {
+     "fecha": "2020-12-15",
+     "precision": "dia",
+     "registrado": "2026-10-02",
+     "estado": "superada",
+     "certeza": "documentado",
+     "evidencia": [
+      3
+     ],
+     "nota": {
+      "es": "Firefox 84 sale sin AppCache.",
+      "en": "Firefox 84 ships without AppCache."
+     }
+    }
+   ],
+   "revisado": "2026-10-02"
+  },
+  {
+   "id": "carga-diferida-de-imagenes-con-libreria-js",
+   "titulo": {
+    "es": "Cargar imágenes en diferido con una librería JavaScript",
+    "en": "Lazy-loading images with a JavaScript library"
+   },
+   "area": "web",
+   "temas": [
+    "lazy-loading",
+    "images",
+    "performance",
+    "intersectionobserver"
+   ],
+   "estado": "superada",
+   "superadaPor": "carga-diferida-nativa-de-imagenes",
+   "porque": {
+    "es": "El navegador lo hace solo con loading=\"lazy\", sin JavaScript extra, en todos los navegadores principales desde marzo de 2022.",
+    "en": "The browser does it natively with loading=\"lazy\", with no extra JavaScript, in every major browser since March 2022."
+   },
+   "certeza": "documentado",
+   "evidencia": [
+    {
+     "tipo": "web",
+     "url": "https://developer.chrome.com/blog/new-in-chrome-77",
+     "titulo": "New in Chrome 77 (Chrome for Developers)",
+     "fecha": "2019-09-16",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "Starting in Chrome 76, the browser handles lazy loading for you, without the need to write custom lazy loading code, or use a separate JavaScript library."
+    },
+    {
+     "tipo": "web",
+     "url": "https://webkit.org/blog/12445/new-webkit-features-in-safari-15-4/",
+     "titulo": "New WebKit Features in Safari 15.4",
+     "fecha": "2022-03-14",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "WebKit added support for lazy-loading images with the loading attribute on the <img> element, providing web developers with an easy way to instruct the browser to defer loading certain images until the user scrolls near them."
+    },
+    {
+     "tipo": "web",
+     "url": "https://web.dev/articles/browser-level-image-lazy-loading",
+     "titulo": "Browser-level image lazy loading for the web (web.dev)",
+     "fecha": "2024-08-13",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "Browser-level image lazy loading is well supported across all the major browsers and is recommended for most use cases, to remove the need for extra dependencies on JavaScript."
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2019",
+     "precision": "año",
+     "registrado": "2026-10-02",
+     "estado": "depende",
+     "certeza": "documentado",
+     "evidencia": [
+      0
+     ],
+     "nota": {
+      "es": "Chrome 76 lo trae de serie: la librería solo sigue haciendo falta para los demás navegadores.",
+      "en": "Chrome 76 ships it natively: the library is only still needed for other browsers."
+     }
+    },
+    {
+     "fecha": "2022-03-14",
+     "precision": "dia",
+     "registrado": "2026-10-02",
+     "estado": "superada",
+     "certeza": "documentado",
+     "evidencia": [
+      1,
+      2
+     ],
+     "nota": {
+      "es": "Safari 15.4 lo añade y pasa a estar en todos los navegadores principales.",
+      "en": "Safari 15.4 adds it and it reaches every major browser."
+     }
+    }
+   ],
+   "revisado": "2026-10-02"
+  },
+  {
+   "id": "carga-diferida-nativa-de-imagenes",
+   "titulo": {
+    "es": "Cargar imágenes en diferido con el atributo loading=\"lazy\"",
+    "en": "Lazy-loading images with the loading=\"lazy\" attribute"
+   },
+   "area": "web",
+   "temas": [
+    "lazy-loading",
+    "images",
+    "performance",
+    "loading-attribute",
+    "baseline"
+   ],
+   "estado": "vigente",
+   "porque": {
+    "es": "Lo hace el navegador, sin dependencias de JavaScript, y es Baseline (en todos los navegadores) desde marzo de 2022. Ojo: no se aplica a las imágenes que se ven al cargar.",
+    "en": "The browser does it, with no JavaScript dependencies, and it has been Baseline (in every browser) since March 2022. Note: do not apply it to images visible on load."
+   },
+   "certeza": "documentado",
+   "evidencia": [
+    {
+     "tipo": "web",
+     "url": "https://web.dev/articles/browser-level-image-lazy-loading",
+     "titulo": "Browser-level image lazy loading for the web (web.dev)",
+     "fecha": "2024-08-13",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "Browser-level image lazy loading is well supported across all the major browsers and is recommended for most use cases, to remove the need for extra dependencies on JavaScript."
+    },
+    {
+     "tipo": "web",
+     "url": "https://developer.mozilla.org/en-US/docs/Web/API/HTMLImageElement/loading",
+     "titulo": "HTMLImageElement: loading property (MDN)",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "It's been available across browsers since March 2022."
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2022-03",
+     "precision": "mes",
+     "registrado": "2026-10-02",
+     "estado": "vigente",
+     "certeza": "documentado",
+     "evidencia": [
+      1
+     ],
+     "nota": {
+      "es": "Disponible en todos los navegadores principales (Baseline).",
+      "en": "Available in all major browsers (Baseline)."
+     }
+    }
+   ],
+   "revisado": "2026-10-02",
+   "caduca": "2027-10-01",
+   "enlaces": [
+    {
+     "nombre": "MDN — HTMLImageElement.loading (Baseline)",
+     "url": "https://developer.mozilla.org/en-US/docs/Web/API/HTMLImageElement/loading"
+    }
+   ]
+  },
+  {
+   "id": "concatenar-ficheros-y-sprites",
+   "titulo": {
+    "es": "Concatenar ficheros y juntar imágenes en sprites para hacer menos peticiones",
+    "en": "Concatenating files and combining images into sprites to make fewer requests"
+   },
+   "area": "web",
+   "temas": [
+    "bundling",
+    "concatenation",
+    "sprites",
+    "http2",
+    "performance",
+    "cache"
+   ],
+   "estado": "depende",
+   "porque": {
+    "es": "Con HTTP/2 hacer muchas peticiones ya no cuesta lo que costaba, pero agrupar algo sigue compensando (comprime mejor y evita viajes de ida y vuelta por imports anidados). Lo que dejó de tener sentido es meterlo todo en un único fichero enorme.",
+    "en": "With HTTP/2 many requests no longer cost what they did, but some bundling still pays off (better compression, no round trips for nested imports). What stopped making sense is putting everything into one huge file."
+   },
+   "ambito": [
+    {
+     "cuando": {
+      "es": "el servidor solo habla HTTP/1.1",
+      "en": "the server only speaks HTTP/1.1"
+     },
+     "estado": "vigente",
+     "porque": {
+      "es": "Cada petición sigue compitiendo por unas pocas conexiones.",
+      "en": "Each request still competes for a few connections."
+     }
+    },
+    {
+     "cuando": {
+      "es": "HTTP/2 o superior y lo agrupas todo en un solo paquete",
+      "en": "HTTP/2 or later and you bundle everything into a single package"
+     },
+     "estado": "antipatron",
+     "porque": {
+      "es": "Un byte cambiado obliga a volver a descargar el paquete entero.",
+      "en": "One changed byte forces re-downloading the whole bundle."
+     }
+    },
+    {
+     "cuando": {
+      "es": "HTTP/2 o superior, agrupando por trozos para producción",
+      "en": "HTTP/2 or later, bundling into chunks for production"
+     },
+     "estado": "vigente",
+     "porque": {
+      "es": "Servir los módulos sueltos en producción añade viajes de ida y vuelta por los imports anidados.",
+      "en": "Shipping unbundled modules in production adds round trips for nested imports."
+     }
+    }
+   ],
+   "certeza": "documentado",
+   "evidencia": [
+    {
+     "tipo": "web",
+     "url": "https://blog.cloudflare.com/http-2-for-web-developers/",
+     "titulo": "HTTP/2 For Web Developers (Cloudflare)",
+     "fecha": "2015-12-10",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "However, concatenating files is no longer a best practice in HTTP/2. While concatenation can still improve compression ratios, it forces expensive cache invalidations."
+    },
+    {
+     "tipo": "web",
+     "url": "https://hpbn.co/optimizing-application-delivery/",
+     "titulo": "High Performance Browser Networking — Optimizing Application Delivery (Ilya Grigorik)",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "That said, HTTP/2 does not eliminate the utility of concatenation and spriting entirely."
+    },
+    {
+     "tipo": "web",
+     "url": "https://vite.dev/guide/why",
+     "titulo": "Why Vite (Vite documentation)",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "Even though unbundled ESM works well during development, shipping it in production is still inefficient due to additional network round trips from nested imports. That's why bundling is still necessary for optimized production builds."
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2015-12-10",
+     "precision": "dia",
+     "registrado": "2026-10-02",
+     "estado": "depende",
+     "certeza": "documentado",
+     "evidencia": [
+      0,
+      1
+     ],
+     "nota": {
+      "es": "Con HTTP/2, concatenar deja de ser «buena práctica» sin más; las fuentes coinciden en que agrupar todo invalida la caché, pero no en que haya que dejar de agrupar.",
+      "en": "With HTTP/2, concatenation stops being a blanket \"best practice\"; sources agree that bundling everything hurts caching, not that bundling should stop."
+     }
+    }
+   ],
+   "revisado": "2026-10-02",
+   "caduca": "2027-10-01"
+  },
+  {
+   "id": "dar-soporte-a-internet-explorer-11",
+   "titulo": {
+    "es": "Dar soporte a Internet Explorer 11 en una web pública (hacks, comentarios condicionales, polyfills)",
+    "en": "Supporting Internet Explorer 11 on a public website (hacks, conditional comments, polyfills)"
+   },
+   "area": "web",
+   "temas": [
+    "internet-explorer",
+    "ie11",
+    "polyfill",
+    "conditional-comments",
+    "browser-support"
+   ],
+   "estado": "innecesaria",
+   "porque": {
+    "es": "Microsoft retiró IE11 en ciertas versiones de Windows 10 el 15 de junio de 2022 y lo dejó desactivado para siempre en 2023 (la desactivación estaba prevista para el 14 de febrero). Excepción: las aplicaciones internas que se abren en el modo IE de Edge, que Microsoft mantiene al menos hasta 2029.",
+    "en": "Microsoft retired IE11 on certain versions of Windows 10 on 15 June 2022 and permanently disabled it in 2023 (scheduled for 14 February). Exception: internal apps opened in Edge’s IE mode, which Microsoft supports through at least 2029."
+   },
+   "certeza": "documentado",
+   "evidencia": [
+    {
+     "tipo": "web",
+     "url": "https://techcommunity.microsoft.com/blog/microsoft-365-blog/microsoft-365-apps-say-farewell-to-internet-explorer-11-and-windows-10-sunsets-microsoft-edge-legacy/1591666",
+     "titulo": "Microsoft 365 apps say farewell to Internet Explorer 11 (Microsoft Tech Community)",
+     "fecha": "2020-08-17",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "August 17, 2021: Support is now unavailable for Microsoft 365 apps and services on IE11."
+    },
+    {
+     "tipo": "web",
+     "url": "https://learn.microsoft.com/en-us/lifecycle/announcements/internet-explorer-11-end-of-support",
+     "titulo": "Internet Explorer 11 end of support (Microsoft Learn)",
+     "fecha": "2022-06-15",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "On June 15, 2022, the Internet Explorer 11 desktop application ended support on certain versions of Windows 10*."
+    },
+    {
+     "tipo": "web",
+     "url": "https://learn.microsoft.com/en-us/lifecycle/products/internet-explorer-11",
+     "titulo": "Internet Explorer 11 — Lifecycle (Microsoft Learn)",
+     "fecha": "2023-05-19",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "The retired, out-of-support Internet Explorer 11 desktop application is scheduled to be permanently disabled through a Microsoft Edge update on certain versions of Windows 10 on February 14, 2023."
+    },
+    {
+     "tipo": "web",
+     "url": "https://learn.microsoft.com/en-us/lifecycle/faq/internet-explorer-microsoft-edge",
+     "titulo": "Lifecycle FAQ — Internet Explorer and Microsoft Edge (Microsoft Learn)",
+     "fecha": "2023-10-12",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "The retired, out-of-support Internet Explorer 11 (IE11) desktop application has been permanently disabled on certain versions of Windows 10."
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2021-08-17",
+     "precision": "dia",
+     "registrado": "2026-10-02",
+     "estado": "depende",
+     "certeza": "documentado",
+     "evidencia": [
+      0
+     ],
+     "nota": {
+      "es": "Las aplicaciones y servicios de Microsoft 365 dejan de soportar IE11.",
+      "en": "Microsoft 365 apps and services drop IE11 support."
+     }
+    },
+    {
+     "fecha": "2022-06-15",
+     "precision": "dia",
+     "registrado": "2026-10-02",
+     "estado": "innecesaria",
+     "certeza": "documentado",
+     "evidencia": [
+      1
+     ],
+     "nota": {
+      "es": "Fin del soporte de IE11 en Windows 10.",
+      "en": "End of IE11 support on Windows 10."
+     }
+    },
+    {
+     "fecha": "2023-02-14",
+     "precision": "dia",
+     "registrado": "2026-10-02",
+     "estado": "innecesaria",
+     "certeza": "documentado",
+     "evidencia": [
+      2,
+      3
+     ],
+     "nota": {
+      "es": "Fecha prevista para desactivarlo para siempre mediante una actualización de Edge; Microsoft confirma después que está desactivado.",
+      "en": "Scheduled date to permanently disable it through an Edge update; Microsoft later confirms it is disabled."
+     }
+    }
+   ],
+   "revisado": "2026-10-02",
+   "caduca": "2027-10-01",
+   "enlaces": [
+    {
+     "nombre": "endoflife.date — Internet Explorer",
+     "url": "https://endoflife.date/internet-explorer"
+    }
+   ]
+  },
+  {
+   "id": "detectar-el-navegador-por-user-agent",
+   "titulo": {
+    "es": "Detectar el navegador leyendo el User-Agent para decidir qué código ejecutar",
+    "en": "Detecting the browser from the User-Agent string to decide which code to run"
+   },
+   "area": "web",
+   "temas": [
+    "user-agent",
+    "ua-sniffing",
+    "browser-detection",
+    "feature-detection",
+    "ua-reduction"
+   ],
+   "estado": "superada",
+   "superadaPor": "detectar-la-funcion-no-el-navegador",
+   "porque": {
+    "es": "Lo que importa es si la función existe, no qué navegador es. Y desde 2022-2023 Chrome congela la versión menor, el sistema operativo y el modelo de dispositivo en la cadena, así que ya ni siquiera informa de eso.",
+    "en": "What matters is whether the feature exists, not which browser it is. And since 2022-2023 Chrome freezes the minor version, OS and device model in the string, so it no longer even reports those."
+   },
+   "certeza": "documentado",
+   "evidencia": [
+    {
+     "tipo": "web",
+     "url": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Browser_detection_using_the_user_agent",
+     "titulo": "Browser detection using the user agent (MDN)",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "Feature detection is where you check to see if a specific feature is available to the client instead of figuring out which browser is rendering your page."
+    },
+    {
+     "tipo": "web",
+     "url": "https://www.chromium.org/updates/ua-reduction/",
+     "titulo": "User-Agent Reduction (The Chromium Projects)",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "June 13th, 2022: the Phase 4 rollout is enabled for 100% of clients on M101 and above via Finch."
+    },
+    {
+     "tipo": "web",
+     "url": "https://www.chromium.org/updates/ua-reduction/",
+     "titulo": "User-Agent Reduction (The Chromium Projects)",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "February 7th, 2023: the Phase 5 rollout is enabled for 100% of clients on M107 and above via Finch."
+    },
+    {
+     "tipo": "web",
+     "url": "https://www.chromium.org/updates/ua-reduction/",
+     "titulo": "User-Agent Reduction (The Chromium Projects)",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "May 11th, 2023: the Phase 6 rollout is enabled for 100% of Android clients on M110 and above via Finch."
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2022-06-13",
+     "precision": "dia",
+     "registrado": "2026-10-02",
+     "estado": "superada",
+     "certeza": "documentado",
+     "evidencia": [
+      1
+     ],
+     "nota": {
+      "es": "Chrome 101+ deja la versión menor a 0.0.0 en el User-Agent para todos.",
+      "en": "Chrome 101+ sets the minor version to 0.0.0 in the User-Agent for everyone."
+     }
+    },
+    {
+     "fecha": "2023-02-07",
+     "precision": "dia",
+     "registrado": "2026-10-02",
+     "estado": "superada",
+     "certeza": "documentado",
+     "evidencia": [
+      2
+     ],
+     "nota": {
+      "es": "Chrome 107+ fija también el sistema operativo y la CPU de escritorio.",
+      "en": "Chrome 107+ also freezes desktop OS and CPU."
+     }
+    },
+    {
+     "fecha": "2023-05-11",
+     "precision": "dia",
+     "registrado": "2026-10-02",
+     "estado": "superada",
+     "certeza": "documentado",
+     "evidencia": [
+      3
+     ],
+     "nota": {
+      "es": "Chrome 110+ en Android fija también la versión de Android y el modelo de dispositivo, para todos.",
+      "en": "Chrome 110+ on Android also freezes the Android version and device model, for everyone."
+     }
+    }
+   ],
+   "revisado": "2026-10-02"
+  },
+  {
+   "id": "detectar-la-funcion-no-el-navegador",
+   "titulo": {
+    "es": "Comprobar si la función existe (feature detection) en vez de detectar el navegador",
+    "en": "Checking whether a feature exists (feature detection) instead of detecting the browser"
+   },
+   "area": "web",
+   "temas": [
+    "feature-detection",
+    "user-agent",
+    "browser-detection",
+    "progressive-enhancement"
+   ],
+   "estado": "vigente",
+   "porque": {
+    "es": "Responde a la pregunta que importa (¿puedo usar esto aquí?) y no se rompe cuando sale una versión nueva o el navegador oculta datos en su User-Agent.",
+    "en": "It answers the question that matters (can I use this here?) and does not break when a new version ships or the browser hides details in its User-Agent."
+   },
+   "certeza": "documentado",
+   "evidencia": [
+    {
+     "tipo": "web",
+     "url": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Browser_detection_using_the_user_agent",
+     "titulo": "Browser detection using the user agent (MDN)",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "Feature detection is where you check to see if a specific feature is available to the client instead of figuring out which browser is rendering your page. For cases where a feature is not supported, you use a fallback instead."
+    },
+    {
+     "tipo": "web",
+     "url": "https://www.chromium.org/updates/ua-reduction/",
+     "titulo": "User-Agent Reduction (The Chromium Projects)",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "June 13th, 2022: the Phase 4 rollout is enabled for 100% of clients on M101 and above via Finch."
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2022-06-13",
+     "precision": "dia",
+     "registrado": "2026-10-02",
+     "estado": "vigente",
+     "certeza": "documentado",
+     "evidencia": [
+      0,
+      1
+     ],
+     "nota": {
+      "es": "Ya era lo recomendado; con la reducción del User-Agent en Chrome, leer la cadena da todavía menos información.",
+      "en": "It was already the recommendation; with Chrome’s User-Agent reduction, the string carries even less information."
+     }
+    }
+   ],
+   "revisado": "2026-10-02",
+   "caduca": "2027-10-01"
+  },
+  {
+   "id": "document-write-para-insertar-scripts",
+   "titulo": {
+    "es": "Insertar scripts con document.write()",
+    "en": "Injecting scripts with document.write()"
+   },
+   "area": "web",
+   "temas": [
+    "document-write",
+    "scripts",
+    "performance",
+    "third-party"
+   ],
+   "estado": "antipatron",
+   "porque": {
+    "es": "Bloquea al parser mientras descarga el script: en 2G, las páginas con scripts de terceros insertados así cargaban el doble de lento. La especificación HTML lo desaconseja expresamente y permite al navegador no ejecutar esos scripts.",
+    "en": "It blocks the parser while the script downloads: on 2G, pages with third-party scripts injected this way loaded twice as slowly. The HTML spec explicitly discourages it and allows browsers not to run those scripts."
+   },
+   "certeza": "documentado",
+   "evidencia": [
+    {
+     "tipo": "web",
+     "url": "https://developer.chrome.com/blog/removing-document-write",
+     "titulo": "Intervening against document.write() (Chrome for Developers)",
+     "fecha": "2016-08-29",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "We will intervene to block injected scripts for 2G users tentatively starting in Chrome 54, which is estimated to be in a stable release for all users in mid-October 2016."
+    },
+    {
+     "tipo": "web",
+     "url": "https://html.spec.whatwg.org/multipage/dynamic-markup-insertion.html",
+     "titulo": "HTML Living Standard — Dynamic markup insertion",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "For all these reasons, use of this method is strongly discouraged."
+    },
+    {
+     "tipo": "web",
+     "url": "https://html.spec.whatwg.org/multipage/dynamic-markup-insertion.html",
+     "titulo": "HTML Living Standard — Dynamic markup insertion",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "User agents are explicitly allowed to avoid executing script elements inserted via this method."
+    },
+    {
+     "tipo": "web",
+     "url": "https://chromestatus.com/feature/5718547946799104",
+     "titulo": "Block the load of cross-origin, parser-blocking scripts inserted via document.write() for users on 2G (Chrome Platform Status)",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "For users on slow connections such as 2G, the performance penalty from third-party scripts loaded via document.write() is often so severe as to delay display of main page content for tens of seconds."
+    },
+    {
+     "tipo": "web",
+     "url": "https://chromiumdash.appspot.com/fetch_milestone_schedule?mstone=55",
+     "titulo": "Chromium Dash — calendario de la versión 55",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "\"stable_date\":\"2016-11-29T00:00:00\""
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2016-08",
+     "precision": "mes",
+     "registrado": "2026-10-02",
+     "estado": "antipatron",
+     "certeza": "documentado",
+     "evidencia": [
+      0,
+      1
+     ],
+     "nota": {
+      "es": "Chrome anuncia que bloqueará los scripts insertados con document.write para usuarios en 2G, a partir de Chrome 54 (previsto para mediados de octubre de 2016).",
+      "en": "Chrome announces it will block scripts injected via document.write for 2G users, starting with Chrome 54 (expected mid-October 2016)."
+     },
+     "tipo": "anuncio",
+     "para": "2016-10"
+    },
+    {
+     "fecha": "2016-11-29",
+     "precision": "dia",
+     "registrado": "2026-10-02",
+     "estado": "antipatron",
+     "certeza": "documentado",
+     "evidencia": [
+      3,
+      4
+     ],
+     "nota": {
+      "es": "Chrome 55 sale con el bloqueo activado por defecto para usuarios en 2G (la ficha de Chrome lo da en la 55, no en la 54 anunciada).",
+      "en": "Chrome 55 ships with the block enabled by default for 2G users (Chrome’s feature entry lists 55, not the announced 54)."
+     }
+    }
+   ],
+   "revisado": "2026-10-02",
+   "caduca": "2027-10-01"
+  },
+  {
+   "id": "domain-sharding",
+   "titulo": {
+    "es": "Repartir los recursos en varios subdominios (domain sharding) en un sitio servido por HTTP/2",
+    "en": "Spreading resources across several subdomains (domain sharding) on a site served over HTTP/2"
+   },
+   "area": "web",
+   "temas": [
+    "domain-sharding",
+    "http2",
+    "http-1-1",
+    "performance",
+    "connections"
+   ],
+   "estado": "antipatron",
+   "porque": {
+    "es": "Era un truco para HTTP/1.1, que limita las conexiones por dominio. HTTP/2 multiplexa todo en una sola conexión; repartir en dominios añade DNS, TCP y TLS y rompe la priorización entre recursos.",
+    "en": "It was a trick for HTTP/1.1, which limits connections per domain. HTTP/2 multiplexes everything over one connection; spreading across domains adds DNS, TCP and TLS and breaks prioritisation between resources."
+   },
+   "certeza": "documentado",
+   "evidencia": [
+    {
+     "tipo": "web",
+     "url": "https://www.rfc-editor.org/rfc/rfc7540",
+     "titulo": "RFC 7540 — Hypertext Transfer Protocol Version 2 (HTTP/2)",
+     "fecha": "2015-05",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "Clients SHOULD NOT open more than one HTTP/2 connection to a given host and port pair, where the host is derived from a URI, a selected alternative service [ALT-SVC], or a configured proxy."
+    },
+    {
+     "tipo": "web",
+     "url": "https://blog.cloudflare.com/http-2-for-web-developers/",
+     "titulo": "HTTP/2 For Web Developers (Cloudflare)",
+     "fecha": "2015-12-10",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "domain sharding breaks HTTP/2 stream prioritization because browsers can’t prioritize streams across multiple domains."
+    },
+    {
+     "tipo": "web",
+     "url": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Connection_management_in_HTTP_1.x",
+     "titulo": "Connection management in HTTP/1.x (MDN)",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "In HTTP/2, domain sharding is no longer useful: the HTTP/2 connection is able to handle parallel unprioritized requests very well. Domain sharding is even detrimental to performance."
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2015-05",
+     "precision": "mes",
+     "registrado": "2026-10-02",
+     "estado": "depende",
+     "certeza": "documentado",
+     "evidencia": [
+      0
+     ],
+     "nota": {
+      "es": "RFC 7540 (HTTP/2): una sola conexión por host y puerto, con todo multiplexado. El sharding sigue teniendo sentido solo con HTTP/1.1.",
+      "en": "RFC 7540 (HTTP/2): one connection per host and port, with everything multiplexed. Sharding only still makes sense with HTTP/1.1."
+     }
+    },
+    {
+     "fecha": "2015-12-10",
+     "precision": "dia",
+     "registrado": "2026-10-02",
+     "estado": "antipatron",
+     "certeza": "documentado",
+     "evidencia": [
+      1
+     ],
+     "nota": {
+      "es": "Cloudflare pide dejar el sharding con HTTP/2.",
+      "en": "Cloudflare advises dropping sharding with HTTP/2."
+     }
+    }
+   ],
+   "revisado": "2026-10-02",
+   "caduca": "2027-10-01"
+  },
+  {
+   "id": "escuchar-unload-para-guardar-estado",
+   "titulo": {
+    "es": "Escuchar el evento unload para guardar estado o enviar analítica",
+    "en": "Listening to the unload event to save state or send analytics"
+   },
+   "area": "web",
+   "temas": [
+    "unload",
+    "bfcache",
+    "analytics",
+    "page-lifecycle",
+    "events"
+   ],
+   "estado": "superada",
+   "superadaPor": "visibilitychange-para-guardar-estado",
+   "porque": {
+    "es": "unload no se dispara de forma fiable (sobre todo en móvil) e impide que la página entre en la caché de ida y vuelta (bfcache). Chrome lo está dejando de disparar por defecto.",
+    "en": "unload does not fire reliably (especially on mobile) and keeps the page out of the back/forward cache (bfcache). Chrome is turning it off by default."
+   },
+   "certeza": "documentado",
+   "evidencia": [
+    {
+     "tipo": "web",
+     "url": "https://web.dev/articles/bfcache",
+     "titulo": "Back/forward cache (web.dev)",
+     "fecha": "2023-05-25",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "The most important way to optimize for bfcache in all browsers is to never use the unload event. Ever!"
+    },
+    {
+     "tipo": "web",
+     "url": "https://developer.chrome.com/docs/web-platform/deprecating-unload",
+     "titulo": "Deprecating the unload event (Chrome for Developers)",
+     "fecha": "2023-08-10",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "The unload event will be gradually deprecated by gradually changing the default so that unload handlers stop firing on pages unless a page explicitly opts in to re-enable them."
+    },
+    {
+     "tipo": "web",
+     "url": "https://developer.mozilla.org/en-US/docs/Web/API/Window/unload_event",
+     "titulo": "Window: unload event (MDN)",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "Developers should avoid using this event."
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2023-05-25",
+     "precision": "dia",
+     "registrado": "2026-10-02",
+     "estado": "antipatron",
+     "certeza": "documentado",
+     "evidencia": [
+      0
+     ],
+     "nota": {
+      "es": "web.dev: nunca usar unload, porque deja la página fuera de la bfcache en todos los navegadores.",
+      "en": "web.dev: never use unload, because it keeps the page out of bfcache in every browser."
+     }
+    },
+    {
+     "fecha": "2023-08-10",
+     "precision": "dia",
+     "registrado": "2026-10-02",
+     "estado": "superada",
+     "certeza": "documentado",
+     "evidencia": [
+      1,
+      2
+     ],
+     "nota": {
+      "es": "Chrome publica el plan para dejar de disparar unload por defecto, por fases, y recomienda visibilitychange y pagehide.",
+      "en": "Chrome publishes its plan to stop firing unload by default, in phases, and recommends visibilitychange and pagehide."
+     }
+    }
+   ],
+   "revisado": "2026-10-02",
+   "enlaces": [
+    {
+     "nombre": "Chrome — calendario de la deprecación de unload",
+     "url": "https://developer.chrome.com/docs/web-platform/deprecating-unload"
+    }
+   ]
+  },
+  {
+   "id": "maquetar-con-flexbox-y-grid",
+   "titulo": {
+    "es": "Maquetar con Flexbox (una dimensión) y Grid (dos dimensiones)",
+    "en": "Laying out with Flexbox (one dimension) and Grid (two dimensions)"
+   },
+   "area": "web",
+   "temas": [
+    "layout",
+    "flexbox",
+    "grid",
+    "css",
+    "baseline"
+   ],
+   "estado": "vigente",
+   "porque": {
+    "es": "Son los sistemas de maquetación diseñados para eso, sin trucos de limpieza ni tablas. Flexbox es Baseline desde septiembre de 2015 y Grid desde octubre de 2017.",
+    "en": "They are the layout systems designed for the job, with no clearing hacks or tables. Flexbox has been Baseline since September 2015 and Grid since October 2017."
+   },
+   "certeza": "documentado",
+   "evidencia": [
+    {
+     "tipo": "web",
+     "url": "https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/flex",
+     "titulo": "flex (MDN)",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "It’s been available across browsers since September 2015."
+    },
+    {
+     "tipo": "web",
+     "url": "https://developer.mozilla.org/en-US/docs/Mozilla/Firefox/Releases/52",
+     "titulo": "Firefox 52 release notes for developers (MDN)",
+     "fecha": "2017-03-07",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "CSS Grids are implemented."
+    },
+    {
+     "tipo": "web",
+     "url": "https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/grid",
+     "titulo": "grid (MDN)",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "It’s been available across browsers since October 2017."
+    },
+    {
+     "tipo": "web",
+     "url": "https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/CSS_layout/Floats",
+     "titulo": "Floats (MDN, Learn web development)",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "With the advent of flexbox and grid it's now returned to its original purpose, as this article explains."
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2015-09",
+     "precision": "mes",
+     "registrado": "2026-10-02",
+     "estado": "vigente",
+     "certeza": "documentado",
+     "evidencia": [
+      0
+     ],
+     "nota": {
+      "es": "Flexbox llega a Baseline.",
+      "en": "Flexbox reaches Baseline."
+     }
+    },
+    {
+     "fecha": "2017-03-07",
+     "precision": "dia",
+     "registrado": "2026-10-02",
+     "estado": "vigente",
+     "certeza": "documentado",
+     "evidencia": [
+      1
+     ],
+     "nota": {
+      "es": "Firefox 52 sale con Grid; Chrome 57 lo sigue esa misma semana.",
+      "en": "Firefox 52 ships with Grid; Chrome 57 follows that same week."
+     }
+    },
+    {
+     "fecha": "2017-10",
+     "precision": "mes",
+     "registrado": "2026-10-02",
+     "estado": "vigente",
+     "certeza": "documentado",
+     "evidencia": [
+      2,
+      3
+     ],
+     "nota": {
+      "es": "Grid llega a Baseline.",
+      "en": "Grid reaches Baseline."
+     }
+    }
+   ],
+   "revisado": "2026-10-02",
+   "caduca": "2027-10-01",
+   "enlaces": [
+    {
+     "nombre": "MDN — flex (Baseline)",
+     "url": "https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/flex"
+    },
+    {
+     "nombre": "MDN — grid (Baseline)",
+     "url": "https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/grid"
+    }
+   ]
+  },
+  {
+   "id": "maquetar-con-float",
+   "titulo": {
+    "es": "Maquetar columnas con float (y clearfix)",
+    "en": "Building column layouts with float (and clearfix)"
+   },
+   "area": "web",
+   "temas": [
+    "layout",
+    "float",
+    "clearfix",
+    "css",
+    "flexbox",
+    "grid"
+   ],
+   "estado": "superada",
+   "superadaPor": "maquetar-con-flexbox-y-grid",
+   "porque": {
+    "es": "float se pensó para que el texto rodeara una imagen; se usó para columnas porque no había otra cosa. Con Flexbox y Grid en todos los navegadores (2015 y 2017), MDN lo llama técnica heredada.",
+    "en": "float was meant for wrapping text around an image; it was used for columns because there was nothing else. With Flexbox and Grid in every browser (2015 and 2017), MDN calls it a legacy technique."
+   },
+   "certeza": "documentado",
+   "evidencia": [
+    {
+     "tipo": "web",
+     "url": "https://www.w3.org/TR/1998/REC-CSS2-19980512/visuren.html",
+     "titulo": "Cascading Style Sheets, Level 2 — Visual formatting model (W3C Recommendation)",
+     "fecha": "1998-05-12",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "A float is a box that is shifted to the left or right on the current line."
+    },
+    {
+     "tipo": "web",
+     "url": "https://www.csszengarden.com/pages/about/",
+     "titulo": "CSS Zen Garden: About (Dave Shea)",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "Both the collaborative nature as well as the visual demonstration of CSS worked together to help drive home the argument that CSS-based design was finally ready for prime time."
+    },
+    {
+     "tipo": "web",
+     "url": "https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/CSS_layout/Floats",
+     "titulo": "Floats (MDN, Learn web development)",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "There are newer, better layout techniques available. Using floats in this way should be regarded as a legacy technique."
+    },
+    {
+     "tipo": "web",
+     "url": "https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/grid",
+     "titulo": "grid (MDN)",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "It’s been available across browsers since October 2017."
+    },
+    {
+     "tipo": "web",
+     "url": "https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/CSS_layout/Floats",
+     "titulo": "Floats (MDN, Learn web development)",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "Originally for floating images inside blocks of text, the float property became one of the most commonly used tools for creating multiple column layouts on webpages."
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "1998-05-12",
+     "precision": "dia",
+     "registrado": "2026-10-02",
+     "estado": "vigente",
+     "certeza": "documentado",
+     "evidencia": [
+      0
+     ],
+     "nota": {
+      "es": "CSS2 es Recomendación del W3C, con float y posicionamiento: maquetar con hojas de estilo pasa a ser posible.",
+      "en": "CSS2 becomes a W3C Recommendation, with float and positioning: laying out with style sheets becomes possible."
+     }
+    },
+    {
+     "fecha": "2003",
+     "precision": "aprox",
+     "registrado": "2026-10-02",
+     "estado": "vigente",
+     "certeza": "documentado",
+     "evidencia": [
+      1
+     ],
+     "nota": {
+      "es": "CSS Zen Garden demuestra que el diseño con CSS está listo. Año deducido de su propia página (no da fecha exacta); es la página del proyecto, no un estándar.",
+      "en": "CSS Zen Garden shows CSS-based design is ready. Year inferred from its own page (no exact date); it is the project’s page, not a standard."
+     }
+    },
+    {
+     "fecha": "2017-10",
+     "precision": "mes",
+     "registrado": "2026-10-02",
+     "estado": "superada",
+     "certeza": "documentado",
+     "evidencia": [
+      2,
+      3,
+      4
+     ],
+     "nota": {
+      "es": "Grid llega a Baseline (Flexbox ya lo era desde 2015): float para columnas queda como técnica heredada.",
+      "en": "Grid reaches Baseline (Flexbox had since 2015): float for columns becomes a legacy technique."
+     }
+    }
+   ],
+   "revisado": "2026-10-02"
+  },
+  {
+   "id": "maquetar-con-tablas",
+   "titulo": {
+    "es": "Maquetar la página con tablas HTML",
+    "en": "Laying out the page with HTML tables"
+   },
+   "area": "web",
+   "temas": [
+    "layout",
+    "tables",
+    "css",
+    "accessibility",
+    "semantics"
+   ],
+   "estado": "superada",
+   "superadaPor": "maquetar-con-float",
+   "porque": {
+    "es": "Las tablas son para datos: usadas para maquetar confunden a los lectores de pantalla y mezclan presentación y contenido. Desde 1999 los estándares del W3C piden hojas de estilo; WCAG 2 no lo prohíbe del todo, pero falla si la tabla no se entiende leída en orden.",
+    "en": "Tables are for data: used for layout they confuse screen readers and mix presentation with content. Since 1999 W3C standards ask for style sheets; WCAG 2 does not ban it outright, but fails it if the table makes no sense read in order."
+   },
+   "certeza": "documentado",
+   "evidencia": [
+    {
+     "tipo": "web",
+     "url": "https://www.w3.org/TR/WCAG10/",
+     "titulo": "Web Content Accessibility Guidelines 1.0 (W3C)",
+     "fecha": "1999-05-05",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "Do not use tables for layout unless the table makes sense when linearized."
+    },
+    {
+     "tipo": "web",
+     "url": "https://www.w3.org/TR/WCAG10/",
+     "titulo": "Web Content Accessibility Guidelines 1.0 (W3C)",
+     "fecha": "1999-05-05",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "Use style sheets to control layout and presentation."
+    },
+    {
+     "tipo": "web",
+     "url": "https://www.w3.org/TR/html401/struct/tables.html",
+     "titulo": "HTML 4.01 Specification — 11 Tables (W3C)",
+     "fecha": "1999-12-24",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "Tables should not be used purely as a means to layout document content as this may present problems when rendering to non-visual media."
+    },
+    {
+     "tipo": "web",
+     "url": "https://html.spec.whatwg.org/multipage/tables.html",
+     "titulo": "HTML Living Standard — Tabular data (WHATWG)",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "Tables must not be used as layout aids. Historically, some web authors have misused tables in HTML as a way to control their page layout."
+    },
+    {
+     "tipo": "web",
+     "url": "https://www.w3.org/WAI/WCAG22/Techniques/failures/F49",
+     "titulo": "F49: Failure of Success Criterion 1.3.2 due to using an HTML layout table that does not make sense when linearized (W3C)",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "Although WCAG 2 does not prohibit the use of layout tables, CSS-based layouts are recommended in order to retain the defined semantic meaning of the HTML table elements and to conform to the coding practice of separating presentation from content."
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "1999-05-05",
+     "precision": "dia",
+     "registrado": "2026-10-02",
+     "estado": "superada",
+     "certeza": "documentado",
+     "evidencia": [
+      0,
+      1
+     ],
+     "nota": {
+      "es": "WCAG 1.0: maquetar con hojas de estilo, y tablas de maquetación solo si se entienden linealizadas.",
+      "en": "WCAG 1.0: lay out with style sheets, and layout tables only if they make sense linearized."
+     }
+    },
+    {
+     "fecha": "1999-12-24",
+     "precision": "dia",
+     "registrado": "2026-10-02",
+     "estado": "superada",
+     "certeza": "documentado",
+     "evidencia": [
+      2
+     ],
+     "nota": {
+      "es": "HTML 4.01: las tablas no deben usarse solo para maquetar.",
+      "en": "HTML 4.01: tables should not be used purely for layout."
+     }
+    }
+   ],
+   "revisado": "2026-10-02"
+  },
+  {
+   "id": "multimedia-con-html-nativo",
+   "titulo": {
+    "es": "Hacer vídeo, animación e interactividad con HTML nativo (<video>, <canvas>)",
+    "en": "Doing video, animation and interactivity with native HTML (<video>, <canvas>)"
+   },
+   "area": "web",
+   "temas": [
+    "video",
+    "canvas",
+    "html5",
+    "flash",
+    "plugins"
+   ],
+   "estado": "vigente",
+   "porque": {
+    "es": "Funciona en todos los navegadores, también en móvil, sin instalar nada. En 2017, los usuarios diarios de Chrome de escritorio que visitaban sitios con Flash habían pasado de más del 80 % al 17 % en tres años.",
+    "en": "It works in every browser, mobile included, with nothing to install. In 2017, Chrome desktop daily users visiting sites with Flash had gone from over 80% to 17% in three years."
+   },
+   "certeza": "documentado",
+   "evidencia": [
+    {
+     "tipo": "web",
+     "url": "https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/video",
+     "titulo": "<video> (MDN)",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "It’s been available across browsers since July 2015."
+    },
+    {
+     "tipo": "web",
+     "url": "https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/canvas",
+     "titulo": "<canvas> (MDN)",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "It’s been available across browsers since July 2015."
+    },
+    {
+     "tipo": "web",
+     "url": "https://blog.chromium.org/2017/07/so-long-and-thanks-for-all-flash.html",
+     "titulo": "So long, and thanks for all the Flash (Chromium Blog)",
+     "fecha": "2017-07-25",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "HTML is faster, safer, and more power efficient than Flash and works across desktop and mobile."
+    },
+    {
+     "tipo": "web",
+     "url": "https://blog.chromium.org/2017/07/so-long-and-thanks-for-all-flash.html",
+     "titulo": "So long, and thanks for all the Flash (Chromium Blog)",
+     "fecha": "2017-07-25",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "Three years ago, over 80% of Chrome daily desktop users visited sites with Flash. Today only 17% of users visit sites with Flash"
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2015-07",
+     "precision": "mes",
+     "registrado": "2026-10-02",
+     "estado": "vigente",
+     "certeza": "documentado",
+     "evidencia": [
+      0,
+      1
+     ],
+     "nota": {
+      "es": "<video> y <canvas> llegan a Baseline.",
+      "en": "<video> and <canvas> reach Baseline."
+     }
+    },
+    {
+     "fecha": "2017-07-25",
+     "precision": "dia",
+     "registrado": "2026-10-02",
+     "estado": "vigente",
+     "certeza": "documentado",
+     "evidencia": [
+      2,
+      3
+     ],
+     "nota": {
+      "es": "Chrome lo da como el sustituto de Flash al anunciar su fin.",
+      "en": "Chrome names it the replacement for Flash when announcing its end."
+     }
+    }
+   ],
+   "revisado": "2026-10-02",
+   "caduca": "2027-10-01"
+  },
+  {
+   "id": "mutation-events-para-observar-el-dom",
+   "titulo": {
+    "es": "Observar cambios del DOM con Mutation Events (DOMNodeInserted, DOMSubtreeModified…)",
+    "en": "Watching DOM changes with Mutation Events (DOMNodeInserted, DOMSubtreeModified…)"
+   },
+   "area": "web",
+   "temas": [
+    "mutation-events",
+    "dom",
+    "domnodeinserted",
+    "mutationobserver",
+    "performance"
+   ],
+   "estado": "superada",
+   "superadaPor": "mutationobserver-para-observar-el-dom",
+   "porque": {
+    "es": "Penalizan el rendimiento; están deprecados desde 2011 y Chrome los desactivó por defecto en la versión 127 (julio de 2024).",
+    "en": "They hurt performance; deprecated since 2011, Chrome disabled them by default in version 127 (July 2024)."
+   },
+   "certeza": "documentado",
+   "evidencia": [
+    {
+     "tipo": "web",
+     "url": "https://developer.chrome.com/blog/mutation-events-deprecation",
+     "titulo": "Mutation events will be removed from Chrome (Chrome for Developers)",
+     "fecha": "2023-05-31",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "These events are a very old part of the DOM level 2 spec, and they have been deprecated since 2011. They were replaced by the MutationObserver interface, which has been supported in all modern browsers since 2013."
+    },
+    {
+     "tipo": "web",
+     "url": "https://developer.chrome.com/release-notes/127",
+     "titulo": "Chrome 127 release notes (Chrome for Developers)",
+     "fecha": "2024-07-23",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "Mutation event support will be disabled by default starting in Chrome 127."
+    },
+    {
+     "tipo": "web",
+     "url": "https://developer.mozilla.org/en-US/docs/Web/API/MutationEvent",
+     "titulo": "MutationEvent (MDN)",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "Mutation events negatively impact performance and they were selected for removal from the web as part of Interop 2025."
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2011",
+     "precision": "año",
+     "registrado": "2026-10-02",
+     "estado": "superada",
+     "certeza": "documentado",
+     "evidencia": [
+      0
+     ],
+     "nota": {
+      "es": "Deprecados en la especificación; los sustituye MutationObserver.",
+      "en": "Deprecated in the specification; replaced by MutationObserver."
+     }
+    },
+    {
+     "fecha": "2024-07-23",
+     "precision": "dia",
+     "registrado": "2026-10-02",
+     "estado": "superada",
+     "certeza": "documentado",
+     "evidencia": [
+      1
+     ],
+     "nota": {
+      "es": "Chrome 127 sale con ellos desactivados por defecto (con un periodo de prueba de deprecación para quien aún los necesite).",
+      "en": "Chrome 127 ships with them disabled by default (with a deprecation trial for those who still need them)."
+     }
+    },
+    {
+     "fecha": "2025",
+     "precision": "año",
+     "registrado": "2026-10-02",
+     "estado": "superada",
+     "certeza": "documentado",
+     "evidencia": [
+      2
+     ],
+     "nota": {
+      "es": "Interop 2025 los elige para retirarlos de la web en todos los navegadores.",
+      "en": "Interop 2025 selects them for removal from the web across browsers."
+     }
+    }
+   ],
+   "revisado": "2026-10-02"
+  },
+  {
+   "id": "mutationobserver-para-observar-el-dom",
+   "titulo": {
+    "es": "Observar cambios del DOM con MutationObserver",
+    "en": "Watching DOM changes with MutationObserver"
+   },
+   "area": "web",
+   "temas": [
+    "mutationobserver",
+    "dom",
+    "mutation-events"
+   ],
+   "estado": "vigente",
+   "porque": {
+    "es": "Es la API diseñada para sustituir a los Mutation Events. Está en todos los navegadores desde 2013 y es Baseline desde julio de 2015.",
+    "en": "It is the API designed to replace Mutation Events. In every browser since 2013, and Baseline since July 2015."
+   },
+   "certeza": "documentado",
+   "evidencia": [
+    {
+     "tipo": "web",
+     "url": "https://developer.mozilla.org/en-US/docs/Web/API/MutationObserver",
+     "titulo": "MutationObserver (MDN)",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "It is designed as a replacement for the older Mutation Events feature, which was part of the DOM3 Events specification."
+    },
+    {
+     "tipo": "web",
+     "url": "https://developer.chrome.com/blog/mutation-events-deprecation",
+     "titulo": "Mutation events will be removed from Chrome (Chrome for Developers)",
+     "fecha": "2023-05-31",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "They were replaced by the MutationObserver interface, which has been supported in all modern browsers since 2013."
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2013",
+     "precision": "año",
+     "registrado": "2026-10-02",
+     "estado": "vigente",
+     "certeza": "documentado",
+     "evidencia": [
+      1
+     ],
+     "nota": {
+      "es": "Disponible en todos los navegadores modernos.",
+      "en": "Available in all modern browsers."
+     }
+    },
+    {
+     "fecha": "2015-07",
+     "precision": "mes",
+     "registrado": "2026-10-02",
+     "estado": "vigente",
+     "certeza": "documentado",
+     "evidencia": [
+      0
+     ],
+     "nota": {
+      "es": "Baseline «ampliamente disponible».",
+      "en": "Baseline \"widely available\"."
+     }
+    }
+   ],
+   "revisado": "2026-10-02",
+   "caduca": "2027-10-01",
+   "enlaces": [
+    {
+     "nombre": "MDN — MutationObserver (Baseline)",
+     "url": "https://developer.mozilla.org/en-US/docs/Web/API/MutationObserver"
+    }
+   ]
+  },
+  {
+   "id": "plugins-flash-npapi-para-multimedia",
+   "titulo": {
+    "es": "Usar Flash u otros plugins (NPAPI) para vídeo, animación o interactividad",
+    "en": "Using Flash or other plugins (NPAPI) for video, animation or interactivity"
+   },
+   "area": "web",
+   "temas": [
+    "flash",
+    "npapi",
+    "plugins",
+    "video",
+    "canvas"
+   ],
+   "estado": "superada",
+   "superadaPor": "multimedia-con-html-nativo",
+   "porque": {
+    "es": "Chrome anunció en 2014 que quitaría los plugins NPAPI en septiembre de 2015, y Adobe dejó de dar soporte a Flash Player el 31 de diciembre de 2020 y bloqueó su contenido en enero de 2021. Lo sustituyen <video> y <canvas>.",
+    "en": "Chrome announced in 2014 it would remove NPAPI plugins in September 2015, and Adobe ended Flash Player support on 31 December 2020 and blocked its content in January 2021. <video> and <canvas> replace it."
+   },
+   "certeza": "documentado",
+   "evidencia": [
+    {
+     "tipo": "web",
+     "url": "https://blog.chromium.org/2014/11/the-final-countdown-for-npapi.html",
+     "titulo": "The Final Countdown for NPAPI (Chromium Blog)",
+     "fecha": "2014-11-24",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "In September 2015 we will remove the override and NPAPI support will be permanently removed from Chrome."
+    },
+    {
+     "tipo": "web",
+     "url": "https://blog.adobe.com/en/publish/2017/07/25/adobe-flash-update",
+     "titulo": "Flash & the Future of Interactive Content (Adobe)",
+     "fecha": "2017-07-25",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "Specifically, we will stop updating and distributing the Flash Player at the end of 2020 and encourage content creators to migrate any existing Flash content to these new open formats."
+    },
+    {
+     "tipo": "web",
+     "url": "https://www.adobe.com/products/flashplayer/end-of-life.html",
+     "titulo": "Adobe Flash Player End of Life",
+     "fecha": "2021-01-13",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "Adobe stopped supporting Flash Player beginning December 31, 2020 (“EOL Date”), as previously announced in July 2017."
+    },
+    {
+     "tipo": "web",
+     "url": "https://www.adobe.com/products/flashplayer/end-of-life.html",
+     "titulo": "Adobe Flash Player End of Life",
+     "fecha": "2021-01-13",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "Adobe blocked Flash content from running in Flash Player beginning January 12, 2021."
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2014-11-24",
+     "precision": "dia",
+     "registrado": "2026-10-02",
+     "estado": "superada",
+     "certeza": "documentado",
+     "evidencia": [
+      0
+     ],
+     "nota": {
+      "es": "Chrome anuncia que quitará NPAPI para siempre en septiembre de 2015.",
+      "en": "Chrome announces it will permanently remove NPAPI in September 2015."
+     },
+     "tipo": "anuncio",
+     "para": "2015-09"
+    },
+    {
+     "fecha": "2017-07-25",
+     "precision": "dia",
+     "registrado": "2026-10-02",
+     "estado": "superada",
+     "certeza": "documentado",
+     "evidencia": [
+      1
+     ],
+     "nota": {
+      "es": "Adobe anuncia el fin de Flash Player para finales de 2020 y pide migrar a formatos abiertos.",
+      "en": "Adobe announces the end of Flash Player at the end of 2020 and asks to migrate to open formats."
+     },
+     "tipo": "anuncio",
+     "para": "2020-12"
+    },
+    {
+     "fecha": "2020-12-31",
+     "precision": "dia",
+     "registrado": "2026-10-02",
+     "estado": "superada",
+     "certeza": "documentado",
+     "evidencia": [
+      2
+     ],
+     "nota": {
+      "es": "Fin del soporte de Flash Player.",
+      "en": "End of Flash Player support."
+     }
+    },
+    {
+     "fecha": "2021-01-12",
+     "precision": "dia",
+     "registrado": "2026-10-02",
+     "estado": "superada",
+     "certeza": "documentado",
+     "evidencia": [
+      3
+     ],
+     "nota": {
+      "es": "Adobe bloquea la ejecución de contenido Flash.",
+      "en": "Adobe blocks Flash content from running."
+     }
+    }
+   ],
+   "revisado": "2026-10-02"
+  },
+  {
+   "id": "polyfills-desde-un-servicio-de-terceros",
+   "titulo": {
+    "es": "Cargar los polyfills desde un servicio de terceros que los genera según el navegador",
+    "en": "Loading polyfills from a third-party service that generates them per browser"
+   },
+   "area": "web",
+   "temas": [
+    "polyfill",
+    "polyfill-io",
+    "supply-chain",
+    "sri",
+    "cdn",
+    "third-party"
+   ],
+   "estado": "antipatron",
+   "porque": {
+    "es": "El contenido cambia según el User-Agent, así que un solo hash de SRI no lo cubre y acabas confiando en quien controle el dominio. Con polyfill.io, el cambio de dueño se avisó en febrero de 2024 y el ataque se destapó en junio.",
+    "en": "The content changes with the User-Agent, so a single SRI hash does not cover it and you end up trusting whoever controls the domain. With polyfill.io, the change of ownership was flagged in February 2024 and the attack came to light in June."
+   },
+   "certeza": "documentado",
+   "evidencia": [
+    {
+     "tipo": "web",
+     "url": "https://github.com/polyfillpolyfill/polyfill-service/issues/487",
+     "titulo": "Subresource Integrity (polyfill-service, issue #487)",
+     "fecha": "2016-03-14",
+     "consultado": "2026-10-02",
+     "primaria": false,
+     "cita": "Financial-Times/polyfill-service sends a different content per User-Agent (and that's the point of the service), so for Subresource Integrity, website developers don't need a hash per URL, but per (URL, User-Agent) pair"
+    },
+    {
+     "tipo": "web",
+     "url": "https://community.fastly.com/t/new-options-for-polyfill-io-users/2540",
+     "titulo": "New options for polyfill.io users (Fastly Community)",
+     "fecha": "2024-02-28",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "Many users access it by linking to the `polyfill.io` service, which has recently changed ownership to a new party."
+    },
+    {
+     "tipo": "web",
+     "url": "https://blog.cloudflare.com/polyfill-io-now-available-on-cdnjs-reduce-your-supply-chain-risk/",
+     "titulo": "polyfill.io now available on cdnjs: reduce your supply chain risk (Cloudflare)",
+     "fecha": "2024-02-29",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "The concerns are that any website embedding a link to the original polyfill.io domain, will now be relying on Funnull to maintain and secure the underlying project to avoid the risk of a supply chain attack."
+    },
+    {
+     "tipo": "web",
+     "url": "https://sansec.io/research/polyfill-supply-chain-attack",
+     "titulo": "Polyfill supply chain attack hits 100K+ sites (Sansec)",
+     "fecha": "2024-06-25",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "The polyfill code is dynamically generated based on the HTTP headers, so multiple attack vectors are likely."
+    },
+    {
+     "tipo": "web",
+     "url": "https://blog.cloudflare.com/automatically-replacing-polyfill-io-links-with-cloudflares-mirror-for-a-safer-internet/",
+     "titulo": "Automatically replacing polyfill.io links with Cloudflare's mirror for a safer Internet (Cloudflare)",
+     "fecha": "2024-06-26",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "If any are found linking to polyfill.io, we rewrite the src attribute to link to our mirror instead."
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2016-03-14",
+     "precision": "dia",
+     "registrado": "2026-10-02",
+     "estado": "depende",
+     "certeza": "documentado",
+     "evidencia": [
+      0
+     ],
+     "nota": {
+      "es": "En el repositorio del proyecto, un usuario explica que SRI no encaja con un servicio que sirve contenido distinto por navegador, y un colaborador le da la razón.",
+      "en": "In the project repository, a user explains that SRI does not fit a service that serves different content per browser, and a contributor agrees."
+     }
+    },
+    {
+     "fecha": "2024-02-28",
+     "precision": "dia",
+     "registrado": "2026-10-02",
+     "estado": "antipatron",
+     "certeza": "documentado",
+     "evidencia": [
+      1,
+      2
+     ],
+     "nota": {
+      "es": "Fastly y Cloudflare avisan de que el dominio polyfill.io ha cambiado de dueño y ofrecen alternativas.",
+      "en": "Fastly and Cloudflare warn that the polyfill.io domain has changed owner and offer alternatives."
+     }
+    },
+    {
+     "fecha": "2024-06-25",
+     "precision": "dia",
+     "registrado": "2026-10-02",
+     "estado": "antipatron",
+     "certeza": "documentado",
+     "evidencia": [
+      3
+     ],
+     "nota": {
+      "es": "Sansec publica que el servicio inyecta código malicioso.",
+      "en": "Sansec reports that the service injects malicious code."
+     }
+    },
+    {
+     "fecha": "2024-06-26",
+     "precision": "dia",
+     "registrado": "2026-10-02",
+     "estado": "antipatron",
+     "certeza": "documentado",
+     "evidencia": [
+      4
+     ],
+     "nota": {
+      "es": "Cloudflare reescribe automáticamente los enlaces a polyfill.io hacia su réplica.",
+      "en": "Cloudflare automatically rewrites polyfill.io links to its mirror."
+     }
+    }
+   ],
+   "revisado": "2026-10-02",
+   "caduca": "2027-10-01"
+  },
+  {
+   "id": "prefijos-de-fabricante-para-funciones-nuevas",
+   "titulo": {
+    "es": "Escribir prefijos de fabricante (-webkit-…) para usar funciones CSS nuevas",
+    "en": "Writing vendor prefixes (-webkit-…) to use new CSS features"
+   },
+   "area": "web",
+   "temas": [
+    "vendor-prefixes",
+    "css",
+    "webkit",
+    "feature-flags"
+   ],
+   "estado": "innecesaria",
+   "porque": {
+    "es": "Los motores de Chrome y Safari dejaron de lanzar funciones nuevas con prefijo: las experimentales van sin prefijo detrás de un flag (Blink desde 2013, WebKit desde 2016). Los prefijos que ya existían se mantienen solo por compatibilidad.",
+    "en": "The Chrome and Safari engines stopped shipping new features with prefixes: experimental ones go unprefixed behind a flag (Blink since 2013, WebKit since 2016). Existing prefixes remain only for compatibility."
+   },
+   "certeza": "documentado",
+   "evidencia": [
+    {
+     "tipo": "web",
+     "url": "https://www.chromium.org/blink/developer-faq/",
+     "titulo": "Blink Developer FAQ (The Chromium Projects)",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "As of today, Chrome is adopting a policy on vendor prefixes, one that is similar to Mozilla's recently announced policy. In short: we won't use vendor prefixes for new features."
+    },
+    {
+     "tipo": "web",
+     "url": "https://blog.chromium.org/2013/04/blink-rendering-engine-for-chromium.html",
+     "titulo": "Blink: A rendering engine for the Chromium project (Chromium Blog)",
+     "fecha": "2013-04-03",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "so today, we are introducing Blink, a new open source rendering engine based on WebKit."
+    },
+    {
+     "tipo": "web",
+     "url": "https://webkit.org/blog/6131/updating-our-prefixing-policy/",
+     "titulo": "Updating Our Prefixing Policy (WebKit)",
+     "fecha": "2016-04-26",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "So, WebKit’s new policy is to implement experimental features unprefixed, behind a runtime flag."
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2013-04",
+     "precision": "aprox",
+     "registrado": "2026-10-02",
+     "estado": "depende",
+     "certeza": "documentado",
+     "evidencia": [
+      0,
+      1
+     ],
+     "nota": {
+      "es": "Blink nace con la política de no prefijar funciones nuevas; WebKit (Safari) sigue prefijando. Fecha del anuncio de Blink; la FAQ que lo dice no lleva fecha propia.",
+      "en": "Blink launches with a no-prefix policy for new features; WebKit (Safari) keeps prefixing. Date of the Blink announcement; the FAQ saying so has no date of its own."
+     }
+    },
+    {
+     "fecha": "2016-04-26",
+     "precision": "dia",
+     "registrado": "2026-10-02",
+     "estado": "innecesaria",
+     "certeza": "documentado",
+     "evidencia": [
+      2
+     ],
+     "nota": {
+      "es": "WebKit adopta la misma política: funciones experimentales sin prefijo, detrás de un flag.",
+      "en": "WebKit adopts the same policy: experimental features unprefixed, behind a flag."
+     }
+    }
+   ],
+   "revisado": "2026-10-02",
+   "caduca": "2027-10-01"
+  },
+  {
+   "id": "scripts-de-terceros-con-sri-o-autoalojados",
+   "titulo": {
+    "es": "Fijar los scripts de terceros con SRI (versión concreta + hash) o alojarlos uno mismo",
+    "en": "Pinning third-party scripts with SRI (exact version + hash) or self-hosting them"
+   },
+   "area": "web",
+   "temas": [
+    "sri",
+    "subresource-integrity",
+    "cdn",
+    "supply-chain",
+    "self-hosting",
+    "third-party"
+   ],
+   "estado": "vigente",
+   "porque": {
+    "es": "Con SRI el navegador se niega a ejecutar un fichero que no coincide con el hash; alojándolo tú, el tercero desaparece de la ecuación. SRI solo sirve si el fichero es siempre el mismo: con un servicio que genera contenido distinto por navegador no basta un hash.",
+    "en": "With SRI the browser refuses to run a file that does not match the hash; self-hosting removes the third party altogether. SRI only works if the file never changes: with a service that generates different content per browser, one hash is not enough."
+   },
+   "certeza": "documentado",
+   "evidencia": [
+    {
+     "tipo": "web",
+     "url": "https://www.w3.org/TR/2016/REC-SRI-20160623/",
+     "titulo": "Subresource Integrity (W3C Recommendation)",
+     "fecha": "2016-06-23",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "This specification defines a mechanism by which user agents may verify that a fetched resource has been delivered without unexpected manipulation."
+    },
+    {
+     "tipo": "web",
+     "url": "https://developer.mozilla.org/en-US/docs/Web/Security/Defenses/Subresource_Integrity",
+     "titulo": "Subresource Integrity (MDN)",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "if an attacker gains control of the third-party host, then they can inject arbitrary malicious content into its files (or replace the files completely). This is referred to as a supply chain attack."
+    },
+    {
+     "tipo": "web",
+     "url": "https://github.com/polyfillpolyfill/polyfill-service/issues/487",
+     "titulo": "Subresource Integrity (polyfill-service, issue #487)",
+     "fecha": "2016-03-14",
+     "consultado": "2026-10-02",
+     "primaria": false,
+     "cita": "Financial-Times/polyfill-service sends a different content per User-Agent (and that's the point of the service), so for Subresource Integrity, website developers don't need a hash per URL, but per (URL, User-Agent) pair"
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2016-06-23",
+     "precision": "dia",
+     "registrado": "2026-10-02",
+     "estado": "vigente",
+     "certeza": "documentado",
+     "evidencia": [
+      0
+     ],
+     "nota": {
+      "es": "SRI es Recomendación del W3C.",
+      "en": "SRI becomes a W3C Recommendation."
+     }
+    }
+   ],
+   "revisado": "2026-10-02",
+   "caduca": "2027-10-01"
+  },
+  {
+   "id": "scripts-de-terceros-sin-sri",
+   "titulo": {
+    "es": "Cargar scripts de un CDN o servicio de terceros sin Subresource Integrity",
+    "en": "Loading scripts from a third-party CDN or service without Subresource Integrity"
+   },
+   "area": "web",
+   "temas": [
+    "sri",
+    "subresource-integrity",
+    "cdn",
+    "supply-chain",
+    "third-party",
+    "polyfill-io"
+   ],
+   "estado": "antipatron",
+   "porque": {
+    "es": "Si alguien toma el control del servidor de terceros, ejecuta lo que quiera en tu página. En junio de 2024, el dominio de polyfill.io, ya en otras manos, sirvió código malicioso a más de 100 000 sitios.",
+    "en": "If someone takes over the third-party host, they run whatever they want on your page. In June 2024 the polyfill.io domain, by then under new ownership, served malicious code to over 100,000 sites."
+   },
+   "certeza": "documentado",
+   "evidencia": [
+    {
+     "tipo": "web",
+     "url": "https://www.w3.org/TR/2016/REC-SRI-20160623/",
+     "titulo": "Subresource Integrity (W3C Recommendation)",
+     "fecha": "2016-06-23",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "This specification defines a mechanism by which user agents may verify that a fetched resource has been delivered without unexpected manipulation."
+    },
+    {
+     "tipo": "web",
+     "url": "https://developer.mozilla.org/en-US/docs/Web/Security/Defenses/Subresource_Integrity",
+     "titulo": "Subresource Integrity (MDN)",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "if an attacker gains control of the third-party host, then they can inject arbitrary malicious content into its files (or replace the files completely). This is referred to as a supply chain attack."
+    },
+    {
+     "tipo": "web",
+     "url": "https://sansec.io/research/polyfill-supply-chain-attack",
+     "titulo": "Polyfill supply chain attack hits 100K+ sites (Sansec)",
+     "fecha": "2024-06-25",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "The new Chinese owner of the popular Polyfill JS project injects malware into more than 100 thousand sites."
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2016-06-23",
+     "precision": "dia",
+     "registrado": "2026-10-02",
+     "estado": "antipatron",
+     "certeza": "documentado",
+     "evidencia": [
+      0
+     ],
+     "nota": {
+      "es": "SRI es Recomendación del W3C: el navegador puede comprobar el hash de lo que descarga.",
+      "en": "SRI becomes a W3C Recommendation: browsers can check the hash of what they download."
+     }
+    },
+    {
+     "fecha": "2024-06-25",
+     "precision": "dia",
+     "registrado": "2026-10-02",
+     "estado": "antipatron",
+     "certeza": "documentado",
+     "evidencia": [
+      2
+     ],
+     "nota": {
+      "es": "Sansec publica el ataque a la cadena de suministro de polyfill.io: más de 100 000 sitios afectados.",
+      "en": "Sansec publishes the polyfill.io supply-chain attack: over 100,000 sites affected."
+     }
+    }
+   ],
+   "revisado": "2026-10-02",
+   "caduca": "2027-10-01"
+  },
+  {
+   "id": "service-worker-para-funcionar-sin-conexion",
+   "titulo": {
+    "es": "Hacer que la web funcione sin conexión con un service worker",
+    "en": "Making a site work offline with a service worker"
+   },
+   "area": "web",
+   "temas": [
+    "service-worker",
+    "offline",
+    "pwa",
+    "cache",
+    "appcache"
+   ],
+   "estado": "vigente",
+   "porque": {
+    "es": "Es el sustituto oficial de AppCache: en vez de un manifiesto que adivina qué cachear, el sitio decide por código qué hacer con cada petición.",
+    "en": "It is the official replacement for AppCache: instead of a manifest that guesses what to cache, the site decides in code what to do with each request."
+   },
+   "certeza": "documentado",
+   "evidencia": [
+    {
+     "tipo": "web",
+     "url": "https://github.com/whatwg/html/commit/1b438067d84da2ee95988842cdd8fe2655444936",
+     "titulo": "Deprecate <keygen> and appcache (WHATWG HTML, commit)",
+     "fecha": "2015-08-28",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "Appcache is superseded by service workers."
+    },
+    {
+     "tipo": "web",
+     "url": "https://web.dev/articles/appcache-removal",
+     "titulo": "Preparing for AppCache removal (web.dev)",
+     "fecha": "2020-05-18",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "Service workers, which are widely supported in current browsers, offer an alternative to providing the offline experience that AppCache had offered."
+    },
+    {
+     "tipo": "web",
+     "url": "https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API",
+     "titulo": "Service Worker API (MDN)",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "Unlike previous attempts in this area such as AppCache, service workers don't make assumptions about what you are trying to do, but then break when those assumptions are not exactly right."
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2015-08-28",
+     "precision": "dia",
+     "registrado": "2026-10-02",
+     "estado": "vigente",
+     "certeza": "documentado",
+     "evidencia": [
+      0
+     ],
+     "nota": {
+      "es": "La especificación HTML los nombra sustitutos de AppCache.",
+      "en": "The HTML spec names them the replacement for AppCache."
+     }
+    },
+    {
+     "fecha": "2020-05-18",
+     "precision": "dia",
+     "registrado": "2026-10-02",
+     "estado": "vigente",
+     "certeza": "documentado",
+     "evidencia": [
+      1
+     ],
+     "nota": {
+      "es": "Con la retirada de AppCache, Chrome los da como la alternativa, ya con soporte amplio.",
+      "en": "With AppCache being removed, Chrome points to them as the alternative, by then widely supported."
+     }
+    }
+   ],
+   "revisado": "2026-10-02",
+   "caduca": "2027-10-01"
+  },
+  {
+   "id": "servir-web-por-http-sin-tls",
+   "titulo": {
+    "es": "Servir un sitio web por HTTP sin TLS",
+    "en": "Serving a website over plain HTTP without TLS"
+   },
+   "area": "web",
+   "temas": [
+    "http",
+    "https",
+    "tls",
+    "not-secure"
+   ],
+   "estado": "antipatron",
+   "porque": {
+    "es": "Desde julio de 2018 Chrome marca todo sitio HTTP como «No seguro» (en febrero de ese año, más del 68 % de su tráfico en Android y Windows ya iba cifrado). Y en 2025 anunció que pediría permiso antes de abrir por HTTP un sitio público.",
+    "en": "Since July 2018 Chrome labels every HTTP site \"Not secure\" (in February that year, over 68% of its traffic on Android and Windows was already encrypted). And in 2025 it announced it would ask before opening a public site over HTTP."
+   },
+   "certeza": "documentado",
+   "evidencia": [
+    {
+     "tipo": "web",
+     "url": "https://blog.chromium.org/2018/02/a-secure-web-is-here-to-stay.html",
+     "titulo": "A secure web is here to stay (Chromium Blog)",
+     "fecha": "2018-02-08",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "Beginning in July 2018 with the release of Chrome 68, Chrome will mark all HTTP sites as “not secure”."
+    },
+    {
+     "tipo": "web",
+     "url": "https://blog.google/products-and-platforms/products/chrome/milestone-chrome-security-marking-http-not-secure/",
+     "titulo": "A milestone for Chrome security: marking HTTP as “not secure” (Google)",
+     "fecha": "2018-07-24",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "Starting today, we’re rolling out these changes to all Chrome users."
+    },
+    {
+     "tipo": "web",
+     "url": "https://blog.google/security/https-by-defau/",
+     "titulo": "HTTPS by default (Google)",
+     "fecha": "2025-10-28",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "One year from now, with the release of Chrome 154 in October 2026, we will change the default settings of Chrome to enable “Always Use Secure Connections”."
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2018-07-24",
+     "precision": "dia",
+     "registrado": "2026-10-02",
+     "estado": "antipatron",
+     "certeza": "documentado",
+     "evidencia": [
+      0,
+      1
+     ],
+     "nota": {
+      "es": "Chrome 68 empieza a marcar todos los sitios HTTP como «No seguro» (anunciado en febrero).",
+      "en": "Chrome 68 starts marking all HTTP sites as \"Not secure\" (announced in February)."
+     }
+    },
+    {
+     "fecha": "2025-10-28",
+     "precision": "dia",
+     "registrado": "2026-10-02",
+     "estado": "antipatron",
+     "certeza": "documentado",
+     "evidencia": [
+      2
+     ],
+     "nota": {
+      "es": "Chrome anuncia «Always Use Secure Connections» activado por defecto con Chrome 154 (previsto para octubre de 2026): pedirá permiso antes de abrir por HTTP un sitio público que no se haya visitado hace poco.",
+      "en": "Chrome announces \"Always Use Secure Connections\" on by default with Chrome 154 (planned for October 2026): it will ask before opening over HTTP a public site not visited recently."
+     },
+     "tipo": "anuncio",
+     "para": "2026-10"
+    }
+   ],
+   "revisado": "2026-10-02",
+   "caduca": "2026-12-01"
+  },
+  {
+   "id": "visibilitychange-para-guardar-estado",
+   "titulo": {
+    "es": "Guardar estado y enviar analítica al pasar la página a hidden (visibilitychange), con pagehide para la navegación",
+    "en": "Saving state and sending analytics when the page becomes hidden (visibilitychange), with pagehide for navigation"
+   },
+   "area": "web",
+   "temas": [
+    "visibilitychange",
+    "pagehide",
+    "sendbeacon",
+    "bfcache",
+    "analytics",
+    "page-lifecycle"
+   ],
+   "estado": "vigente",
+   "porque": {
+    "es": "El paso a hidden es lo último que la página puede observar de forma fiable (cambio de pestaña, cierre, cambio de app en el móvil) y no la saca de la bfcache, al contrario que unload.",
+    "en": "Becoming hidden is the last thing a page can reliably observe (tab switch, close, app switch on mobile) and, unlike unload, it does not take the page out of bfcache."
+   },
+   "certeza": "documentado",
+   "evidencia": [
+    {
+     "tipo": "web",
+     "url": "https://developer.chrome.com/docs/web-platform/deprecating-unload",
+     "titulo": "Deprecating the unload event (Chrome for Developers)",
+     "fecha": "2023-08-10",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "Consider the hidden state the last reliable time to save app and user data."
+    },
+    {
+     "tipo": "web",
+     "url": "https://developer.mozilla.org/en-US/docs/Web/API/Document/visibilitychange_event",
+     "titulo": "Document: visibilitychange event (MDN)",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "Transitioning to hidden is the last event that's reliably observable by the page, so developers should treat it as the likely end of the user's session (for example, for sending analytics data)."
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2023-08-10",
+     "precision": "dia",
+     "registrado": "2026-10-02",
+     "estado": "vigente",
+     "certeza": "documentado",
+     "evidencia": [
+      0,
+      1
+     ],
+     "nota": {
+      "es": "Chrome, al deprecar unload, recomienda en su lugar visibilitychange (hidden) para guardar datos y pagehide para la navegación.",
+      "en": "Chrome, when deprecating unload, recommends visibilitychange (hidden) to save data and pagehide for navigation instead."
+     }
+    }
+   ],
+   "revisado": "2026-10-02",
+   "caduca": "2027-10-01"
+  },
+  {
+   "id": "xhr-sincrono-en-el-hilo-principal",
+   "titulo": {
+    "es": "Hacer peticiones XMLHttpRequest síncronas en el hilo principal",
+    "en": "Making synchronous XMLHttpRequest calls on the main thread"
+   },
+   "area": "web",
+   "temas": [
+    "xhr",
+    "xmlhttprequest",
+    "synchronous",
+    "main-thread",
+    "fetch"
+   ],
+   "estado": "antipatron",
+   "porque": {
+    "es": "Congela la página hasta que llega la respuesta. La especificación prohíbe usarlo fuera de los workers y lo da por «en proceso de eliminación» desde 2014. Sigue funcionando: no se ha quitado.",
+    "en": "It freezes the page until the response arrives. The spec forbids it outside workers and has called it \"in the process of being removed\" since 2014. It still works: it has not been removed."
+   },
+   "certeza": "documentado",
+   "evidencia": [
+    {
+     "tipo": "web",
+     "url": "https://xhr.spec.whatwg.org/",
+     "titulo": "XMLHttpRequest Standard (WHATWG)",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "Developers must not pass false for the async argument when the current global object is a Window object."
+    },
+    {
+     "tipo": "web",
+     "url": "https://github.com/whatwg/xhr/commit/575999ae",
+     "titulo": "Add a warning sign for synchronous usage of the XMLHttpRequest API (WHATWG XHR, commit)",
+     "fecha": "2014-02-07",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "Add a warning sign for synchronous usage of the XMLHttpRequest API"
+    },
+    {
+     "tipo": "web",
+     "url": "https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest_API/Synchronous_and_Asynchronous_Requests",
+     "titulo": "Synchronous and asynchronous requests (MDN)",
+     "consultado": "2026-10-02",
+     "primaria": true,
+     "cita": "Synchronous XHR is now deprecated and should be avoided in favor of asynchronous requests."
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2014-02-07",
+     "precision": "dia",
+     "registrado": "2026-10-02",
+     "estado": "antipatron",
+     "certeza": "documentado",
+     "evidencia": [
+      1
+     ],
+     "nota": {
+      "es": "La especificación de WHATWG añade el aviso contra el XHR síncrono en el hilo principal.",
+      "en": "The WHATWG spec adds the warning against synchronous XHR on the main thread."
+     }
+    }
+   ],
+   "revisado": "2026-10-02",
+   "caduca": "2027-10-01"
+  }
+ ]
+}

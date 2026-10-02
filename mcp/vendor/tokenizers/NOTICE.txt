@@ -1,0 +1,15 @@
+Tokenizers bundled with @jarroba/mcp for `count_tokens`
+
+Downloaded from Hugging Face at a pinned revision by mcp/scripts/vendor-tokenizers.mjs.
+
+------------------------------------------------------------------------------
+qwen3: tokenizer of Qwen/Qwen3-0.6B
+  https://huggingface.co/Qwen/Qwen3-0.6B/tree/c1899de289a04d12100db370d81485cdf75e47ca
+  License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
+  sha256 of qwen3.json.br: 0afd523002bb1e7338adbd30657e2531ae1349d652eb665bad61ae6f192406e1
+
+------------------------------------------------------------------------------
+mistral-v3: tokenizer of mistralai/Mistral-7B-Instruct-v0.3
+  https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.3/tree/c170c708c41dac9275d15a8fff4eca08d52bab71
+  License: Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)
+  sha256 of mistral-v3.json.br: 54437d03906b430e166b024b1c3fa95fdcda654ceb46630880de277f82ee84ba

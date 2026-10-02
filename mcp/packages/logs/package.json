@@ -1,0 +1,38 @@
+{
+  "name": "@jarroba/mcp-logs",
+  "version": "0.1.7",
+  "type": "module",
+  "description": "MCP server (stdio, local) that lets an AI read a log file it could never fit in its context: a 200 MB CI log. Detects the format, counts EVENTS (a 40-line stack trace is one), resolves root causes, groups lines into templates, answers when it started, and orders rotated logs by time. 11 tools, ~4.8k tokens of context.",
+  "keywords": [
+    "mcp",
+    "modelcontextprotocol",
+    "logs",
+    "log-analysis",
+    "stacktrace",
+    "observability",
+    "ci",
+    "claude",
+    "cursor"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Invarato/jarroba-mcp.git",
+    "directory": "mcp/packages/logs"
+  },
+  "bin": {
+    "jarroba-mcp-logs": "dist/logs.mjs"
+  },
+  "files": [
+    "dist",
+    "LICENSE"
+  ],
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "zod": "^3.23.0"
+  },
+  "mcpName": "io.github.Invarato/jarroba-tools-logs",
+  "scripts": {
+    "prepublishOnly": "cd ../.. && node build.mjs"
+  }
+}
