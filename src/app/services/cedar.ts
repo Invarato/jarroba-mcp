@@ -14,6 +14,12 @@ export interface MotorCedar {
         type: "failure";
         errors: ErrorCedar[];
     };
+    checkParseEntities?(llamada: unknown): {
+        type: "success";
+    } | {
+        type: "failure";
+        errors: ErrorCedar[];
+    };
     isAuthorized(llamada: unknown): {
         type: "success";
         response: {
@@ -131,4 +137,10 @@ export function decidirCedar(cedar: MotorCedar, conjunto: ConjuntoCedar, entidad
         decidieron: diagnostics.reason,
         erroresEvaluacion: diagnostics.errors.map(e => ({ id: e.policyId, mensaje: texto(e.error) })),
     };
+}
+export function validarEntidadesCedar(cedar: MotorCedar, entidades: unknown[], esquema?: string): string[] {
+    if (!esquema?.trim() || !cedar.checkParseEntities)
+        return [];
+    const r = cedar.checkParseEntities({ entities: entidades, schema: esquema });
+    return r.type === "failure" ? r.errors.map(texto) : [];
 }

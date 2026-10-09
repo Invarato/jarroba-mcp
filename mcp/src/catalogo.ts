@@ -91,11 +91,14 @@ export const DOMINIOS: Record<Dominio, {
             "log_profile_check",
             "log_profile_suggest"
         ] },
-    queue: { titulo: "colas y dimensionado", tools: [
+    queue: { titulo: "colas, dimensionado y br\u00F3keres de mensajes", tools: [
             "queue_analyze",
             "queue_size",
             "queue_loss",
-            "queue_simulate"
+            "queue_simulate",
+            "rabbit_route",
+            "kafka_partition",
+            "kafka_assign"
         ] },
     project: { titulo: "taller de proyecto", tools: [
             "make_simulate",
@@ -136,7 +139,10 @@ export const DOMINIOS: Record<Dominio, {
             "bond_energy",
             "band_formation",
             "coulomb_blockade",
-            "gate_geometry"
+            "gate_geometry",
+            "chem_ph",
+            "chem_titration",
+            "chem_solubility"
         ] },
     access: { titulo: "identidad, RBAC y gobernanza (Azure/AWS/GCP/K8s)", tools: [
             "access_check",

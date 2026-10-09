@@ -14,4 +14,4 @@ function cargar(): typeof Cedar {
     throw ultimo;
 }
 export const cedar = cargar();
-export { prepararCedar, decidirCedar } from "../../src/app/services/cedar";
+export { prepararCedar, decidirCedar, validarEntidadesCedar } from "../../src/app/services/cedar";

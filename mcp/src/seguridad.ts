@@ -555,8 +555,14 @@ export const ESTADO_PRACTICA: Record<Estado, string> = {
     depende: "depends",
 };
 export const CERTEZA_PRACTICA: Record<Certeza, string> = { medido: "measured", documentado: "documented", consenso: "consensus", opinion: "opinion" };
-const AREA_PRACTICA: Record<Area, string> = { ia: "ai", desarrollo: "development", web: "web", seguridad: "security", datos: "data", infra: "infrastructure" };
+export const AREA_PRACTICA = { ia: "ai", desarrollo: "development", web: "web", seguridad: "security", datos: "data", infra: "infrastructure" } as const satisfies Record<Area, string>;
+export const AREA_PRACTICA_ES = Object.fromEntries(Object.entries(AREA_PRACTICA).map(([es, en]) => [en, es])) as Record<(typeof AREA_PRACTICA)[Area], Area>;
 const PRECISION: Record<Precision, string> = { dia: "day", mes: "month", año: "year", aprox: "approximate" };
+export const indicePracticasEn = (l: {
+    id: string;
+    practice: string;
+    verdict: Estado;
+}[]) => l.map((p) => ({ ...p, verdict: ESTADO_PRACTICA[p.verdict] }));
 export function practicasEn(r: RespuestaConsulta) {
     if (!r.found)
         return r;
@@ -567,8 +573,5 @@ export function practicasEn(r: RespuestaConsulta) {
             certainty: CERTEZA_PRACTICA[p.certainty],
             cases: p.cases?.map((c) => ({ ...c, verdict: ESTADO_PRACTICA[c.verdict] })),
             changesSince: p.changesSince?.map((h) => ({ ...h, precision: PRECISION[h.precision], verdict: ESTADO_PRACTICA[h.verdict] })),
-            sources: p.sources.map(({ measuredIn, ...s }) => (measuredIn !== undefined
-                ? { measuredBy: "Jarroba Tools", details: `https://jarroba.com/tools/en/practices?q=${encodeURIComponent(p.practice)}`, date: s.date }
-                : s)),
         })) };
 }

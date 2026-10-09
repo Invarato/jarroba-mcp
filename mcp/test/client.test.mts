@@ -801,7 +801,7 @@ const kafka = JSON.stringify({ archsim: 1, nodes: [
 const asV = await call("archsim_validate", { archsim: kafka });
 check("archsim_validate: a valid document is ok and summarised", asV.o?.ok === true && asV.o.summary.nodes === 4 && asV.o.summary.byKind.queue === 1, asV.o);
 const asVBad = await call("archsim_validate", { archsim: JSON.stringify({ archsim: 1, nodes: [{ id: "x", kind: "spaceship" }] }) });
-check("archsim_validate: an unknown kind is reported, not thrown", asVBad.o?.ok === false && /spaceship/.test(asVBad.o.error), asVBad.o);
+check("archsim_validate: an unknown kind is reported in English with its code, not thrown", asVBad.o?.ok === false && /^Unknown node kind: "spaceship"/.test(asVBad.o.error) && asVBad.o.code === "kind", asVBad.o);
 const asS1 = await call("archsim_simulate", { archsim: kafka });
 const asQ = asS1.o?.steady?.queues?.[0];
 check("archsim_simulate: the queue is an async boundary \u2014 the DB gets what it can take, the backlog grows in Kafka", asQ?.queue === "Kafka" && Math.abs(asQ.drainCap - 400) < 1 && asQ.fullInSec > 0
@@ -1236,6 +1236,10 @@ action view appliesTo { principal: [User], resource: [Doc, Folder] };`;
     check("cedar_check: con esquema, el atributo inventado \u00ABsecreto\u00BB es un error de validaci\u00F3n", (val?.validation?.errors ?? []).length > 0, val?.validation);
     const sinHas = (await call("cedar_check", { policies: POL, schema: ESQ })).o;
     check("cedar_check: `resource.secret` sin `has`, con Folder posible \u2192 error de validaci\u00F3n en \u00ABnada-secreto\u00BB", (sinHas?.validation?.errors ?? []).some((e: any) => e.id === "nada-secreto" && /Folder/.test(e.error)), sinHas?.validation);
+    const entMal = (await call("cedar_check", { policies: POL, schema: ESQ, entities: [{ uid: { type: "Doc", id: "x" }, attrs: { secret: "yes" }, parents: [] }] })).o;
+    check("cedar_check: una entidad que no cuadra con el esquema (secret como texto) \u2192 entityErrors aparte", entMal?.entityErrors?.length > 0 && /secret/.test(JSON.stringify(entMal.entityErrors)), entMal?.entityErrors);
+    const entBien = (await call("cedar_check", { policies: POL, schema: ESQ, entities: ENT })).o;
+    check("cedar_check: entidades que cuadran \u2192 sin entityErrors", entBien && entBien.entityErrors === undefined, entBien?.entityErrors);
     const ok2 = (await call("cedar_check", { policies: POL.replace("when { resource.secret }", "when { resource has secret && resource.secret }"), schema: ESQ })).o;
     check("cedar_check: con `has`, las pol\u00EDticas validan sin errores contra el esquema", ok2?.valid === true && ok2.validation?.errors?.length === 0, ok2?.validation);
     const abierto = (await call("cedar_check", {
@@ -1257,9 +1261,74 @@ action view appliesTo { principal: [User], resource: [Doc, Folder] };`;
     check("practice_check: con since 2019, TLS 1.0/1.1 trae solo lo posterior (2021), no el hito de 2018", t11 && t11.changesSince?.length && t11.changesSince.every((h: any) => h.date >= "2019"), t11?.changesSince);
     const tok = (await call("practice_check", { topic: "counting Claude tokens with o200k" })).o;
     const o2 = tok?.results?.find((r: any) => r.id === "o200k-como-tokens-de-claude");
-    check("practice_check: una evidencia medida no ense\u00F1a rutas del repo, sino qui\u00E9n y la ficha p\u00FAblica", o2?.verdict === "anti-pattern" && o2.sources?.some((s: any) => s.measuredBy === "Jarroba Tools" && /practices\?q=/.test(s.details))
-        && !o2.sources.some((s: any) => "measuredIn" in s), o2?.sources);
+    check("practice_check: una evidencia medida dice qu\u00E9 se midi\u00F3 y con qu\u00E9 tool, sin rutas del repo", o2?.verdict === "anti-pattern" && o2.sources?.some((s: any) => s.measured && (!s.tool || s.tool.startsWith("https://jarroba.com/tools/")))
+        && !/conocimiento\/|scripts\/|src\/app/.test(JSON.stringify(o2.sources)), o2?.sources);
+    const idx = (await call("practice_check", { area: "security" })).o;
+    check("practice_check: con solo area, el \u00EDndice del \u00E1rea entero, con veredictos en ingl\u00E9s", idx?.area === "security" && idx.entries?.length > 10 && idx.entries.every((e: any) => e.id && e.practice && ["still-valid", "superseded", "anti-pattern", "no-longer-needed", "depends"].includes(e.verdict)), idx?.entries?.slice(0, 3));
+    const vacio = await call("practice_check", {});
+    check("practice_check: sin topic ni area, error que dice qu\u00E9 dar", vacio.isError && /topic/.test(vacio.text), vacio.text);
+    for (const fuera of ["medieval falconry training schedule", "how to tune a guitar"]) {
+        const f = (await call("practice_check", { topic: fuera })).o;
+        check(`practice_check: «${fuera}» no casa con nada (dos falsos positivos ya arreglados)`, f?.found === false, f?.results?.map((x: any) => x.id));
+    }
+    check("practice_check: sin coincidencia, candidatas (nearest) con id y t\u00EDtulo para que el agente juzgue", nada?.nearest === undefined || (nada.nearest.length <= 20 && nada.nearest.every((n: any) => n.id && n.practice && Object.keys(n).length === 2)), nada?.nearest);
     check("practice_check: nada en espa\u00F1ol cruza la frontera (c\u00F3digos)", !/"(vigente|superada|antipatron|innecesaria|depende|medido|documentado|consenso|opinion|desarrollo|datos|año|mes|dia)"/.test(JSON.stringify([ox, tls, tok])), JSON.stringify(tok).slice(0, 300));
+}
+{
+    const B = [{ queue: "Q1", bindingKey: "*.orange.*" }, { queue: "Q2", bindingKey: "*.*.rabbit" }, { queue: "Q2", bindingKey: "lazy.#" }];
+    const r1 = (await call("rabbit_route", { type: "topic", bindings: B, routingKey: "quick.orange.rabbit" })).o;
+    check("rabbit_route topic: quick.orange.rabbit \u2192 Q1 y Q2", JSON.stringify(r1?.queues) === "[\"Q1\",\"Q2\"]" && !r1.unroutable, r1);
+    const r2 = (await call("rabbit_route", { type: "topic", bindings: B, routingKey: "lazy.pink.rabbit" })).o;
+    check("rabbit_route topic: lazy.pink.rabbit casa dos bindings de Q2 y lo entrega UNA vez", JSON.stringify(r2?.queues) === "[\"Q2\"]" && JSON.stringify(r2.matchedBindings) === "[1,2]", r2);
+    const r3 = (await call("rabbit_route", { type: "topic", bindings: B, routingKey: "quick.brown.fox" })).o;
+    check("rabbit_route topic: nada casa \u2192 unroutable, y cada binding dice por qu\u00E9 con sus palabras", r3?.unroutable === true && r3.bindings[0].why.type === "topic" && r3.bindings[0].why.matches === false && Array.isArray(r3.bindings[0].why.routingKeyWords), r3?.bindings?.[0]);
+    const h = (await call("rabbit_route", { type: "headers", headers: { format: "pdf", type: "report" }, bindings: [{ queue: "all", arguments: { "x-match": "all", format: "pdf", type: "log" } }, { queue: "any", arguments: { "x-match": "any", format: "pdf", type: "log" } }] })).o;
+    check("rabbit_route headers: all falla por type, any casa por format; condiciones en ingl\u00E9s", JSON.stringify(h?.queues) === "[\"any\"]" && h.bindings[0].why.conditions.some((c: any) => c.header === "type" && c.result === "no-match"), h?.bindings);
+    const largo = (await call("rabbit_route", { type: "direct", bindings: [{ queue: "q", bindingKey: "a" }], routingKey: "x".repeat(300) })).o;
+    check("rabbit_route: routing key de m\u00E1s de 255 bytes \u2192 error en ingl\u00E9s", /255/.test(largo?.error ?? ""), largo);
+    const kp = (await call("kafka_partition", { key: "foobar", partitions: 7 })).o;
+    const pos = -790332482 & 2147483647;
+    check("kafka_partition: foobar \u2192 murmur2 \u2212790332482, positivo y m\u00F3dulo 7, como Kafka", kp?.hash === -790332482 && kp.positive === pos && kp.partition === pos % 7 && kp.bytes === 6, kp);
+    const seis = await Promise.all(["a", "b", "c", "d", "e", "f", "g", "h"].map(async (k) => (await call("kafka_partition", { key: k, partitions: 6 })).o?.partition));
+    check("kafka_partition: a..h en 6 particiones, medido contra Kafka", JSON.stringify(seis) === "[4,2,4,5,2,3,3,1]", seis);
+    const rg = (await call("kafka_assign", { strategy: "range", topics: [{ name: "topic1", partitions: 3 }, { name: "topic2", partitions: 2 }], members: [{ id: "consumer1", topics: ["topic1"] }, { id: "consumer2", topics: ["topic1", "topic2"] }, { id: "consumer3", topics: ["topic1"] }] })).o;
+    check("kafka_assign range: el caso de RangeAssignorTest (consumer2 se lleva topic1-1 y todo topic2)", JSON.stringify(rg?.assignment?.consumer2) === JSON.stringify([{ topic: "topic1", partition: 1 }, { topic: "topic2", partition: 0 }, { topic: "topic2", partition: 1 }])
+        && rg.assignment.consumer1.length === 1 && rg.assignment.consumer3.length === 1, rg);
+    const ocioso = (await call("kafka_assign", { strategy: "range", topics: [{ name: "t", partitions: 1 }], members: [{ id: "c2", topics: ["t"] }, { id: "c1", topics: ["t"] }] })).o;
+    check("kafka_assign: m\u00E1s miembros que particiones \u2192 idleMembers", JSON.stringify(ocioso?.idleMembers) === "[\"c2\"]", ocioso);
+    const st = (await call("kafka_assign", { strategy: "sticky", topics: [{ name: "t", partitions: 2 }], members: [{ id: "a", topics: ["t"] }, { id: "b", topics: ["x"] }] })).o;
+    check("kafka_assign sticky con suscripciones distintas \u2192 error en ingl\u00E9s", /same topics/.test(st?.error ?? ""), st);
+    const coop = (await call("kafka_assign", { strategy: "cooperative-sticky", topics: [{ name: "t", partitions: 2 }], members: [{ id: "a", topics: ["t"], owned: [{ topic: "t", partition: 0 }, { topic: "t", partition: 1 }], generation: 1 }, { id: "b", topics: ["t"] }] })).o;
+    check("kafka_assign cooperative-sticky: entra b \u2192 a suelta UNA (transferring a\u2192b) y se queda la otra", coop?.transferring?.length === 1 && coop.transferring[0].from === "a" && coop.transferring[0].to === "b" && coop.assignment.a.length === 1 && coop.assignment.b.length === 0, coop);
+    check("br\u00F3keres: nada en espa\u00F1ol cruza la frontera", !/"(casa|falla|ignorada|presencia|igual|razon|indice|orden|codigo)"/.test(JSON.stringify([r1, r2, r3, h, rg, st])), JSON.stringify(h).slice(0, 300));
+}
+{
+    const cerca = (a: number, b: number, tol: number) => Math.abs(a - b) <= tol;
+    const ac = (await call("chem_ph", { components: [{ substance: "CH3COOH", concentration: 0.1 }] })).o;
+    check("chem_ph: \u00E1cido ac\u00E9tico 0,1 M \u2192 pH \u2248 2,88, residuo ~0, y el libro (d\u00E9bil, x/C < 5 %) casi acierta", cerca(ac?.pH, 2.88, 0.01) && Math.abs(ac.chargeBalanceResidual) < 1e-9 && /weak acid/.test(ac.textbook.method) && ac.textbook.rule.holds === true && Math.abs(ac.textbook.errorVsExact) < 0.01, ac);
+    check("chem_ph: cada constante con su cita (DOI o URL)", ac?.constants?.[0]?.substance === "acetico" && ac.constants[0].sources.length > 0 && ac.constants[0].sources.every((f: any) => f.citation && f.verified), ac?.constants);
+    const fos = (await call("chem_ph", { components: [{ substance: "NaH2PO4", concentration: 0.1 }] })).o;
+    check("chem_ph: NaH2PO4 por su f\u00F3rmula \u2192 fosf\u00F3rico forma 1, anf\u00F3tero \u00BD(pKa\u2081+pKa\u2082) \u2248 4,67", /amphoteric/.test(fos?.textbook?.method) && cerca(fos.textbook.pH, 4.673, 0.01) && fos.speciation[0].forms.length === 4 && fos.speciation[0].forms[1].species === "H2PO4-", fos);
+    const dil = (await call("chem_ph", { components: [{ substance: "HCl", concentration: 1e-8 }] })).o;
+    check("chem_ph: HCl 1e-8 M \u2192 pH < 7 exacto, y el libro (pH 8) falla con la regla \u00ABagua despreciable\u00BB incumplida", dil?.pH < 7 && dil.pH > 6.9 && dil.textbook.rule.holds === false && dil.textbook.errorVsExact > 0.9, dil);
+    const nada = await call("chem_ph", { components: [{ substance: "unobtainium", concentration: 0.1 }] });
+    check("chem_ph: sustancia desconocida \u2192 error que dice c\u00F3mo listarlas", nada.isError && /listSubstances/.test(nada.text ?? ""), nada.text);
+    const lista = (await call("chem_ph", { listSubstances: true })).o;
+    check("chem_ph: listSubstances da d\u00E9biles con sus formas y fuertes", lista?.weak?.some((w: any) => w.id === "fosforico" && w.forms.includes("Na2HPO4")) && lista.strong.some((x: any) => x.formula === "HCl"), lista?.weak?.slice(0, 2));
+    const val = (await call("chem_titration", { analyte: [{ substance: "acetico", concentration: 0.1 }], analyteVolumeMl: 25, titrant: { substance: "NaOH", concentration: 0.1 }, maxVolumeMl: 50 })).o;
+    const eq = val?.equivalencePoints?.[0];
+    check("chem_titration: ac\u00E9tico con NaOH \u2192 equivalencia en 25 mL, pH \u2248 8,7, y la fenolftale\u00EDna entre las mejores", val?.equivalencePoints?.length === 1 && cerca(eq.volumeMl, 25, 0.1) && cerca(eq.pH, 8.72, 0.1)
+        && eq.indicators.slice(0, 3).some((i: any) => i.indicator === "fenolftaleina") && val.indicatorSources.every((i: any) => i.sources.length), eq);
+    const fosv = (await call("chem_titration", { analyte: [{ substance: "H3PO4", concentration: 0.1 }], analyteVolumeMl: 20, titrant: { substance: "NaOH", concentration: 0.1 }, maxVolumeMl: 50 })).o;
+    check("chem_titration: fosf\u00F3rico \u2192 dos saltos visibles (20 y 40 mL)", fosv?.equivalencePoints?.length === 2 && cerca(fosv.equivalencePoints[0].volumeMl, 20, 0.3) && cerca(fosv.equivalencePoints[1].volumeMl, 40, 0.3), fosv?.equivalencePoints?.map((e: any) => [e.volumeMl, e.pH]));
+    const agcl = (await call("chem_solubility", { salt: "AgCl", solidInExcess: true })).o;
+    const s0 = 10 ** (-agcl?.pKsp / 2);
+    check("chem_solubility: AgCl en agua con s\u00F3lido \u2192 s = \u221AKsp, como el libro", cerca(agcl?.equilibrium?.dissolvedMolPerL / s0, 1, 0.01) && /pure water/.test(agcl.textbook.method) && agcl.kspSources.length, agcl);
+    const prec = (await call("chem_solubility", { salt: "agcl", components: [{ substance: "AgNO3", concentration: 0.01 }, { substance: "NaCl", concentration: 0.01 }] })).o;
+    check("chem_solubility: AgNO3 + NaCl 0,01 M \u2192 precipita (s negativa = lo que cae)", prec?.precipitates === true && prec.equilibrium.dissolvedMolPerL < 0, prec);
+    const cc = (await call("chem_solubility", { salt: "CaCO3", solidInExcess: true })).o;
+    check("chem_solubility: CaCO3 en agua \u2192 el exacto disuelve M\u00C1S que el libro (el carbonato es base) y avisa del vaso cerrado", cc?.equilibrium?.dissolvedMolPerL > cc.textbook.dissolvedMolPerL && cc.assumptions.some((a: string) => /Closed vessel/.test(a)) && cc.constants.some((k: any) => k.substance === "carbonico"), cc);
+    check("qu\u00EDmica: nada en espa\u00F1ol cruza la frontera", !/"(agua|debil-acido|anfotero|tampon|compilacion|cumple|valor|metodo)"/.test(JSON.stringify([ac, fos, val, agcl, cc])), JSON.stringify(fos?.textbook));
 }
 const { probarHuerfano, CONTROL_ROTO } = await import("./huerfano.mjs");
 const control = await probarHuerfano("node", CONTROL_ROTO);

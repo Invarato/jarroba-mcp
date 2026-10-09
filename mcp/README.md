@@ -10,12 +10,12 @@ second implementation to drift.
 
 ## Four packages, because context is not free
 
-Loading all 128 tools costs **~46,500 tokens of context** before you type anything, in a client that
+Loading all 134 tools costs **~50,000 tokens of context** before you type anything, in a client that
 loads every tool definition up front (Cursor and most others; Claude Code with Tool Search turned off).
 That is Claude Code's own count: measured with `/context` on 0.1.7 (120 tools: 41,996 tokens) and
 extrapolated with `npm run tokens`. Claude Code's **Tool Search**, on by default, only loads a definition
 when it is about to be used: there the whole catalogue costs a few hundred tokens. GitHub's official MCP
-server is the usual example of the problem; Cursor caps out around 40 tools. A catalogue of 128 is not "more
+server is the usual example of the problem; Cursor caps out around 40 tools. A catalogue of 134 is not "more
 complete", it is more expensive — and the model also *chooses* worse, because the usual failure of a
 big catalogue is not a missing tool, it is calling the one next to it.
 
@@ -26,7 +26,7 @@ So pick the one you actually want:
 | **`@jarroba/mcp-logs`** | 11 | **~4,800 tok** | Reading logs that do not fit in your context |
 | **`@jarroba/mcp-tests`** | 4 | **~1,800 tok** | Auditing tests — including your own |
 | **`@jarroba/mcp-calc`** | 5 | **~1,700 tok** | Maths with units, equations and sheets |
-| `@jarroba/mcp` | 128 | ~46,500 tok | Everything |
+| `@jarroba/mcp` | 134 | ~50,000 tok | Everything |
 
 All four come from the same source. The filter is the `JARROBA_MCP_DOMAINS` environment variable and
 each binary sets its own as a **default**, not a cage: install `mcp-logs` and add
@@ -167,13 +167,20 @@ invalidates. `dora_metrics` computes the four DORA metrics from `gh run list` JS
 time), says why each failed deploy counts as failed, and classifies the team against every State of DevOps
 report 2019-2024 — saying "ambiguous" when a report's table does not decide.
 
-**Chemistry and solid state (`chem`, 9)** — the textbook case for this whole server. A model invents
+**Chemistry and solid state (`chem`, 12)** — the textbook case for this whole server. A model invents
 chromium's electron configuration, removes electrons from the wrong orbital when ionizing, and
 confuses bond energy (D0) with well depth (De). Here that comes from services with measured oracles
-and tests.
+and tests. For solutions: the exact pH of any mix of acids, bases and salts with the textbook formula next to
+it and how wrong it is (`chem_ph`), titrations with their equivalence points and the best indicator
+(`chem_titration`) and whether a salt precipitates and how much dissolves (`chem_solubility`). Every constant
+comes with the paper it was measured in.
 
-**Queueing (`queue`, 4)** — Erlang B and M/M/c: how many resources you need, how long people wait,
-what fraction is turned away. Plus a simulation to **cross-check** the formula.
+**Queueing and message brokers (`queue`, 7)** — Erlang B and M/M/c: how many resources you need, how long people wait,
+what fraction is turned away. Plus a simulation to **cross-check** the formula. And the broker arithmetic a model
+gets wrong in its head, ported from RabbitMQ 4.0.5 and Kafka 4.3.1 and checked against their own tests: which queues a
+RabbitMQ exchange routes to and why (`rabbit_route`), which partition a Kafka key lands in (`kafka_partition`, murmur2
+with the working shown) and how a consumer group splits partitions (`kafka_assign`: range, roundrobin, sticky,
+cooperative-sticky).
 
 **Identity/RBAC (`access`, 4)** — a vendor-neutral identity/RBAC model that mirrors Azure RBAC, AWS
 IAM/Organizations, GCP Resource Manager or Kubernetes RBAC, each rule verified against the official

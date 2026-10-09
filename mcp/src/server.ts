@@ -4,7 +4,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import { getMath } from "../../src/app/shared/mathjs-lazy";
-import { importArchsim } from "../../src/app/features/archsim/archsim-dsl";
+import { importArchsim, dslErrorEn } from "../../src/app/features/archsim/archsim-dsl";
 import { runtimeToSteady } from "../../src/app/features/archsim/archsim-runtime-sim";
 import { runtimeInsights } from "../../src/app/features/archsim/archsim-insights";
 import { costBreakdown } from "../../src/app/features/archsim/archsim-cloud-catalog";
@@ -83,6 +83,10 @@ import { textoAvisoEn, textoCasoEn, textoPropiedadEn, textoTecnicaEn } from "../
 import { TestProjectService } from "../../src/app/services/test-project.service";
 import type { Lenguaje } from "../../src/app/services/test-audit.model";
 import { erlangB, mmc, mmck, mmcLoss, serversNeeded, simulateQueue, littleError } from "../../src/app/services/queueing.service";
+import { rabbitRoute } from "../../src/app/services/brokers/rabbit-route";
+import { partitionForKey } from "../../src/app/services/brokers/kafka-partition";
+import { kafkaAssign } from "../../src/app/services/brokers/kafka-assign";
+import { rabbitEn, kafkaAssignEn } from "./brokers";
 import { CodeGenService, type CodeTarget } from "../../src/app/services/code-gen.service";
 import { CATALOG_QUERIES, assembleSchema, type SchemaModel } from "../../src/app/services/schema-catalog";
 import { candidates as fkCandidates, evidenceSql, orphanSql, addFkSql, cobertura, ordenarPorEvidencia, esRelevante, type FkEvidence, } from "../../src/app/services/fk-infer.service";
@@ -114,7 +118,7 @@ import { validateSemantic, findMetric, instantiateMetric, type SemanticLayer, } 
 import { spawnSync } from "node:child_process";
 import vm from "node:vm";
 import { DOMINIOS, cuadrarCatalogo, anotacionesDe, recuento, dominiosPedidos, type Dominio } from "./catalogo";
-import { textoEn, pegadoEn, accionesEn, cabecerasEn, correoEn, samlEn, agenteEn, cambiosCatalogoEn, oauthEn, oidcEn, AVISO_JWT, practicasEn, alcanceEn, explicacionEn, hallazgosK8sEn, resumenK8s, EXTERNO_EN, erroresEsquemaEn, pssEn, rbacEn } from "./seguridad";
+import { textoEn, pegadoEn, accionesEn, cabecerasEn, correoEn, samlEn, agenteEn, cambiosCatalogoEn, oauthEn, oidcEn, AVISO_JWT, practicasEn, indicePracticasEn, AREA_PRACTICA, AREA_PRACTICA_ES, alcanceEn, explicacionEn, hallazgosK8sEn, resumenK8s, EXTERNO_EN, erroresEsquemaEn, pssEn, rbacEn } from "./seguridad";
 import { comparacionEn, srmEn, multiEn, doraEn } from "./experimentos";
 import { FACTOR_CLAUDE_CODE, FACTOR_CLAUDE_FUENTE } from "./factor-claude";
 import { migracionEn, comprobacionEn, equivalenciaEn, impactoEn } from "./migracion";
@@ -376,7 +380,7 @@ const DOMINIO_EN: Record<Dominio, string> = {
     db: "databases (SQL translation, schema review, docs, measured migration locks)",
     ai: "AI-on-AI review (prompt/RAG/claim checks, MCP catalogue audit)",
     logs: "log analysis (parsing, patterns, stack traces, rotation)",
-    queue: "queueing and capacity math",
+    queue: "queueing and capacity math, RabbitMQ routing and Kafka partitioning",
     project: "project build tooling (Makefile/Docker simulation and lint, DORA metrics from gh/git)",
     tests: "test-suite auditing",
     chem: "chemistry and solid-state physics",
@@ -396,7 +400,8 @@ function instructionsDe(pedidos: Dominio[] | null): string {
         + "whenever a task needs an exact, reproducible computation instead of your own estimate. Each "
         + "tool's own annotations say honestly whether it only reads, writes, or can be destructive.";
 }
-const server = new McpServer({ name: "jarroba-tools", version: "0.2.0" }, { instructions: instructionsDe(dominiosPedidos()) });
+declare const __VERSION_PAQUETE__: string | undefined;
+const server = new McpServer({ name: "jarroba-tools", version: typeof __VERSION_PAQUETE__ === "string" ? __VERSION_PAQUETE__ : "0.0.0-dev" }, { instructions: instructionsDe(dominiosPedidos()) });
 const ESCAPE_MODES: [
     EscapeMode,
     ...EscapeMode[]
@@ -1768,6 +1773,33 @@ server.tool("queue_simulate", "Simulate the queue customer by customer (discrete
         note: "If the two columns disagree, suspect the model rather than the simulation: the simulation assumes nothing.",
     });
 });
+const HEADER_VALUE = z.union([z.string().max(1000), z.number(), z.boolean(), z.null()]);
+server.tool("rabbit_route", "Which queues a RabbitMQ exchange delivers a message to, and why each binding matches or not: direct, topic (* and # words), fanout and headers (x-match all/any/all-with-x/any-with-x). Ported from RabbitMQ 4.0.5 and checked against its own tests. Unroutable means the message is dropped (or returned with mandatory). One difference: in headers, 1 and 1.0 are different values in RabbitMQ and equal here.", {
+    type: z.enum(["direct", "topic", "fanout", "headers"]),
+    bindings: z.array(z.object({
+        queue: z.string().max(255),
+        bindingKey: z.string().max(1000).optional().describe("direct/topic; ignored by fanout and headers"),
+        arguments: z.record(HEADER_VALUE).optional().describe("headers: the binding arguments, x-match included"),
+    })).max(10000),
+    routingKey: z.string().max(1000).optional(),
+    headers: z.record(HEADER_VALUE).optional().describe("headers exchange: the message headers"),
+}, async (input) => ok(rabbitEn(rabbitRoute(input))));
+server.tool("kafka_partition", "The partition Kafka's default partitioner picks for a message key: murmur2 over the UTF-8 bytes, made positive, modulo the partition count \u2014 with the intermediate numbers so the result can be checked. Ported from Kafka 4.3.1 and checked against its murmur2 test vectors. Only for messages WITH a key (without one, Kafka uses the sticky partitioner, which is not deterministic).", {
+    key: z.string().max(100000),
+    partitions: z.number().int().min(1).max(1000000),
+}, async ({ key, partitions }) => nn(partitionForKey(key, partitions), "partitions must be an integer between 1 and 1,000,000"));
+server.tool("kafka_assign", "How a Kafka consumer group splits partitions among its members with the classic protocol (the default in Kafka 4.3): range, roundrobin, sticky or cooperative-sticky, ported from Kafka 4.3.1 and checked against its tests. Returns each member's partitions, idle members and the order the assignor walked them; for the sticky strategies give each member's owned partitions (and generation) to see what moves, and with cooperative-sticky which partitions are revoked this round and handed over in the next. Not covered: rack awareness and the server-side assignors of KIP-848; sticky only when all members subscribe to the same topics.", {
+    strategy: z.enum(["range", "roundrobin", "sticky", "cooperative-sticky"]),
+    topics: z.array(z.object({ name: z.string().max(249), partitions: z.number().int().min(1) })).min(1).max(10000),
+    members: z.array(z.object({
+        id: z.string().max(255),
+        topics: z.array(z.string().max(249)).max(10000).describe("The topics it subscribes to"),
+        groupInstanceId: z.string().max(255).optional().describe("Static membership: changes the order, and so the split"),
+        owned: z.array(z.object({ topic: z.string().max(249), partition: z.number().int().min(0) })).max(200000).optional()
+            .describe("sticky strategies: the partitions it had before this rebalance"),
+        generation: z.number().int().min(-1).optional().describe("The generation it owned them in (default -1)"),
+    })).min(1).max(10000),
+}, async (input) => ok(kafkaAssignEn(kafkaAssign(input))));
 async function leerProyecto(dir: string, tope = 5000): Promise<{
     ficheros: FicheroVirtual[];
     error?: string;
@@ -2404,6 +2436,47 @@ server.tool("gate_geometry", "Why the transistor changed shape: natural length l
         })),
         note: "The \u03BB of the cylindrical wire comes from a different formula (Auth & Plummer) and is NOT comparable with the planar ones: it is always larger for a mathematical reason, not a physical one. That is why it is marked comparable:false and left out of the ranking.",
     });
+});
+const COMPONENTE_QUIMICA = z.object({
+    substance: z.string().min(1).max(60).describe("A table id (\"acetico\", \"fosforico\"), the formula of one of its forms as sold (\"NaH2PO4\", \"NH4Cl\", \"NH3\") or a strong one (\"HCl\", \"NaOH\", \"AgNO3\")"),
+    concentration: z.number().positive().max(20).describe("mol/L"),
+});
+const CONSTANTES_NOTA = "Every constant comes with the paper or critical compilation it was taken from.";
+server.tool("chem_ph", "Exact pH of a mixture of acids, bases and salts by charge and mass balance \u2014 no \"x is negligible\", no \"only the first dissociation\" \u2014 with the speciation of each weak system and the textbook formula next to it, with its validity rule and how wrong it is here. " + CONSTANTES_NOTA + " Ideal solution at 25 \u00B0C. Give listSubstances: true (and no components) to get what it knows.", {
+    components: z.array(COMPONENTE_QUIMICA).max(12).default([]).describe("What is in the beaker; empty = pure water"),
+    listSubstances: z.boolean().optional(),
+}, async ({ components, listSubstances }) => {
+    const c = await quimicaMod();
+    if ("error" in c)
+        return c.error;
+    if (listSubstances)
+        return ok(c.m.aceptadas());
+    const r = c.m.chemPh({ components });
+    return "error" in r ? err(r.error as string) : ok(r);
+});
+server.tool("chem_titration", "Titration of what is in the beaker with a titrant from the burette: every equivalence point (volume and pH), the indicators ranked by titration error for each, and the curve. Polyprotic acids, mixtures and weak/weak included, computed exactly. " + CONSTANTES_NOTA, {
+    analyte: z.array(COMPONENTE_QUIMICA).min(1).max(12),
+    analyteVolumeMl: z.number().positive().max(10000),
+    titrant: COMPONENTE_QUIMICA,
+    maxVolumeMl: z.number().positive().max(10000).describe("How far to titrate"),
+    points: z.number().int().min(2).max(400).optional().describe("Points of the returned curve (default 41)"),
+}, async (input) => {
+    const c = await quimicaMod();
+    if ("error" in c)
+        return c.error;
+    const r = c.m.chemTitration(input);
+    return "error" in r ? err(r.error as string) : ok(r);
+});
+server.tool("chem_solubility", "Does a sparingly soluble salt precipitate in this solution (Q vs Ksp), and if it does \u2014 or if you add the solid in excess \u2014 the equilibrium: how much dissolves or precipitates and the final pH, with the basicity of the anion and the common ion taken into account; next to it the textbook formula, which ignores the pH (the CaCO\u2083 lesson). " + CONSTANTES_NOTA, {
+    salt: z.string().min(1).max(30).describe("Table id or formula: \"agcl\", \"CaCO3\", \"Mg(OH)2\"\u2026"),
+    components: z.array(COMPONENTE_QUIMICA).max(12).default([]).describe("What is already in the beaker; empty = pure water"),
+    solidInExcess: z.boolean().default(false).describe("Add the solid salt in excess (saturate) instead of only checking whether it precipitates"),
+}, async (input) => {
+    const c = await quimicaMod();
+    if ("error" in c)
+        return c.error;
+    const r = c.m.chemSolubility(input);
+    return "error" in r ? err(r.error as string) : ok(r);
 });
 server.tool("sram_noise_margin", "Static noise margin (SNM) of a 6T SRAM cell by the butterfly method: two cross-coupled transfer curves and the side of the largest inscribed square. Returns the margin per mode (hold/read/write), the per-lobe split (which side would flip) and, optionally, the margin expressed in sigmas and the array failure probability. NOT the diagonal shortcut, which returns twice the correct value. First-order Shichman-Hodges: no body effect, no process variation, no parasitics \u2014 it shows why the margin moves, it is not a silicon signature.", {
     mode: z.enum(["hold", "read", "write"]).default("read")
@@ -3077,7 +3150,7 @@ const r2 = (x: number) => Number.isFinite(x) ? Math.round(x * 100) / 100 : x;
 server.tool("archsim_validate", "Validate an architecture-simulation document (the archsim format, spec: archsim.md next to llms.txt). Checks the JSON shape, known node kinds and edge references, and builds the graph with the type defaults. Returns {ok, error?, summary: {nodes by kind, edges, queues without consumers}}. Use it before archsim_simulate or before handing the JSON to a person.", { archsim: z.string().describe("The archsim document as JSON ({\"archsim\":1,\"nodes\":[\u2026],\"edges\":[\u2026]}).") }, async ({ archsim }) => {
     const r = importArchsim(archsim);
     if (r.error || !r.state)
-        return ok({ ok: false, error: r.error ?? "Could not build the graph." });
+        return ok({ ok: false, error: r.error ? dslErrorEn(r.error) : "Could not build the graph.", code: r.error?.code });
     const byKind: Record<string, number> = {};
     for (const n of r.state.nodes)
         byKind[n.kind] = (byKind[n.kind] ?? 0) + 1;
@@ -3095,7 +3168,7 @@ server.tool("archsim_simulate", "Simulate an architecture (archsim format) with 
 }, async ({ archsim, aiReqPerSec, phase }) => {
     const r = importArchsim(archsim);
     if (r.error || !r.state)
-        return err(`Invalid archsim document: ${r.error ?? "could not build the graph"}`);
+        return err(`Invalid archsim document: ${r.error ? dslErrorEn(r.error) : "could not build the graph"}`);
     const { nodes, edges } = r.state;
     const byId = new Map(nodes.map(n => [n.id, n]));
     const rr = aiReqPerSec ?? 0;
@@ -3170,6 +3243,7 @@ const dbMod = diferido(() => import("./db-motores.mjs"));
 const hojaMod = diferido(() => import("./hoja-calculo.mjs"));
 const cedarMod = diferido(() => import("./cedar.mjs"));
 const practicasMod = diferido(() => import("./practicas.mjs"));
+const quimicaMod = diferido(() => import("./quimica.mjs"));
 server.tool("mermaid_validate", "Check that Mermaid code actually parses, with Mermaid's own parser (the same version the Jarroba Tools web uses), before you hand it to someone to render. Returns the detected diagram type, or the parser error with its line, column and the tokens it expected \u2014 feed that back and fix the diagram, instead of guessing. Catches what models typically get wrong: unquoted labels with parentheses, `end` used as a node id, full-width punctuation, a `%` inside a pie value, an unknown diagram keyword. Covers every diagram type Mermaid knows (flowchart, sequence, class, state, ER, gantt, pie, mindmap, gitGraph, C4, architecture\u2026). It parses only; it does not render.", { mermaid: z.string().max(500000).describe("The Mermaid source, without the ```mermaid fences") }, async ({ mermaid: fuente }) => {
     const c = await mermaidMod();
     if ("error" in c)
@@ -3325,7 +3399,7 @@ server.tool("spreadsheet_audit", "Audit a spreadsheet file (.xlsx, .xlsm, .ods, 
     });
 });
 const UID_CEDAR = z.string().max(500).describe("Entity UID in Cedar syntax, e.g. User::\"alice\"");
-server.tool("cedar_check", "Check Cedar authorization policies (the language of AWS Verified Permissions) with the official Cedar engine, instead of reasoning about them: parse errors with their location; validation against your schema if you give one (wrong attribute, wrong entity type, impossible conditions); and, for each request, allow or deny with the policies that decided it \u2014 so you can tell a missing permit from a forbid that wins, and see a forbid that errored and so did not apply (fails open). Policies may carry @id(\"\u2026\") to name them in the answer.", {
+server.tool("cedar_check", "Check Cedar authorization policies (the language of AWS Verified Permissions) with the official Cedar engine, instead of reasoning about them: parse errors with their location; validation against your schema if you give one (wrong attribute, wrong entity type, impossible conditions), and of your entities against it; and, for each request, allow or deny with the policies that decided it \u2014 so you can tell a missing permit from a forbid that wins, and see a forbid that errored and so did not apply (fails open). Policies may carry @id(\"\u2026\") to name them in the answer.", {
     policies: z.string().min(1).max(500000).describe("Cedar policy set (text)"),
     schema: z.string().max(500000).optional().describe("Cedar schema, text or JSON. If given, policies are validated against it"),
     entities: z.array(z.record(z.unknown())).max(5000).default([]).describe("Entities in Cedar JSON format: {uid:{type,id}, attrs, parents}"),
@@ -3339,7 +3413,7 @@ server.tool("cedar_check", "Check Cedar authorization policies (the language of 
     const c = await cedarMod();
     if ("error" in c)
         return c.error;
-    const { cedar, prepararCedar, decidirCedar } = c.m;
+    const { cedar, prepararCedar, decidirCedar, validarEntidadesCedar } = c.m;
     const conjunto = prepararCedar(cedar, policies, schema);
     if ("error" in conjunto) {
         const { tipo, detalles } = conjunto.error;
@@ -3350,6 +3424,7 @@ server.tool("cedar_check", "Check Cedar authorization policies (the language of 
         return err(`The schema does not parse: ${detalles.join(" | ")}`);
     }
     const resumen = Object.fromEntries(conjunto.politicas.map((p) => [p.id, p.resumen]));
+    const erroresEntidades = entities.length ? validarEntidadesCedar(cedar, entities, schema) : [];
     const decisiones = [];
     for (const r of requests) {
         const peticion = `${r.principal} ${r.action} ${r.resource}`;
@@ -3375,16 +3450,28 @@ server.tool("cedar_check", "Check Cedar authorization policies (the language of 
             errors: conjunto.validacion.errores.map((e) => ({ id: e.id, error: e.mensaje })),
             warnings: conjunto.validacion.avisos.map((e) => ({ id: e.id, warning: e.mensaje })),
         },
+        entityErrors: erroresEntidades.length ? erroresEntidades : undefined,
         decisions: decisiones.length ? decisiones : undefined,
     });
 });
 server.tool("practice_check", "Before recommending a practice you learned in training, check whether it still holds: a curated, dated register of development and AI practices (still valid, superseded by what, anti-pattern, unnecessary since, or depends on the case), each with its evidence and how sure it is. Give `since` (your knowledge cutoff) to get only what changed after it. If the register has no entry, it says so instead of guessing \u2014 no entry means not reviewed, not \"fine\".", {
-    topic: z.string().min(2).max(200).describe("What to check, in English: e.g. \"chain of thought prompting\", \"jwt in localStorage\""),
+    topic: z.string().min(2).max(200).optional().describe("What to check, in English: e.g. \"chain of thought prompting\", \"jwt in localStorage\""),
     since: z.string().regex(/^\d{4}(-\d{2}(-\d{2})?)?$/).optional().describe("Your knowledge cutoff: YYYY, YYYY-MM or YYYY-MM-DD"),
-}, async ({ topic, since }) => {
+    area: z.enum(Object.values(AREA_PRACTICA) as [
+        string,
+        ...string[]
+    ]).optional()
+        .describe("Without topic: list every entry of this area (id, title, verdict; ~2,000 tokens) to scan it yourself"),
+}, async ({ topic, since, area }) => {
     const c = await practicasMod();
     if ("error" in c)
         return c.error;
+    if (!topic) {
+        if (!area)
+            return err("Give a topic, or an area to list its entries");
+        const entries = indicePracticasEn(c.m.indice(c.m.REGISTRO, AREA_PRACTICA_ES[area as keyof typeof AREA_PRACTICA_ES]));
+        return ok({ area, entries, note: "Call practice_check again with an id as the topic to get its verdict, reasons and sources." });
+    }
     const hoy = new Date().toISOString().slice(0, 10);
     return ok({ ...practicasEn(c.m.consultar(c.m.REGISTRO, topic, since, hoy)), register: `${c.m.REGISTRO.practicas.length} practices, as shipped with this version; the live one is at https://jarroba.com/tools/en/practices` });
 });

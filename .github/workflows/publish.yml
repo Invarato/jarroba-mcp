@@ -33,7 +33,7 @@ jobs:
           for p in mcp mcp/packages/logs mcp/packages/tests mcp/packages/calc; do
             v=$(node -p "require('./$p/package.json').version")
             echo "$p: $v"
-            [ "v$v" = "$TAG" ] || [ "$p" != mcp ] || { echo "::error::tag $TAG but mcp is $v"; exit 1; }
+            [ "v$v" = "$TAG" ] || { echo "::error::tag $TAG but $p is $v (all four packages share one version)"; exit 1; }
           done
       - run: npm ci --no-audit --no-fund
       - name: Build and test

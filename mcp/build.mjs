@@ -55,20 +55,15 @@ const DIFERIDOS = [
     { entrada: "src/hoja-calculo.mts", salida: "dist/hoja-calculo.mjs", topeMB: 0.9 },
     { entrada: "src/tokenizadores.mts", salida: "dist/tokenizadores.mjs", topeMB: 0.5 },
     { entrada: "src/cedar.mts", salida: "dist/cedar.mjs", topeMB: 0.1 },
-    { entrada: "src/practicas.mts", salida: "dist/practicas.mjs", topeMB: 0.4, plugins: [{
-                name: "practicas-sin-rutas",
-                setup(b) {
-                    b.onLoad({ filter: /practicas\.json$/ }, (args) => {
-                        const reg = JSON.parse(readFileSync(args.path, "utf8"));
-                        for (const p of reg.practicas)
-                            for (const e of p.evidencia)
-                                if (e.tipo === "medida")
-                                    e.donde = "";
-                        return { contents: JSON.stringify(reg), loader: "json" };
-                    });
-                },
-            }] },
+    { entrada: "src/practicas.mts", salida: "dist/practicas.mjs", topeMB: JSON.stringify(JSON.parse(readFileSync("../public/practicas.json", "utf8"))).length / 1048576 + 0.15 },
+    { entrada: "src/quimica.mts", salida: "dist/quimica.mjs", topeMB: 0.3 },
 ];
+if (existsSync("../public/datos/manifiesto.json")) {
+    const actual = JSON.parse(readFileSync("../public/datos/manifiesto.json", "utf8")).entradas.find((e) => e.id === "quimica-constantes")?.actual;
+    if (!readFileSync("src/quimica.mts", "utf8").includes(`/datos/quimica/${actual}'`)) {
+        throw new Error(`src/quimica.mts no importa la tabla de química vigente (${actual}, según public/datos/manifiesto.json): cambia el import y TABLA_FICHERO.`);
+    }
+}
 const EXTERNOS_DIFERIDOS = DIFERIDOS.map((d) => "./" + d.salida.split("/").pop());
 const COPYLEFT = /\b(A?GPL|LGPL|SSPL|EUPL|CC-BY-SA|EPL|MPL|CDDL)\b/i;
 const ficheroDe = (dir, patron) => readdirSync(dir).find((f) => patron.test(f));
@@ -110,8 +105,19 @@ function anotar(dist, metafile) {
     avisos.set(dist, m);
 }
 const excedidos = [];
+const sinComentarioJson = { name: "sin-comentario-json", setup(b) {
+        b.onLoad({ filter: /\.json$/ }, (args) => {
+            if (args.path.includes("node_modules"))
+                return undefined;
+            const j = JSON.parse(readFileSync(args.path, "utf8"));
+            if (!j || typeof j !== "object" || Array.isArray(j) || !("_comentario" in j))
+                return undefined;
+            delete j._comentario;
+            return { contents: JSON.stringify(j), loader: "json" };
+        });
+    } };
 for (const p of PAQUETES) {
-    const r = await build({ metafile: true, entryPoints: [p.entrada], bundle: true, platform: "node", format: "esm", target: "node20", outfile: p.salida, external: [...p.externas, ...EXTERNOS_DIFERIDOS], minifyWhitespace: true, legalComments: "external", preserveSymlinks: true,
+    const r = await build({ metafile: true, entryPoints: [p.entrada], bundle: true, platform: "node", format: "esm", target: "node20", outfile: p.salida, external: [...p.externas, ...EXTERNOS_DIFERIDOS], plugins: [sinComentarioJson], define: { __VERSION_PAQUETE__: JSON.stringify(JSON.parse(readFileSync(p.manifiesto ?? "package.json", "utf8")).version) }, minifyWhitespace: true, legalComments: "external", preserveSymlinks: true,
     });
     anotar(dirname(p.salida), r.metafile);
     const src = readFileSync(p.salida, "utf8").replace(/^#!.*\n/, "");
@@ -152,11 +158,11 @@ for (const p of PAQUETES) {
         excedidos.push(`${p.nombre}: ${mb.toFixed(2)} MB > tope ${p.topeMB} MB`);
 }
 for (const d of DIFERIDOS) {
-    const r = await build({ metafile: true, entryPoints: [d.entrada], bundle: true, platform: "node", format: "esm", target: "node20", outfile: d.salida, minify: true, legalComments: "external", alias: d.alias, plugins: d.plugins,
+    const r = await build({ metafile: true, entryPoints: [d.entrada], bundle: true, platform: "node", format: "esm", target: "node20", outfile: d.salida, minify: true, legalComments: "external", alias: d.alias, plugins: [sinComentarioJson, ...(d.plugins ?? [])],
     });
     anotar(dirname(d.salida), r.metafile);
     const mb = readFileSync(d.salida).length / 1048576;
-    console.log(`✔ ${d.salida.padEnd(30)} ${mb.toFixed(2).padStart(5)} MB  (tope ${d.topeMB})  → solo @jarroba/mcp, cargado en diferido`);
+    console.log(`✔ ${d.salida.padEnd(30)} ${mb.toFixed(2).padStart(5)} MB  (tope ${+d.topeMB.toFixed(2)})  → solo @jarroba/mcp, cargado en diferido`);
     if (mb > d.topeMB)
         excedidos.push(`${d.salida}: ${mb.toFixed(2)} MB > tope ${d.topeMB} MB`);
 }

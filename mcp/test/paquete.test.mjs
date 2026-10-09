@@ -39,6 +39,8 @@ try {
             return { o: null, texto, isError: !!r.isError };
         }
     };
+    const vPaquete = JSON.parse(readFileSync(join(caja, "node_modules", "@jarroba", "mcp", "package.json"), "utf8")).version;
+    check("serverInfo anuncia la versi\u00F3n del paquete", cliente.getServerVersion()?.version === vPaquete, cliente.getServerVersion());
     const tools = (await cliente.listTools()).tools;
     check("el paquete instalado publica sus herramientas", tools.length > 0, tools.length);
     const db = await llamar("db_schema_review", { ddl: "CREATE TABLE cliente (id int primary key, nombre text);" });
@@ -89,6 +91,8 @@ try {
     check("tokenizadores: count_tokens qwen3 funciona desde el paquete instalado", qw.o?.tokens === 4, qw.texto.slice(0, 200));
     const ced = await llamar("cedar_check", { policies: "permit(principal, action, resource);", requests: [{ principal: "User::\"a\"", action: "Action::\"v\"", resource: "Doc::\"d\"" }] });
     check("cedar: cedar_check decide desde el paquete instalado", ced.o?.decisions?.[0]?.decision === "allow", ced.texto.slice(0, 200));
+    const qph = await llamar("chem_ph", { components: [{ substance: "CH3COOH", concentration: 0.1 }] });
+    check("qu\u00EDmica: chem_ph calcula y cita desde el paquete instalado", Math.abs(qph.o?.pH - 2.88) < 0.01 && qph.o.constants?.[0]?.sources?.length > 0, qph.texto.slice(0, 200));
     const js = await llamar("json_schema_validate", { json: "{\"a\":\"x\"}", schema: "{\"properties\":{\"a\":{\"type\":\"number\"}}}" });
     check("ajv: json_schema_validate valida en el paquete instalado", js.o?.valid === false && js.o?.errors?.[0]?.path === "/a", js.texto.slice(0, 200));
     const acc = await llamar("actions_audit", { files: [{ path: ".github/workflows/a.yml", content: "on: push\njobs:\n  a:\n    runs-on: x\n    steps:\n      - uses: actions/checkout@v4\n" }] });
@@ -128,6 +132,8 @@ try {
             const tr = new StdioClientTransport({ command: "node", args: [join(cajaD, "node_modules", ".bin", caso.bin)], cwd: cajaD });
             const cl = new Client({ name: "paquete", version: "0.0.0" });
             await cl.connect(tr);
+            const vD = JSON.parse(readFileSync(join(raiz, caso.dir, "package.json"), "utf8")).version;
+            check(`${caso.tgz}: serverInfo anuncia SU versión (${vD})`, cl.getServerVersion()?.version === vD, cl.getServerVersion());
             const nombres = (await cl.listTools()).tools.map((x) => x.name);
             check(`${caso.tgz}: publica ${caso.tools} herramientas, no el catálogo entero`, nombres.length === caso.tools, nombres.length);
             check(`${caso.tgz}: y NO publica las de otros dominios (${caso.noDebe})`, !nombres.includes(caso.noDebe), nombres.slice(0, 6));

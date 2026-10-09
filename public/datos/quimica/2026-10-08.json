@@ -1,0 +1,985 @@
+{
+  "acidos": [
+    {
+      "id": "acetico",
+      "formula": "CH3COOH",
+      "carga0": 0,
+      "pKa": [
+        4.756
+      ],
+      "fuentes": [
+        {
+          "cita": "Harned, H. S.; Ehlers, R. W. The Dissociation Constant of Acetic Acid from 0 to 60° Centigrade. J. Am. Chem. Soc. 1933, 55, 652-656",
+          "doi": "10.1021/ja01329a027",
+          "verificado": "compilacion"
+        },
+        {
+          "cita": "Goldberg, R. N.; Kishore, N.; Lennen, R. M. Thermodynamic Quantities for the Ionization Reactions of Buffers. J. Phys. Chem. Ref. Data 2002, 31, 231-370; Tabla 7.2 (Acetate), p. 238, y resumen sección 8, p. 359",
+          "doi": "10.1063/1.1416902",
+          "url": "https://srd.nist.gov/jpcrdreprint/1.1416902.pdf",
+          "verificado": "compilacion"
+        }
+      ],
+      "nota": "Valor seleccionado por Goldberg et al. (evaluación AAA), que adoptan las medidas con pilas sin unión líquida de Harned y Ehlers (pK = 4.756 a 298.15 K, I = 0) como «el conjunto definitivo». El artículo de ACS no se pudo abrir (antibot); DOI y páginas comprobados en Crossref. El valor se leyó en la tabla de Goldberg, que reproduce el de Harned y Ehlers."
+    },
+    {
+      "id": "fosforico",
+      "formula": "H3PO4",
+      "carga0": 0,
+      "pKa": [
+        2.148,
+        7.198,
+        12.35
+      ],
+      "fuentes": [
+        {
+          "cita": "Bates, R. G. First dissociation constant of phosphoric acid from 0° to 60° C; limitations of the electromotive force method for moderately strong acids. J. Res. Natl. Bur. Stand. 1951, 47(3), 127-134 (Tabla 3: media 2.148 ± 0.005 a 25 °C)",
+          "doi": "10.6028/jres.047.017",
+          "url": "https://nvlpubs.nist.gov/nistpubs/jres/47/jresv47n3p127_A1b.pdf",
+          "verificado": "texto"
+        },
+        {
+          "cita": "Bates, R. G.; Acree, S. F. pH values of certain phosphate-chloride mixtures, and the second dissociation constant of phosphoric acid from 0° to 60° C. J. Res. Natl. Bur. Stand. 1943, 30, 129 (Tabla 6: pK2 = 7.198 a 25 °C)",
+          "doi": "10.6028/jres.030.012",
+          "url": "https://nvlpubs.nist.gov/nistpubs/jres/30/jresv30n2p129_A1b.pdf",
+          "verificado": "texto"
+        },
+        {
+          "cita": "Vanderzee, C. E.; Quist, A. S. The third dissociation constant of orthophosphoric acid. J. Phys. Chem. 1961, 65, 118-123 (pK3 = 12.375, método espectrofotométrico con indicador)",
+          "doi": "10.1021/j100819a034",
+          "verificado": "compilacion"
+        },
+        {
+          "cita": "Goldberg, R. N.; Kishore, N.; Lennen, R. M. J. Phys. Chem. Ref. Data 2002, 31, 231-370; Tabla 7.51 (Phosphate), pp. 321-326, y sección 8, p. 359",
+          "doi": "10.1063/1.1416902",
+          "url": "https://srd.nist.gov/jpcrdreprint/1.1416902.pdf",
+          "verificado": "compilacion"
+        }
+      ],
+      "nota": "pK1 y pK2 leídos en el texto de los artículos del NBS (pilas sin unión líquida). pK3 = 12.35 es el valor SELECCIONADO por Goldberg et al. como consenso de varios estudios (Beutler 12.36, Vanderzee y Quist 12.375, Papoff 12.39…); no procede de un único artículo. El artículo de Vanderzee y Quist (ACS) no se pudo abrir: su valor se leyó en la tabla de Goldberg; DOI comprobado en Crossref. Discrepancia de pK3 entre fuentes de hasta ~0.04."
+    },
+    {
+      "id": "carbonico",
+      "formula": "H2CO3",
+      "carga0": 0,
+      "pKa": [
+        6.351,
+        10.329
+      ],
+      "fuentes": [
+        {
+          "cita": "Berg, R. L.; Vanderzee, C. E. Thermodynamics of carbon dioxide and carbonic acid: (a) the standard enthalpies of solution of Na2CO3(s), NaHCO3(s), and CO2(g) in water at 298.15 K; (b) the standard enthalpies of formation, standard Gibbs energies of formation, and standard entropies of CO2(aq), HCO3-(aq), CO3 2-(aq), NaHCO3(s), Na2CO3(s), Na2CO3·H2O(s), and Na2CO3·10H2O(s). J. Chem. Thermodyn. 1978, 10, 1113-1136",
+          "doi": "10.1016/0021-9614(78)90029-0",
+          "verificado": "compilacion"
+        },
+        {
+          "cita": "Goldberg, R. N.; Kishore, N.; Lennen, R. M. J. Phys. Chem. Ref. Data 2002, 31, 231-370; Tabla 7.20 (Carbonate), p. 264, y sección 8, p. 359",
+          "doi": "10.1063/1.1416902",
+          "url": "https://srd.nist.gov/jpcrdreprint/1.1416902.pdf",
+          "verificado": "compilacion"
+        },
+        {
+          "cita": "Smith, R. M.; Martell, A. E. Critical Stability Constants, Vol. 4: Inorganic Complexes. Plenum Press, Nueva York, 1976; p. 37, Hydrogen carbonate: log K (25 °C, I = 0) = 10.329 ± 0.01 (HL/H.L) y 6.352 ± 0.01 (H2L/HL.H)",
+          "url": "https://archive.org/details/1976-martell-critical-stability-constants.-volume-4-inorganic-complexes",
+          "verificado": "compilacion"
+        }
+      ],
+      "nota": "pKa1 es el APARENTE, referido a CO2 disuelto total (CO2(aq) + H2CO3), que es el que se usa en problemas de pH. El pKa del H2CO3 «verdadero» es ~3.6 y no se incluye. Goldberg et al. basan los valores seleccionados en el estudio y revisión de Berg y Vanderzee (también base de los CODATA Key Values); Peiper y Pitzer (1982) seleccionaron 6.355 y 10.337 (diferencia dentro de la incertidumbre). Las medidas clásicas por fem son Harned y Davis, J. Am. Chem. Soc. 1943, 65, 2030 (doi 10.1021/ja01250a059) para pKa1 y Harned y Scholes, J. Am. Chem. Soc. 1941, 63, 1706 (doi 10.1021/ja01851a058) para pKa2; DOIs comprobados en Crossref pero sus textos (ACS) no se pudieron abrir, así que no se citan como fuente del número. El artículo de Berg y Vanderzee tampoco se pudo abrir (Elsevier, 403): el valor se leyó en Goldberg. Martell y Smith (1976) seleccionan 6.352 y 10.329, coincidentes."
+    },
+    {
+      "id": "amonio",
+      "formula": "NH4{+}",
+      "carga0": 1,
+      "pKa": [
+        9.245
+      ],
+      "fuentes": [
+        {
+          "cita": "Bates, R. G.; Pinching, G. D. Acidic dissociation constant of ammonium ion at 0° to 50° C, and the base strength of ammonia. J. Res. Natl. Bur. Stand. 1949, 42, 419-430 (Tabla 3: -log Ka = 9.2449 ± 0.0010 a 25 °C)",
+          "doi": "10.6028/jres.042.037",
+          "url": "https://nvlpubs.nist.gov/nistpubs/jres/42/jresv42n5p419_A1b.pdf",
+          "verificado": "texto"
+        },
+        {
+          "cita": "Goldberg, R. N.; Kishore, N.; Lennen, R. M. J. Phys. Chem. Ref. Data 2002, 31, 231-370; Tabla 7.7 (Ammonia), pp. 245-247, y sección 8, p. 359 (pK = 9.245)",
+          "doi": "10.1063/1.1416902",
+          "url": "https://srd.nist.gov/jpcrdreprint/1.1416902.pdf",
+          "verificado": "compilacion"
+        }
+      ],
+      "nota": "Pila sin unión líquida, disoluciones equimolales NH3/NH4Cl. El mismo artículo da Kb(NH3) = 1.77e-5 (pKb 4.751) a 25 °C. Owen, con electrodo de plata-yoduro de plata, obtuvo 9.239."
+    },
+    {
+      "id": "citrico",
+      "formula": "C6H8O7",
+      "carga0": 0,
+      "pKa": [
+        3.128,
+        4.761,
+        6.396
+      ],
+      "fuentes": [
+        {
+          "cita": "Bates, R. G.; Pinching, G. D. Resolution of the Dissociation Constants of Citric Acid at 0 to 50°, and Determination of Certain Related Thermodynamic Functions. J. Am. Chem. Soc. 1949, 71, 1274-1283 (corrección en 71, 4165)",
+          "doi": "10.1021/ja01172a039",
+          "verificado": "compilacion"
+        },
+        {
+          "cita": "Goldberg, R. N.; Kishore, N.; Lennen, R. M. J. Phys. Chem. Ref. Data 2002, 31, 231-370; Tabla 7.22 (Citrate), pp. 265-268, y sección 8, p. 359",
+          "doi": "10.1063/1.1416902",
+          "url": "https://srd.nist.gov/jpcrdreprint/1.1416902.pdf",
+          "verificado": "compilacion"
+        }
+      ],
+      "nota": "Goldberg et al. consideran el estudio de Bates y Pinching (pila sin unión líquida) el más cuidadoso y adoptan sus pK: 3.128, 4.761, 6.396. El artículo (ACS) no se pudo abrir; los valores se leyeron en la tabla de Goldberg atribuidos a 49BAT/PIN; DOI comprobado en Crossref. Hay una fe de erratas en J. Am. Chem. Soc. 1949, 71, 4165 (doi 10.1021/ja01180a622) cuyo contenido no se pudo ver."
+    },
+    {
+      "id": "formico",
+      "formula": "HCOOH",
+      "carga0": 0,
+      "pKa": [
+        3.752
+      ],
+      "fuentes": [
+        {
+          "cita": "Harned, H. S.; Embree, N. D. The Ionization Constant of Formic Acid from 0 to 60°. J. Am. Chem. Soc. 1934, 56, 1042-1044",
+          "doi": "10.1021/ja01320a010",
+          "verificado": "compilacion"
+        },
+        {
+          "cita": "Harned, H. S.; Owen, B. B. The Physical Chemistry of Electrolytic Solutions, 2.ª ed., cap. 15. Reinhold, Nueva York, 1950 (Ka = 1.772e-4 a 25 °C), según lo cita Bates, J. Res. Natl. Bur. Stand. 1951, 47, 127, p. 131 y ref. [13]",
+          "url": "https://nvlpubs.nist.gov/nistpubs/jres/47/jresv47n3p127_A1b.pdf",
+          "verificado": "compilacion"
+        }
+      ],
+      "nota": "pKa = -log(1.772e-4) = 3.752. El valor 1.772e-4 se leyó en el texto de Bates (1951), que lo toma de Harned y Owen (1950, cap. 15); Harned y Owen recogen las medidas con pila sin unión líquida de Harned y Embree (1934). El artículo de Harned y Embree (ACS) no se pudo abrir; DOI comprobado en Crossref."
+    },
+    {
+      "id": "oxalico",
+      "formula": "H2C2O4",
+      "carga0": 0,
+      "pKa": [
+        1.27,
+        4.266
+      ],
+      "fuentes": [
+        {
+          "cita": "Darken, L. S. The Ionization Constants of Oxalic Acid at 25° from Conductance Measurements. J. Am. Chem. Soc. 1941, 63, 1007-1011 (pK1 = 1.27)",
+          "doi": "10.1021/ja01849a033",
+          "verificado": "compilacion"
+        },
+        {
+          "cita": "McDougall, A. O.; Long, F. A. Relative hydrogen bonding of deuterium. II. Acid ionization constants in H2O and D2O. J. Phys. Chem. 1962, 66, 429-433 (pK1 = 1.270, conductividad)",
+          "doi": "10.1021/j100809a012",
+          "verificado": "compilacion"
+        },
+        {
+          "cita": "Pinching, G. D.; Bates, R. G. Second dissociation constant of oxalic acid from 0 to 50 °C, and the pH of certain oxalate buffer solutions. J. Res. Natl. Bur. Stand. 1948, 40, 405-416 (pK2 = 4.266 a 25 °C)",
+          "doi": "10.6028/jres.040.031",
+          "url": "https://nvlpubs.nist.gov/nistpubs/jres/40/jresv40n5p405_A1b.pdf",
+          "verificado": "texto"
+        },
+        {
+          "cita": "Goldberg, R. N.; Kishore, N.; Lennen, R. M. J. Phys. Chem. Ref. Data 2002, 31, 231-370; Tabla 7.50 (Oxalate), pp. 316-320, y sección 8, p. 359",
+          "doi": "10.1063/1.1416902",
+          "url": "https://srd.nist.gov/jpcrdreprint/1.1416902.pdf",
+          "verificado": "compilacion"
+        }
+      ],
+      "nota": "pK2 leído en el texto de Pinching y Bates (pila sin unión líquida; la ecuación del resumen da 4.266 a 298.15 K). pK1 = 1.27 es el que selecciona Goldberg a partir de las medidas de conductividad de Darken y de McDougall y Long (artículos ACS no accesibles: valores leídos en la tabla de Goldberg; DOIs comprobados en Crossref). Al ser un ácido moderadamente fuerte, pK1 es más incierto: Parton y Gibbons (1939) dan 1.299 (1.27 al recalcularlo Kettler et al., 1998). Harned y Fallon (1939) dieron pK2 0.02-0.03 más alto; Kettler et al. recalculan 4.262."
+    },
+    {
+      "id": "fluorhidrico",
+      "formula": "HF",
+      "carga0": 0,
+      "pKa": [
+        3.17
+      ],
+      "fuentes": [
+        {
+          "cita": "Broene, H. H.; De Vries, T. The Thermodynamics of Aqueous Hydrofluoric Acid Solutions. J. Am. Chem. Soc. 1947, 69, 1644-1646 (K = 6.71e-4 mol/kg a 25 °C)",
+          "doi": "10.1021/ja01199a022",
+          "verificado": "compilacion"
+        },
+        {
+          "cita": "Hamer, W. J.; Wu, Y.-C. The activity coefficients of hydrofluoric acid in water from 0 to 35 °C. J. Res. Natl. Bur. Stand. 1970, 74A(6), 761-768 (sección 1.1, tabla de conductividad: K = 0.000684 a 25 °C; p. 2-3 recoge el K de Broene y De Vries)",
+          "doi": "10.6028/jres.074a.063",
+          "url": "https://nvlpubs.nist.gov/nistpubs/jres/74a/jresv74an6p761_a1b.pdf",
+          "verificado": "texto"
+        },
+        {
+          "cita": "Smith, R. M.; Martell, A. E. Critical Stability Constants, Vol. 4: Inorganic Complexes. Plenum Press, Nueva York, 1976; p. 96, Hydrogen fluoride: log K (HL/H.L, 25 °C, I = 0) = 3.17 ± 0.01",
+          "url": "https://archive.org/details/1976-martell-critical-stability-constants.-volume-4-inorganic-complexes",
+          "verificado": "compilacion"
+        }
+      ],
+      "nota": "Las fuentes oscilan entre 3.165 (K = 6.84e-4, conductividad, Hamer y Wu 1970, que consideran preferibles los datos de conductividad) y 3.173 (6.71e-4, fem, Broene y De Vries 1947); se toma 3.17, que es también el valor seleccionado por Martell y Smith (3.17 ± 0.01). Hefter (J. Solution Chem. 1984, 13, 457) recomienda 3.18 ± 0.02 tras revisar la literatura (solo visto en un resumen de búsqueda, no citado como fuente). El valor de Broene y De Vries se leyó en el texto de Hamer y Wu, no en el artículo original (ACS, no accesible). Ojo: HF forma además HF2- (k ≈ 0.26-0.38 mol/kg según el método), relevante solo en disoluciones concentradas."
+    },
+    {
+      "id": "hipocloroso",
+      "formula": "HClO",
+      "carga0": 0,
+      "pKa": [
+        7.53
+      ],
+      "fuentes": [
+        {
+          "cita": "Smith, R. M.; Martell, A. E. Critical Stability Constants, Vol. 4: Inorganic Complexes. Plenum Press, Nueva York, 1976; p. 134, Hydrogen hypochlorite: log K (HL/H.L, 25 °C, I = 0) = 7.53 ± 0.02",
+          "url": "https://archive.org/details/1976-martell-critical-stability-constants.-volume-4-inorganic-complexes",
+          "verificado": "compilacion"
+        },
+        {
+          "cita": "Morris, J. C. The Acid Ionization Constant of HOCl from 5 to 35°. J. Phys. Chem. 1966, 70, 3798-3805",
+          "doi": "10.1021/j100884a007",
+          "verificado": "no"
+        }
+      ],
+      "nota": "Martell y Smith seleccionan 7.53 ± 0.02. La ecuación de Morris (1966), pKa = 3000/T - 10.0686 + 0.0253·T, da 7.537 a 298.15 K y es la más usada en química del agua; coincide dentro de la incertidumbre. El artículo de Morris (ACS) no se pudo abrir: su ecuación solo se vio citada en fuentes secundarias (cita y DOI comprobados en Crossref)."
+    },
+    {
+      "id": "nitroso",
+      "formula": "HNO2",
+      "carga0": 0,
+      "pKa": [
+        3.15
+      ],
+      "fuentes": [
+        {
+          "cita": "Lumme, P.; Lahermo, P.; Tummavuori, J. Thermodynamics of the Ionization of Hydroxylamine and Nitrous Acid in Water. Acta Chem. Scand. 1965, 19, 2175-2188 (Tabla 13, p. 2184: pK0 = 3.148 por extrapolación y 3.157 por la ecuación en T, a 25 °C)",
+          "doi": "10.3891/acta.chem.scand.19-2175",
+          "url": "https://actachemscand.ki.ku.dk/pdf/acta_vol_19_p2175-2188.pdf",
+          "verificado": "texto"
+        },
+        {
+          "cita": "Smith, R. M.; Martell, A. E. Critical Stability Constants, Vol. 4: Inorganic Complexes. Plenum Press, Nueva York, 1976; p. 47, Hydrogen nitrite: log K (HL/H.L, 25 °C, I = 0) = 3.15",
+          "url": "https://archive.org/details/1976-martell-critical-stability-constants.-volume-4-inorganic-complexes",
+          "verificado": "compilacion"
+        }
+      ],
+      "nota": "Medida potenciométrica (electrodo de vidrio) en NaClO4 extrapolada a I = 0. El PDF del artículo es un escaneo: el valor se leyó en la imagen de la página 2184. Martell y Smith (1976) seleccionan 3.15."
+    },
+    {
+      "id": "cianhidrico",
+      "formula": "HCN",
+      "carga0": 0,
+      "pKa": [
+        9.21
+      ],
+      "fuentes": [
+        {
+          "cita": "Izatt, R. M.; Christensen, J. J.; Pack, R. T.; Bench, R. Thermodynamics of Metal-Cyanide Coördination. I. pK, ΔH0, and ΔS0 Values as a Function of Temperature for Hydrocyanic Acid Dissociation in Aqueous Solution. Inorg. Chem. 1962, 1, 828-831",
+          "doi": "10.1021/ic50004a022",
+          "verificado": "no"
+        },
+        {
+          "cita": "Smith, R. M.; Martell, A. E. Critical Stability Constants, Vol. 4: Inorganic Complexes. Plenum Press, Nueva York, 1976; p. 26, Hydrogen cyanide: log K (HL/H.L, 25 °C, I = 0) = 9.21 ± 0.01",
+          "url": "https://archive.org/details/1976-martell-critical-stability-constants.-volume-4-inorganic-complexes",
+          "verificado": "compilacion"
+        }
+      ],
+      "nota": "Valor seleccionado por Martell y Smith (9.21 ± 0.01). El estudio de Izatt et al. (1962) es la medida de referencia habitualmente citada para este valor, pero su texto (ACS) no se pudo abrir: cita y DOI comprobados en Crossref, número no leído en él."
+    },
+    {
+      "id": "sulfurico",
+      "formula": "HSO4{-}",
+      "carga0": -1,
+      "pKa": [
+        1.99
+      ],
+      "fuentes": [
+        {
+          "cita": "Wu, Y. C.; Feng, D. The second dissociation constant of sulfuric acid at various temperatures by the conductometric method. J. Solution Chem. 1995, 24, 133-144 (pK = 1.987 a 298.15 K, I = 0)",
+          "doi": "10.1007/bf00972837",
+          "verificado": "compilacion"
+        },
+        {
+          "cita": "Goldberg, R. N.; Kishore, N.; Lennen, R. M. J. Phys. Chem. Ref. Data 2002, 31, 231-370; Tabla 7.58 (Sulfate), p. 344, y sección 8, p. 360 (pK = 1.987, basado en los CODATA Key Values)",
+          "doi": "10.1063/1.1416902",
+          "url": "https://srd.nist.gov/jpcrdreprint/1.1416902.pdf",
+          "verificado": "compilacion"
+        },
+        {
+          "cita": "Smith, R. M.; Martell, A. E. Critical Stability Constants, Vol. 4: Inorganic Complexes. Plenum Press, Nueva York, 1976; p. 79, Hydrogen sulfate ion: log K (25 °C, I = 0) = 1.99 ± 0.01",
+          "url": "https://archive.org/details/1976-martell-critical-stability-constants.-volume-4-inorganic-complexes",
+          "verificado": "compilacion"
+        }
+      ],
+      "nota": "Solo la segunda disociación (HSO4- ⇌ H+ + SO4 2-); la primera es completa. Goldberg et al. dan 1.987 (CODATA, confirmado por la conductimetría de Wu y Feng, 1995); Martell y Smith 1.99 ± 0.01; Clegg, Rard y Pitzer (1994) adoptan 1.979. Se apunta 1.99 (todas dentro de ±0.01). El artículo de Wu y Feng (Springer) no se pudo abrir: su valor se leyó en Goldberg; DOI comprobado en Crossref."
+    },
+    {
+      "id": "benzoico",
+      "formula": "C6H5COOH",
+      "carga0": 0,
+      "pKa": [
+        4.2
+      ],
+      "fuentes": [
+        {
+          "cita": "Brockman, F. G.; Kilpatrick, M. The Thermodynamic Dissociation Constant of Benzoic Acid from Conductance Measurements. J. Am. Chem. Soc. 1934, 56, 1483-1486",
+          "doi": "10.1021/ja01322a012",
+          "verificado": "no"
+        },
+        {
+          "cita": "Partanen, J. I.; Juusola, P. M.; Minkkinen, P. O. Determination of Stoichiometric Dissociation Constants of Benzoic Acid in Aqueous Sodium or Potassium Chloride Solutions at 25 °C. J. Solution Chem. 2001, 30, 443-462 (Ka = (6.326 ± 0.005)e-5 revisado a partir de Brockman y Kilpatrick)",
+          "doi": "10.1023/A:1010300631756",
+          "url": "https://link.springer.com/article/10.1023/A:1010300631756",
+          "verificado": "resumen"
+        }
+      ],
+      "nota": "Partanen et al. (2001) reevalúan los datos de conductividad de Brockman y Kilpatrick (el conjunto más preciso) y obtienen Ka = 6.326e-5, pKa = 4.199, apoyado por Dippy y Williams (conductividad) y Jones y Parton (fem con quinhidrona). Otros valores muy citados: 4.204 (Ka = 6.25e-5, tablas de texto) y 4.206 ± 0.006 (potenciometría con electrodo de hidrógeno); se apunta 4.20. El artículo de Brockman y Kilpatrick (ACS) no se pudo abrir; su valor original no se ha leído."
+    },
+    {
+      "id": "succinico",
+      "formula": "C4H6O4",
+      "carga0": 0,
+      "pKa": [
+        4.207,
+        5.636
+      ],
+      "fuentes": [
+        {
+          "cita": "Pinching, G. D.; Bates, R. G. First dissociation constant of succinic acid from 0° to 50° C and related thermodynamic quantities. J. Res. Natl. Bur. Stand. 1950, 45, 444-449 (Tabla 2: -log K1 = 4.2066 ± 0.0009 a 25 °C)",
+          "doi": "10.6028/jres.045.049",
+          "url": "https://nvlpubs.nist.gov/nistpubs/jres/045/jresv45n6p444_A1b.pdf",
+          "verificado": "texto"
+        },
+        {
+          "cita": "Pinching, G. D.; Bates, R. G. Second dissociation constant of succinic acid from 0° to 50° C. J. Res. Natl. Bur. Stand. 1950, 45, 322-328 (Tabla 3: -log K2 = 5.6358 ± 0.0012 a 25 °C)",
+          "doi": "10.6028/jres.045.035",
+          "url": "https://nvlpubs.nist.gov/nistpubs/jres/045/jresv45n4p322_A1b.pdf",
+          "verificado": "texto"
+        },
+        {
+          "cita": "Goldberg, R. N.; Kishore, N.; Lennen, R. M. J. Phys. Chem. Ref. Data 2002, 31, 231-370; Tabla 7.57 (Succinate), pp. 340-343, y sección 8, p. 360",
+          "doi": "10.1063/1.1416902",
+          "url": "https://srd.nist.gov/jpcrdreprint/1.1416902.pdf",
+          "verificado": "compilacion"
+        }
+      ],
+      "nota": "Pilas sin unión líquida. Goldberg et al. adoptan exactamente estos valores (4.207 y 5.636)."
+    },
+    {
+      "id": "ftalico",
+      "formula": "C6H4(COOH)2",
+      "carga0": 0,
+      "pKa": [
+        2.95,
+        5.408
+      ],
+      "fuentes": [
+        {
+          "cita": "Hamer, W. J.; Pinching, G. D.; Acree, S. F. First dissociation constant of o-phthalic acid and related pH values of phthalate buffers from 0° to 60° C. J. Res. Natl. Bur. Stand. 1945, 35, 539-564 (resumen: log K1 = -561.57/T + 1.2843 - 0.0078833·T, que da pK1 = 2.950 a 25 °C)",
+          "doi": "10.6028/jres.035.027",
+          "url": "https://nvlpubs.nist.gov/nistpubs/jres/35/jresv35n6p539_A1b.pdf",
+          "verificado": "texto"
+        },
+        {
+          "cita": "Hamer, W. J.; Acree, S. F. Second dissociation constant of o-phthalic acid and related pH values of phthalate buffers from 0° to 60° C. J. Res. Natl. Bur. Stand. 1945, 35, 381-416 (tabla de -log K2: media 5.4083 ± 0.0008 a 25 °C)",
+          "doi": "10.6028/jres.035.018",
+          "url": "https://nvlpubs.nist.gov/nistpubs/jres/35/jresv35n5p381_A1b.pdf",
+          "verificado": "texto"
+        },
+        {
+          "cita": "Goldberg, R. N.; Kishore, N.; Lennen, R. M. J. Phys. Chem. Ref. Data 2002, 31, 231-370; Tabla 7.52 (Phthalate), pp. 326-329, y sección 8, p. 360",
+          "doi": "10.1063/1.1416902",
+          "url": "https://srd.nist.gov/jpcrdreprint/1.1416902.pdf",
+          "verificado": "compilacion"
+        }
+      ],
+      "nota": "Ácido o-ftálico (benceno-1,2-dicarboxílico). Pilas sin unión líquida; Goldberg et al. adoptan los mismos valores (2.950 y 5.408)."
+    },
+    {
+      "id": "tartarico",
+      "formula": "C4H6O6",
+      "carga0": 0,
+      "pKa": [
+        3.036,
+        4.366
+      ],
+      "fuentes": [
+        {
+          "cita": "Bates, R. G.; Canham, R. G. Resolution of the dissociation constants of d-tartaric acid from 0° to 50° C. J. Res. Natl. Bur. Stand. 1951, 47, 343-348 (tablas 2 y 3: -log K1 = 3.036 y -log K2 = 4.366 a 25 °C)",
+          "doi": "10.6028/jres.047.041",
+          "url": "https://nvlpubs.nist.gov/nistpubs/jres/47/jresv47n5p343_A1b.pdf",
+          "verificado": "texto"
+        },
+        {
+          "cita": "Goldberg, R. N.; Kishore, N.; Lennen, R. M. J. Phys. Chem. Ref. Data 2002, 31, 231-370; Tabla 7.63 (L(+)-Tartaric acid), pp. 347-349, y sección 8, p. 360",
+          "doi": "10.1063/1.1416902",
+          "url": "https://srd.nist.gov/jpcrdreprint/1.1416902.pdf",
+          "verificado": "compilacion"
+        }
+      ],
+      "nota": "Ácido d-(L-(+))-tartárico, el natural. Las dos disociaciones se solapan mucho (K1/K2 ≈ 20), lo que hace delicada la resolución; Goldberg et al. consideran este estudio el definitivo. La media de otros estudios da 3.04 y 4.40."
+    },
+    {
+      "id": "sulfuroso",
+      "formula": "H2SO3",
+      "carga0": 0,
+      "pKa": [
+        1.857,
+        7.172
+      ],
+      "fuentes": [
+        {
+          "cita": "Goldberg, R. N.; Parker, V. B. Thermodynamics of solution of SO2(g) in water and of aqueous sulfur dioxide solutions. J. Res. Natl. Bur. Stand. 1985, 90(5), 341-358 (sec. 4.1: K1 = 0.0139 mol/kg; sec. 4.2: K2 = 6.72e-8 mol/kg a 298.15 K)",
+          "doi": "10.6028/jres.090.024",
+          "url": "https://nvlpubs.nist.gov/nistpubs/jres/090/jresv90n5p341_A1b.pdf",
+          "verificado": "texto"
+        },
+        {
+          "cita": "Huss, A., Jr.; Eckert, C. A. Equilibria and ion activities in aqueous sulfur dioxide solutions. J. Phys. Chem. 1977, 81, 2268-2270 (K1 = 0.0139, conductividad y espectrofotometría UV)",
+          "doi": "10.1021/j100539a015",
+          "verificado": "compilacion"
+        }
+      ],
+      "nota": "«H2SO3» es en realidad SO2(aq): pKa1 se refiere a SO2(aq) + H2O ⇌ H+ + HSO3-. Goldberg y Parker, en su evaluación crítica, prefieren K1 de Huss y Eckert (1977) a la de Tartar y Garretson (pila electroquímica, que daban otras evaluaciones anteriores); K2 es su valor «tentativo» ajustado por consistencia termodinámica (6.72e-8; 6.5e-8 antes del ajuste). pKa = -log K. Goldberg et al. (2002, Tabla 7.59) mantienen 1.857 y 7.172. El valor de Huss y Eckert se leyó en Goldberg y Parker (ACS no accesible)."
+    },
+    {
+      "id": "borico",
+      "formula": "B(OH)3",
+      "carga0": 0,
+      "pKa": [
+        9.237
+      ],
+      "fuentes": [
+        {
+          "cita": "Owen, B. B. The Dissociation Constant of Boric Acid from 10 to 50°. J. Am. Chem. Soc. 1934, 56, 1695-1697",
+          "doi": "10.1021/ja01323a014",
+          "verificado": "compilacion"
+        },
+        {
+          "cita": "Manov, G. G.; DeLollis, N. J.; Acree, S. F. Ionization constant of boric acid and the pH of certain borax-chloride buffer solutions from 0° to 60° C. J. Res. Natl. Bur. Stand. 1944, 33, 287 (resumen: pK = 2237.94/T + 0.016883·T - 3.305, que da 9.235 a 25 °C)",
+          "doi": "10.6028/jres.033.013",
+          "url": "https://nvlpubs.nist.gov/nistpubs/jres/33/jresv33n4p287_A1b.pdf",
+          "verificado": "texto"
+        },
+        {
+          "cita": "Goldberg, R. N.; Kishore, N.; Lennen, R. M. J. Phys. Chem. Ref. Data 2002, 31, 231-370; Tabla 7.15 (Borate), p. 259, y sección 8, p. 359",
+          "doi": "10.1063/1.1416902",
+          "url": "https://srd.nist.gov/jpcrdreprint/1.1416902.pdf",
+          "verificado": "compilacion"
+        }
+      ],
+      "nota": "El ácido bórico es un ácido de Lewis: B(OH)3 + H2O ⇌ B(OH)4- + H+. Goldberg et al. seleccionan 9.237 a partir de los trabajos de Owen (1934, 1935; Owen y King 1943), con pila sin unión líquida; Manov et al. (1944) dan 9.235 y Mesmer y Baes (1972) algo distinto, diferencias que Goldberg considera «algo mayores de lo deseable». En disoluciones concentradas (> 0.025 M) se forman poliboratos. El artículo de Owen (ACS) no se pudo abrir: su valor se toma de Goldberg."
+    },
+    {
+      "id": "glicina",
+      "formula": "H3NCH2COOH{+}",
+      "carga0": 1,
+      "pKa": [
+        2.351,
+        9.78
+      ],
+      "fuentes": [
+        {
+          "cita": "King, E. J. The Ionization Constants of Glycine and the Effect of Sodium Chloride upon its Second Ionization. J. Am. Chem. Soc. 1951, 73, 155-159 (pK1 = 2.351, pK2 = 9.780)",
+          "doi": "10.1021/ja01145a056",
+          "verificado": "compilacion"
+        },
+        {
+          "cita": "Owen, B. B. The Dissociation Constants of Glycine at Various Temperatures. J. Am. Chem. Soc. 1934, 56, 24-27 (pK1 = 2.350, pK2 = 9.780 según el recálculo de Goldberg)",
+          "doi": "10.1021/ja01316a007",
+          "verificado": "compilacion"
+        },
+        {
+          "cita": "Goldberg, R. N.; Kishore, N.; Lennen, R. M. J. Phys. Chem. Ref. Data 2002, 31, 231-370; Tabla 7.31 (Glycine), pp. 281-286, y sección 8, p. 359",
+          "doi": "10.1063/1.1416902",
+          "url": "https://srd.nist.gov/jpcrdreprint/1.1416902.pdf",
+          "verificado": "compilacion"
+        }
+      ],
+      "nota": "Forma más protonada: catión glicinio H3N+-CH2-COOH (H2Gly+). pK1: COOH; pK2: NH3+ del zwitterión. Goldberg et al. consideran los estudios de King (1945, 1951; pila sin unión líquida) los más exactos, en excelente acuerdo con Owen (1934) y Datta y Grzybowski (1958, pK2 = 9.778). Los artículos (ACS) no se pudieron abrir: valores leídos en la tabla de Goldberg; DOIs comprobados en Crossref."
+    },
+    {
+      "id": "metilamina",
+      "formula": "CH3NH3{+}",
+      "carga0": 1,
+      "pKa": [
+        10.645
+      ],
+      "fuentes": [
+        {
+          "cita": "Harned, H. S.; Robinson, R. A. The ionic concentrations and activity coefficients of weak electrolytes in certain salt solutions. J. Am. Chem. Soc. 1928, 50, 3157-3178 (pK = 10.645, pila sin unión líquida)",
+          "doi": "10.1021/ja01399a004",
+          "verificado": "compilacion"
+        },
+        {
+          "cita": "Goldberg, R. N.; Kishore, N.; Lennen, R. M. J. Phys. Chem. Ref. Data 2002, 31, 231-370; Tabla 7.45 (Methylamine), pp. 310-311, y sección 8, p. 359",
+          "doi": "10.1063/1.1416902",
+          "url": "https://srd.nist.gov/jpcrdreprint/1.1416902.pdf",
+          "verificado": "compilacion"
+        },
+        {
+          "cita": "Everett, D. H.; Wynne-Jones, W. F. K. The dissociation constants of the methylammonium ions and the basic strengths of the methylamines in water. Proc. R. Soc. Lond. A 1941, 177, 499-516 (pKa = 10.62)",
+          "doi": "10.1098/rspa.1941.0037",
+          "verificado": "compilacion"
+        }
+      ],
+      "nota": "pKa del ion metilamonio. Goldberg et al. adoptan 10.645 de Harned y Robinson (1928). Everett y Wynne-Jones (1941) dan 10.62, leído en Lumme, P.; Lahermo, P.; Tummavuori, J. Acta Chem. Scand. 1965, 19, 2175-2188; Tabla 14, p. 2185, que recoge los valores de Everett y Wynne-Jones (ref. 28) (artículo de la Royal Society bloqueado por antibot). Diferencia 0.025, dentro del margen."
+    },
+    {
+      "id": "dimetilamina",
+      "formula": "(CH3)2NH2{+}",
+      "carga0": 1,
+      "pKa": [
+        10.77
+      ],
+      "fuentes": [
+        {
+          "cita": "Everett, D. H.; Wynne-Jones, W. F. K. The dissociation constants of the methylammonium ions and the basic strengths of the methylamines in water. Proc. R. Soc. Lond. A 1941, 177, 499-516",
+          "doi": "10.1098/rspa.1941.0037",
+          "verificado": "compilacion"
+        },
+        {
+          "cita": "Lumme, P.; Lahermo, P.; Tummavuori, J. Acta Chem. Scand. 1965, 19, 2175-2188; Tabla 14, p. 2185, que recoge los valores de Everett y Wynne-Jones (ref. 28): (CH3)2NH2+ pK0 = 10.77",
+          "doi": "10.3891/acta.chem.scand.19-2175",
+          "url": "https://actachemscand.ki.ku.dk/pdf/acta_vol_19_p2175-2188.pdf",
+          "verificado": "compilacion"
+        }
+      ],
+      "nota": "pKa del ion dimetilamonio. El artículo original (Royal Society) no se pudo abrir por antibot; el valor se leyó en la Tabla 14 de Lumme et al. (1965), que lo atribuye a Everett y Wynne-Jones. DOI comprobado en Crossref."
+    },
+    {
+      "id": "trimetilamina",
+      "formula": "(CH3)3NH{+}",
+      "carga0": 1,
+      "pKa": [
+        9.8
+      ],
+      "fuentes": [
+        {
+          "cita": "Everett, D. H.; Wynne-Jones, W. F. K. The dissociation constants of the methylammonium ions and the basic strengths of the methylamines in water. Proc. R. Soc. Lond. A 1941, 177, 499-516",
+          "doi": "10.1098/rspa.1941.0037",
+          "verificado": "compilacion"
+        },
+        {
+          "cita": "Lumme, P.; Lahermo, P.; Tummavuori, J. Acta Chem. Scand. 1965, 19, 2175-2188; Tabla 14, p. 2185, que recoge los valores de Everett y Wynne-Jones (ref. 28): (CH3)3NH+ pK0 = 9.80",
+          "doi": "10.3891/acta.chem.scand.19-2175",
+          "url": "https://actachemscand.ki.ku.dk/pdf/acta_vol_19_p2175-2188.pdf",
+          "verificado": "compilacion"
+        }
+      ],
+      "nota": "pKa del ion trimetilamonio. Es menor que el de la dimetilamina pese a tener más grupos donadores (efecto de solvatación, que discute el propio Lumme). El artículo original (Royal Society) no se pudo abrir por antibot; el valor se leyó en la Tabla 14 de Lumme et al. (1965). DOI comprobado en Crossref."
+    },
+    {
+      "id": "hidracina",
+      "formula": "N2H5{+}",
+      "carga0": 1,
+      "pKa": [
+        7.98
+      ],
+      "fuentes": [
+        {
+          "cita": "Smith, R. M.; Martell, A. E. Critical Stability Constants, Vol. 4: Inorganic Complexes. Plenum Press, Nueva York, 1976; p. 43, Hydrazine: log K (HL/H.L, 25 °C, I = 0) = 7.98 ± 0.01",
+          "url": "https://archive.org/details/1976-martell-critical-stability-constants.-volume-4-inorganic-complexes",
+          "verificado": "compilacion"
+        },
+        {
+          "cita": "Goldberg, R. N.; Kishore, N.; Lennen, R. M. J. Phys. Chem. Ref. Data 2002, 31, 231-370; Tabla 7.40 (Hydrazine), pp. 300-301, y sección 8, p. 360 (pK = 8.02, media de la literatura)",
+          "doi": "10.1063/1.1416902",
+          "url": "https://srd.nist.gov/jpcrdreprint/1.1416902.pdf",
+          "verificado": "compilacion"
+        },
+        {
+          "cita": "Ware, G. C.; Spulnik, J. B.; Gilbert, E. C. J. Am. Chem. Soc. 1936, 58, 1605 (pK = 7.99 a 25 °C, I = 0, según la tabla de Goldberg)",
+          "verificado": "compilacion"
+        }
+      ],
+      "nota": "pKa del ion hidracinio N2H5+ (N2H4 + H+). La segunda protonación (N2H6 2+) tiene pKa ≈ -1 y no se incluye. Martell y Smith seleccionan 7.98 ± 0.01; Goldberg et al. adoptan la media de la literatura, 8.02, que incluye medidas a otras temperaturas y fuerzas iónicas. Las medidas individuales a 25 °C e I = 0 que recoge Goldberg van de 7.95 (Yui 1941) a 7.99 (Ware et al. 1936); se toma 7.98. Discrepancia entre compilaciones: 0.04. La cita de Ware et al. no tiene DOI comprobado."
+    },
+    {
+      "id": "hidroxilamina",
+      "formula": "NH3OH{+}",
+      "carga0": 1,
+      "pKa": [
+        5.95
+      ],
+      "fuentes": [
+        {
+          "cita": "Lumme, P.; Lahermo, P.; Tummavuori, J. Thermodynamics of the Ionization of Hydroxylamine and Nitrous Acid in Water. Acta Chem. Scand. 1965, 19, 2175-2188 (Tabla 10 y Tabla 12, pp. 2182 y 2184: pK0 = 5.948 a 25 °C)",
+          "doi": "10.3891/acta.chem.scand.19-2175",
+          "url": "https://actachemscand.ki.ku.dk/pdf/acta_vol_19_p2175-2188.pdf",
+          "verificado": "texto"
+        },
+        {
+          "cita": "Smith, R. M.; Martell, A. E. Critical Stability Constants, Vol. 4: Inorganic Complexes. Plenum Press, Nueva York, 1976; p. 44, Hydroxylamine: log K (25 °C, I = 0) = 5.96 ± 0.02",
+          "url": "https://archive.org/details/1976-martell-critical-stability-constants.-volume-4-inorganic-complexes",
+          "verificado": "compilacion"
+        }
+      ],
+      "nota": "pKa del ion hidroxilamonio NH3OH+. Medida potenciométrica (electrodo de vidrio) extrapolada a I = 0. Los propios autores recogen en su Tabla 11 valores de la literatura a 25 °C entre 5.8 y 6.60, y señalan como más concordantes los de Robinson y Bower (5.96, espectrofotometría). Martell y Smith: 5.96 ± 0.02."
+    },
+    {
+      "id": "sulfhidrico",
+      "formula": "H2S",
+      "carga0": 0,
+      "pKa": [
+        7.02
+      ],
+      "fuentes": [
+        {
+          "cita": "Smith, R. M.; Martell, A. E. Critical Stability Constants, Vol. 4: Inorganic Complexes. Plenum Press, Nueva York, 1976; p. 76, Hydrogen sulfide: log K (H2L/HL.H, 25 °C, I = 0) = 7.02 ± 0.04",
+          "url": "https://archive.org/details/1976-martell-critical-stability-constants.-volume-4-inorganic-complexes",
+          "verificado": "compilacion"
+        },
+        {
+          "cita": "Hershey, J. P.; Plese, T.; Millero, F. J. The pK1* for the dissociation of H2S in various ionic media. Geochim. Cosmochim. Acta 1988, 52, 2047-2051",
+          "doi": "10.1016/0016-7037(88)90183-4",
+          "verificado": "no"
+        }
+      ],
+      "nota": "Solo pKa1. El pKa2 (HS- ⇌ H+ + S2-) es controvertido: Martell y Smith (1976) daban 13.9 ± 0.1, pero medidas posteriores (espectroscopia Raman y UV en disoluciones muy alcalinas) lo sitúan entre ~17 y ~19, porque el S2- prácticamente no existe en agua; por eso se omite. Para pKa1, trabajos más recientes como Hershey, Plese y Millero (1988) dan ~6.98; su artículo (Elsevier) no se pudo abrir (cita y DOI comprobados en Crossref, número no leído). Diferencia con Martell y Smith: 0.04."
+    }
+  ],
+  "indicadores": [
+    {
+      "id": "fenolftaleina",
+      "viraje": [
+        8,
+        9.8
+      ],
+      "colorAcido": "incoloro",
+      "colorBasico": "rojo-violeta",
+      "colorAcidoHex": "#f5f5f5",
+      "colorBasicoHex": "#c2187a",
+      "fuentes": [
+        {
+          "cita": "Kolthoff, I. M. Acid-Base Indicators (trad. C. Rosenblum). Macmillan, Nueva York, 1937; Apéndice, Tabla 5 «Transformation ranges of the most important indicators», pp. 386-388",
+          "url": "https://archive.org/details/acidbaseindicato030701mbp",
+          "verificado": "compilacion"
+        }
+      ],
+      "nota": "Kolthoff da 8.0-9.8 (incoloro → rojo-violeta). Muchos textos modernos dan 8.2-10.0; la diferencia viene de dónde se fija el límite visual. En medio muy básico (pH > 13) vuelve lentamente a incoloro."
+    },
+    {
+      "id": "naranja-metilo",
+      "viraje": [
+        3.1,
+        4.4
+      ],
+      "colorAcido": "rojo",
+      "colorBasico": "amarillo anaranjado",
+      "colorAcidoHex": "#d7261e",
+      "colorBasicoHex": "#f5a623",
+      "fuentes": [
+        {
+          "cita": "Kolthoff, I. M. Acid-Base Indicators (trad. C. Rosenblum). Macmillan, Nueva York, 1937; Apéndice, Tabla 5 «Transformation ranges of the most important indicators», pp. 386-388",
+          "url": "https://archive.org/details/acidbaseindicato030701mbp",
+          "verificado": "compilacion"
+        }
+      ],
+      "nota": ""
+    },
+    {
+      "id": "rojo-metilo",
+      "viraje": [
+        4.4,
+        6.2
+      ],
+      "colorAcido": "rojo",
+      "colorBasico": "amarillo",
+      "colorAcidoHex": "#d81b2a",
+      "colorBasicoHex": "#f2d21b",
+      "fuentes": [
+        {
+          "cita": "Kolthoff, I. M. Acid-Base Indicators (trad. C. Rosenblum). Macmillan, Nueva York, 1937; Apéndice, Tabla 5 «Transformation ranges of the most important indicators», pp. 386-388",
+          "url": "https://archive.org/details/acidbaseindicato030701mbp",
+          "verificado": "compilacion"
+        }
+      ],
+      "nota": ""
+    },
+    {
+      "id": "azul-bromotimol",
+      "viraje": [
+        6,
+        7.6
+      ],
+      "colorAcido": "amarillo",
+      "colorBasico": "azul",
+      "colorAcidoHex": "#e6d31e",
+      "colorBasicoHex": "#1f4fbf",
+      "fuentes": [
+        {
+          "cita": "Kolthoff, I. M. Acid-Base Indicators (trad. C. Rosenblum). Macmillan, Nueva York, 1937; Apéndice, Tabla 5 «Transformation ranges of the most important indicators», pp. 386-388",
+          "url": "https://archive.org/details/acidbaseindicato030701mbp",
+          "verificado": "compilacion"
+        }
+      ],
+      "nota": "Kolthoff lo escribe «bromthymol blue». A pH intermedio (~7) se ve verde."
+    },
+    {
+      "id": "azul-timol-acido",
+      "viraje": [
+        1.2,
+        2.8
+      ],
+      "colorAcido": "rojo",
+      "colorBasico": "amarillo",
+      "colorAcidoHex": "#d0212a",
+      "colorBasicoHex": "#f0d020",
+      "fuentes": [
+        {
+          "cita": "Kolthoff, I. M. Acid-Base Indicators (trad. C. Rosenblum). Macmillan, Nueva York, 1937; Apéndice, Tabla 5 «Transformation ranges of the most important indicators», pp. 386-388",
+          "url": "https://archive.org/details/acidbaseindicato030701mbp",
+          "verificado": "compilacion"
+        }
+      ],
+      "nota": "Primer viraje del azul de timol (forma ácida)."
+    },
+    {
+      "id": "azul-timol-basico",
+      "viraje": [
+        8,
+        9.6
+      ],
+      "colorAcido": "amarillo",
+      "colorBasico": "azul",
+      "colorAcidoHex": "#f0d020",
+      "colorBasicoHex": "#2244b8",
+      "fuentes": [
+        {
+          "cita": "Kolthoff, I. M. Acid-Base Indicators (trad. C. Rosenblum). Macmillan, Nueva York, 1937; Apéndice, Tabla 5 «Transformation ranges of the most important indicators», pp. 386-388",
+          "url": "https://archive.org/details/acidbaseindicato030701mbp",
+          "verificado": "compilacion"
+        }
+      ],
+      "nota": "Segundo viraje del azul de timol (forma básica)."
+    },
+    {
+      "id": "verde-bromocresol",
+      "viraje": [
+        3.8,
+        5.4
+      ],
+      "colorAcido": "amarillo",
+      "colorBasico": "azul",
+      "colorAcidoHex": "#e8d61e",
+      "colorBasicoHex": "#2a5fc4",
+      "fuentes": [
+        {
+          "cita": "Kolthoff, I. M. Acid-Base Indicators (trad. C. Rosenblum). Macmillan, Nueva York, 1937; Apéndice, Tabla 5 «Transformation ranges of the most important indicators», pp. 386-388",
+          "url": "https://archive.org/details/acidbaseindicato030701mbp",
+          "verificado": "compilacion"
+        }
+      ],
+      "nota": "Kolthoff lo escribe «bromcresol green»."
+    },
+    {
+      "id": "tornasol",
+      "viraje": [
+        5,
+        8
+      ],
+      "colorAcido": "rojo",
+      "colorBasico": "azul",
+      "colorAcidoHex": "#c62828",
+      "colorBasicoHex": "#3949ab",
+      "fuentes": [
+        {
+          "cita": "Kolthoff, I. M. Acid-Base Indicators (trad. C. Rosenblum). Macmillan, Nueva York, 1937; Apéndice, Tabla 5 «Transformation ranges of the most important indicators», pp. 386-388",
+          "url": "https://archive.org/details/acidbaseindicato030701mbp",
+          "verificado": "compilacion"
+        }
+      ],
+      "nota": "Kolthoff lo da para la azolitmina, el componente activo del tornasol, y advierte que el tornasol comercial es una mezcla con grandes errores salino y proteico: sirve como papel indicador, no para medir pH por colorimetría."
+    },
+    {
+      "id": "amarillo-alizarina",
+      "viraje": [
+        10.1,
+        11.1
+      ],
+      "colorAcido": "amarillo",
+      "colorBasico": "lila",
+      "colorAcidoHex": "#f2d21b",
+      "colorBasicoHex": "#a05fb0",
+      "fuentes": [
+        {
+          "cita": "Kolthoff, I. M. Acid-Base Indicators (trad. C. Rosenblum). Macmillan, Nueva York, 1937; Apéndice, Tabla 5 «Transformation ranges of the most important indicators», pp. 386-388",
+          "url": "https://archive.org/details/acidbaseindicato030701mbp",
+          "verificado": "compilacion"
+        }
+      ],
+      "nota": "Kolthoff da 10.1-11.1, amarillo → lila, para el «alizarine yellow». Tablas modernas del amarillo de alizarina R dan 10.1-12.0, amarillo → rojo anaranjado; la tonalidad básica depende del producto concreto (R o GG)."
+    },
+    {
+      "id": "timolftaleina",
+      "viraje": [
+        9.3,
+        10.5
+      ],
+      "colorAcido": "incoloro",
+      "colorBasico": "azul",
+      "colorAcidoHex": "#f5f5f5",
+      "colorBasicoHex": "#1e5bd8",
+      "fuentes": [
+        {
+          "cita": "Kolthoff, I. M. Acid-Base Indicators (trad. C. Rosenblum). Macmillan, Nueva York, 1937; Apéndice, Tabla 5 «Transformation ranges of the most important indicators», pp. 386-388",
+          "url": "https://archive.org/details/acidbaseindicato030701mbp",
+          "verificado": "compilacion"
+        }
+      ],
+      "nota": ""
+    }
+  ],
+  "solubilidad": [
+    {
+      "id": "agcl",
+      "formula": "AgCl",
+      "pKs": 9.74,
+      "fuentes": [
+        {
+          "cita": "Smith, R. M.; Martell, A. E. Critical Stability Constants, Vol. 4: Inorganic Complexes. Plenum Press, Nueva York, 1976; p. 107, Chloride ion: log K (M.L/ML(s), 25 °C, I = 0)",
+          "url": "https://archive.org/details/1976-martell-critical-stability-constants.-volume-4-inorganic-complexes",
+          "verificado": "compilacion"
+        }
+      ],
+      "nota": "Martell y Smith: -9.74 ± 0.00."
+    },
+    {
+      "id": "agbr",
+      "formula": "AgBr",
+      "pKs": 12.3,
+      "fuentes": [
+        {
+          "cita": "Smith, R. M.; Martell, A. E. Critical Stability Constants, Vol. 4: Inorganic Complexes. Plenum Press, Nueva York, 1976; p. 116, Bromide ion: log K (M.L/ML(s), 25 °C, I = 0)",
+          "url": "https://archive.org/details/1976-martell-critical-stability-constants.-volume-4-inorganic-complexes",
+          "verificado": "compilacion"
+        }
+      ],
+      "nota": "Martell y Smith: -12.30 ± 0.02."
+    },
+    {
+      "id": "agi",
+      "formula": "AgI",
+      "pKs": 16.08,
+      "fuentes": [
+        {
+          "cita": "Smith, R. M.; Martell, A. E. Critical Stability Constants, Vol. 4: Inorganic Complexes. Plenum Press, Nueva York, 1976; p. 122, Iodide ion: log K (M.L/ML(s), 25 °C, I = 0)",
+          "url": "https://archive.org/details/1976-martell-critical-stability-constants.-volume-4-inorganic-complexes",
+          "verificado": "compilacion"
+        }
+      ],
+      "nota": "Martell y Smith: -16.08 (sin incertidumbre indicada)."
+    },
+    {
+      "id": "ag2cro4",
+      "formula": "Ag2CrO4",
+      "pKs": 11.92,
+      "fuentes": [
+        {
+          "cita": "Smith, R. M.; Martell, A. E. Critical Stability Constants, Vol. 4: Inorganic Complexes. Plenum Press, Nueva York, 1976; p. 17, Hydrogen chromate: log K (M^2.L/M2L(s), 25 °C, I = 0)",
+          "url": "https://archive.org/details/1976-martell-critical-stability-constants.-volume-4-inorganic-complexes",
+          "verificado": "compilacion"
+        }
+      ],
+      "nota": "Martell y Smith: -11.92 ± 0.03. Ks = [Ag+]^2[CrO4 2-]."
+    },
+    {
+      "id": "baso4",
+      "formula": "BaSO4",
+      "pKs": 9.96,
+      "fuentes": [
+        {
+          "cita": "Smith, R. M.; Martell, A. E. Critical Stability Constants, Vol. 4: Inorganic Complexes. Plenum Press, Nueva York, 1976; p. 79, Hydrogen sulfate ion: log K (M.L/ML(s), 25 °C, I = 0)",
+          "url": "https://archive.org/details/1976-martell-critical-stability-constants.-volume-4-inorganic-complexes",
+          "verificado": "compilacion"
+        }
+      ],
+      "nota": "Martell y Smith: -9.96 ± 0.03."
+    },
+    {
+      "id": "caso4",
+      "formula": "CaSO4",
+      "pKs": 4.62,
+      "fuentes": [
+        {
+          "cita": "Smith, R. M.; Martell, A. E. Critical Stability Constants, Vol. 4: Inorganic Complexes. Plenum Press, Nueva York, 1976; p. 79, Hydrogen sulfate ion: log K (M.L/ML(s), 25 °C, I = 0)",
+          "url": "https://archive.org/details/1976-martell-critical-stability-constants.-volume-4-inorganic-complexes",
+          "verificado": "compilacion"
+        }
+      ],
+      "nota": "Martell y Smith: -4.62 ± 0.02 (la tabla no especifica la fase sólida). Al ser bastante soluble, el par iónico CaSO4(aq) (log K = 2.31 en la misma página) pesa mucho en la solubilidad real."
+    },
+    {
+      "id": "caf2",
+      "formula": "CaF2",
+      "pKs": 10.41,
+      "fuentes": [
+        {
+          "cita": "Smith, R. M.; Martell, A. E. Critical Stability Constants, Vol. 4: Inorganic Complexes. Plenum Press, Nueva York, 1976; p. 96, Hydrogen fluoride: log K (M.L^2/ML2(s), 25 °C, I = 0)",
+          "url": "https://archive.org/details/1976-martell-critical-stability-constants.-volume-4-inorganic-complexes",
+          "verificado": "compilacion"
+        }
+      ],
+      "nota": "Martell y Smith: -10.41 (valor entre paréntesis en ΔH, sin incertidumbre en log K)."
+    },
+    {
+      "id": "caco3",
+      "formula": "CaCO3",
+      "pKs": 8.35,
+      "fuentes": [
+        {
+          "cita": "Smith, R. M.; Martell, A. E. Critical Stability Constants, Vol. 4: Inorganic Complexes. Plenum Press, Nueva York, 1976; p. 37, Hydrogen carbonate: log K (M.L/ML(s, calcite), 25 °C, I = 0)",
+          "url": "https://archive.org/details/1976-martell-critical-stability-constants.-volume-4-inorganic-complexes",
+          "verificado": "compilacion"
+        }
+      ],
+      "nota": "Calcita: -8.35 ± 0.1. Para aragonito, Martell y Smith dan -8.22. La solubilidad real del CaCO3 depende mucho del pH y del CO2 disuelto (el CO3 2- se protona)."
+    },
+    {
+      "id": "pbi2",
+      "formula": "PbI2",
+      "pKs": 8.1,
+      "fuentes": [
+        {
+          "cita": "Smith, R. M.; Martell, A. E. Critical Stability Constants, Vol. 4: Inorganic Complexes. Plenum Press, Nueva York, 1976; p. 124, Iodide ion: log K (M.L^2/ML2(s), 25 °C, I = 0)",
+          "url": "https://archive.org/details/1976-martell-critical-stability-constants.-volume-4-inorganic-complexes",
+          "verificado": "compilacion"
+        }
+      ],
+      "nota": "Martell y Smith: -8.10 ± 0.09."
+    },
+    {
+      "id": "mgoh2",
+      "formula": "Mg(OH)2",
+      "pKs": 11.15,
+      "fuentes": [
+        {
+          "cita": "Smith, R. M.; Martell, A. E. Critical Stability Constants, Vol. 4: Inorganic Complexes. Plenum Press, Nueva York, 1976; p. 1, Hydroxide ion: log K (M.L^2/ML2(s), 25 °C, I = 0)",
+          "url": "https://archive.org/details/1976-martell-critical-stability-constants.-volume-4-inorganic-complexes",
+          "verificado": "compilacion"
+        }
+      ],
+      "nota": "Martell y Smith: -11.15 ± 0.2. Ks = [Mg2+][OH-]^2; depende de la forma cristalina y del envejecimiento del precipitado."
+    },
+    {
+      "id": "caoh2",
+      "formula": "Ca(OH)2",
+      "pKs": 5.19,
+      "fuentes": [
+        {
+          "cita": "Smith, R. M.; Martell, A. E. Critical Stability Constants, Vol. 4: Inorganic Complexes. Plenum Press, Nueva York, 1976; p. 1, Hydroxide ion: log K (M.L^2/ML2(s), 25 °C, I = 0)",
+          "url": "https://archive.org/details/1976-martell-critical-stability-constants.-volume-4-inorganic-complexes",
+          "verificado": "compilacion"
+        }
+      ],
+      "nota": "Martell y Smith: -5.19 ± 0.2. Bastante soluble: la formación del par CaOH+ (log K = 1.3) afecta a la solubilidad real."
+    },
+    {
+      "id": "feoh3",
+      "formula": "Fe(OH)3",
+      "pKs": 38.8,
+      "fuentes": [
+        {
+          "cita": "Smith, R. M.; Martell, A. E. Critical Stability Constants, Vol. 4: Inorganic Complexes. Plenum Press, Nueva York, 1976; p. 7, Hydroxide ion: log K (M.L^3/ML3(s), 25 °C, I = 0)",
+          "url": "https://archive.org/details/1976-martell-critical-stability-constants.-volume-4-inorganic-complexes",
+          "verificado": "compilacion"
+        }
+      ],
+      "nota": "Martell y Smith: -38.8 ± 0.2 para el Fe(OH)3 sólido (precipitado amorfo). Para la goethita α-FeOOH dan -41.5 (M.L^3/MOOH) y para la hematites -42.7 (por Fe). Valor muy dependiente del envejecimiento del precipitado; en tablas escolares aparecen valores de 37 a 39."
+    }
+  ]
+}

@@ -7,12 +7,12 @@
     "source": "github",
     "subfolder": "mcp/packages/logs"
   },
-  "version": "0.1.7",
+  "version": "0.1.9",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "@jarroba/mcp-logs",
-      "version": "0.1.7",
+      "version": "0.1.9",
       "transport": {
         "type": "stdio"
       },
