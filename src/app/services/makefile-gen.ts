@@ -1,4 +1,4 @@
-export type Stack = "generico" | "node" | "python" | "go" | "rust" | "c";
+export type Stack = "generico" | "node" | "python" | "go" | "rust" | "c" | "maven" | "gradle";
 export interface OpcionesGen {
     stack: Stack;
     conLogs: boolean;
@@ -49,6 +49,20 @@ function recetasDeStack(s: Stack): Receta[] {
             { nombre: "test", ayuda: "Runs the tests", phony: true, lineas: ["cargo test"] },
             { nombre: "lint", ayuda: "Checks the style", phony: true, lineas: ["cargo clippy -- -D warnings"] },
             { nombre: "clean", ayuda: "Removes what was built", phony: true, lineas: ["cargo clean"] },
+        ];
+        case "maven": return [
+            { nombre: "install", ayuda: "Downloads the dependencies", phony: true, lineas: ["$(MVN) -B dependency:go-offline"] },
+            { nombre: "build", ayuda: "Packages the project without running the tests", phony: true, lineas: ["$(MVN) -B package -DskipTests"] },
+            { nombre: "test", ayuda: "Runs the tests", phony: true, lineas: ["$(MVN) -B test"] },
+            { nombre: "lint", ayuda: "Runs the whole verification (tests and checks)", phony: true, lineas: ["$(MVN) -B verify"] },
+            { nombre: "clean", ayuda: "Removes what was built", phony: true, lineas: ["$(MVN) -B clean"] },
+        ];
+        case "gradle": return [
+            { nombre: "install", ayuda: "Downloads the dependencies", phony: true, lineas: ["$(GRADLE) dependencies"] },
+            { nombre: "build", ayuda: "Builds the project without running the tests", phony: true, lineas: ["$(GRADLE) assemble"] },
+            { nombre: "test", ayuda: "Runs the tests", phony: true, lineas: ["$(GRADLE) test"] },
+            { nombre: "lint", ayuda: "Runs the checks without the tests", phony: true, lineas: ["$(GRADLE) check -x test"] },
+            { nombre: "clean", ayuda: "Removes what was built", phony: true, lineas: ["$(GRADLE) clean"] },
         ];
         case "c": return [
             { nombre: "build", ayuda: "Builds the binary", phony: true, requisitos: "$(OUT)/$(NOMBRE)", lineas: [] },
@@ -102,6 +116,14 @@ export function generarMakefile(o: OpcionesGen): string {
         L.push("CFLAGS := -Wall -Wextra -O2");
         L.push("SRCS := $(wildcard src/*.c)");
         L.push("OBJS := $(SRCS:src/%.c=$(OUT)/%.o)");
+    }
+    if (o.stack === "maven") {
+        L.push("# The project wrapper if there is one (it pins the Maven version), the installed mvn if not.");
+        L.push("MVN := $(if $(wildcard ./mvnw),./mvnw,mvn)");
+    }
+    if (o.stack === "gradle") {
+        L.push("# The project wrapper if there is one (it pins the Gradle version), the installed gradle if not.");
+        L.push("GRADLE := $(if $(wildcard ./gradlew),./gradlew,gradle)");
     }
     if (o.conDocker) {
         L.push("IMAGEN := $(NOMBRE)");
@@ -179,4 +201,32 @@ export function objetivosGenerados(o: OpcionesGen): string[] {
     if (o.conHelp)
         out.push("help");
     return out;
+}
+export interface ProyectoDetectado {
+    stack: Stack;
+    porque: string;
+}
+export function detectarStack(rutas: string[]): ProyectoDetectado {
+    const rs = (Array.isArray(rutas) ? rutas : []).filter((r): r is string => typeof r === "string");
+    const raiz = new Set(rs.filter(r => !r.includes("/")));
+    const MARCAS: [
+        string,
+        Stack
+    ][] = [
+        ["pom.xml", "maven"],
+        ["build.gradle", "gradle"],
+        ["build.gradle.kts", "gradle"],
+        ["go.mod", "go"],
+        ["Cargo.toml", "rust"],
+        ["pyproject.toml", "python"],
+        ["setup.py", "python"],
+        ["requirements.txt", "python"],
+        ["package.json", "node"],
+    ];
+    for (const [fichero, stack] of MARCAS)
+        if (raiz.has(fichero))
+            return { stack, porque: fichero };
+    if (rs.some(r => /^src\/[^/]+\.c$/.test(r)))
+        return { stack: "c", porque: "src/*.c" };
+    return { stack: "generico", porque: "" };
 }

@@ -39,8 +39,8 @@ export function pasoFinal(etapaId: string, efecto: "permite" | "deniega" | "inde
 export function pasoContinua(etapaId: string, detalleKey: string, params?: Record<string, string | number | boolean>): PasoEtapa {
     return { etapaId, aplica: true, final: false, detalleKey, params };
 }
-export function pasoNoAplica(etapaId: string, detalleKey: string): PasoEtapa {
-    return { etapaId, aplica: false, final: false, detalleKey };
+export function pasoNoAplica(etapaId: string, detalleKey: string, params?: Record<string, string | number | boolean>): PasoEtapa {
+    return params ? { etapaId, aplica: false, final: false, detalleKey, params } : { etapaId, aplica: false, final: false, detalleKey };
 }
 const ESCAPE_REGEX = /[.+^${}()|[\]\\]/g;
 export function coincidePatron(accion: string, patron: string): boolean {

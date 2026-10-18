@@ -6,7 +6,7 @@ import { probarHuerfano } from "./huerfano.mjs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { recuento } from "../src/catalogo.ts";
+import { recuento, DOMINIOS } from "../src/catalogo.ts";
 const raiz = join(dirname(fileURLToPath(import.meta.url)), "..");
 const caja = mkdtempSync(join(tmpdir(), "jarroba-mcp-paquete-"));
 let fallos = 0;
@@ -119,9 +119,9 @@ try {
     const huerfano = await probarHuerfano("node", [join(caja, "node_modules", ".bin", "jarroba-mcp")]);
     check("el paquete instalado SALE al perder la sesi\u00F3n (la 0.1.5 se quedaba al 100 % de CPU)", !huerfano.vivo, huerfano);
     for (const caso of [
-        { dir: "packages/logs", tgz: "jarroba-mcp-logs", bin: "jarroba-mcp-logs", tools: 11, prueba: ["log_analyze", { text: "2024-01-15T10:30:00Z ERROR boom" }], noDebe: "db_schema_review" },
-        { dir: "packages/tests", tgz: "jarroba-mcp-tests", bin: "jarroba-mcp-tests", tools: 4, prueba: ["test_audit", { text: "it('x', () => { expect(1).toBe(1); });", language: "typescript" }], noDebe: "log_analyze" },
-        { dir: "packages/calc", tgz: "jarroba-mcp-calc", bin: "jarroba-mcp-calc", tools: 5, prueba: ["calc_eval", { expression: "5 km + 300 m" }], noDebe: "log_analyze" },
+        { dir: "packages/logs", tgz: "jarroba-mcp-logs", bin: "jarroba-mcp-logs", tools: DOMINIOS.logs.tools.length, prueba: ["log_analyze", { text: "2024-01-15T10:30:00Z ERROR boom" }], noDebe: "db_schema_review" },
+        { dir: "packages/tests", tgz: "jarroba-mcp-tests", bin: "jarroba-mcp-tests", tools: DOMINIOS.tests.tools.length, prueba: ["test_audit", { text: "it('x', () => { expect(1).toBe(1); });", language: "typescript" }], noDebe: "log_analyze" },
+        { dir: "packages/calc", tgz: "jarroba-mcp-calc", bin: "jarroba-mcp-calc", tools: DOMINIOS.calc.tools.length, prueba: ["calc_eval", { expression: "5 km + 300 m" }], noDebe: "log_analyze" },
     ]) {
         const cajaD = mkdtempSync(join(tmpdir(), `jarroba-${caso.tgz}-`));
         try {

@@ -80,25 +80,19 @@ function satisfiesSingle(ver: ParsedVersion, range: string): boolean {
             return false;
         return compareVersions(ver, lo) >= 0 && compareVersions(ver, hi) <= 0;
     }
-    const caretM = range.match(/^\^(\d+)\.(\d+)\.(\d+)/);
+    const caretM = range.match(/^\^(\d+)(?:\.(\d+))?(?:\.(\d+))?(?:[-+]\S*)?$/);
     if (caretM) {
-        const major = +caretM[1], minor = +caretM[2], patch = +caretM[3];
-        const lo: ParsedVersion = { major, minor, patch, prerelease: [] };
-        const hi: ParsedVersion = { major: major + 1, minor: 0, patch: 0, prerelease: [] };
-        return compareVersions(ver, lo) >= 0 && compareVersions(ver, hi) < 0;
-    }
-    const caretMinor = range.match(/^\^(\d+)\.(\d+)$/);
-    if (caretMinor) {
-        const major = +caretMinor[1], minor = +caretMinor[2];
-        const lo: ParsedVersion = { major, minor, patch: 0, prerelease: [] };
-        const hi: ParsedVersion = { major: major + 1, minor: 0, patch: 0, prerelease: [] };
-        return compareVersions(ver, lo) >= 0 && compareVersions(ver, hi) < 0;
-    }
-    const caretMaj = range.match(/^\^(\d+)$/);
-    if (caretMaj) {
-        const major = +caretMaj[1];
-        const lo: ParsedVersion = { major, minor: 0, patch: 0, prerelease: [] };
-        const hi: ParsedVersion = { major: major + 1, minor: 0, patch: 0, prerelease: [] };
+        const major = +caretM[1];
+        const minor = caretM[2] !== undefined ? +caretM[2] : undefined;
+        const patch = caretM[3] !== undefined ? +caretM[3] : undefined;
+        const lo: ParsedVersion = { major, minor: minor ?? 0, patch: patch ?? 0, prerelease: [] };
+        let hi: ParsedVersion;
+        if (major > 0 || minor === undefined)
+            hi = { major: major + 1, minor: 0, patch: 0, prerelease: [] };
+        else if (minor > 0 || patch === undefined)
+            hi = { major: 0, minor: minor + 1, patch: 0, prerelease: [] };
+        else
+            hi = { major: 0, minor: 0, patch: patch + 1, prerelease: [] };
         return compareVersions(ver, lo) >= 0 && compareVersions(ver, hi) < 0;
     }
     const tildeM = range.match(/^~(\d+)\.(\d+)\.(\d+)/);

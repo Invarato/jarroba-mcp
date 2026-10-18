@@ -1,3 +1,4 @@
+import { DETECTORES_IDENTIDAD } from "./detectors-identidad";
 export type EntityCategory = "secret" | "pii" | "financial" | "id" | "path" | "generic";
 export interface Detector {
     id: string;
@@ -9,6 +10,7 @@ export interface Detector {
     entropyMin?: number;
     defaultOff?: boolean;
     placeholder?: string;
+    keywords?: string[];
 }
 export function stripAnsi(text: string): string {
     return text.replace(/\[[0-9;?]*[ -/]*[@-~]/g, "").replace(/[PX^_].*?\\/g, "");
@@ -70,6 +72,14 @@ function digitCount(s: string): boolean {
     const n = s.replace(/\D/g, "").length;
     return n >= 9 && n <= 15;
 }
+function telefono(s: string): boolean {
+    if (!digitCount(s))
+        return false;
+    let grupos: string[] = s.match(/\d+/g) ?? [];
+    if (/^\s*[+(]/.test(s))
+        grupos = grupos.slice(1);
+    return grupos.every((g, i) => g.length < 5 || i === grupos.length - 1);
+}
 export function isReservedIpv4(ip: string): boolean {
     const m = ip.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
     if (!m)
@@ -119,13 +129,17 @@ export const DETECTORS: Detector[] = [
     { id: "azure-conn-key", label: "Clave de cadena de conexi\u00F3n Azure", category: "secret", group: 1, regex: /\b(?:AccountKey|SharedAccessKey)=([A-Za-z0-9+/]{20,}={0,2})/g, placeholder: "REDACTED" },
     { id: "gcp-key", label: "Google API Key", category: "secret", regex: /\bAIza[0-9A-Za-z_-]{35}\b/g, placeholder: "AIzaXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" },
     { id: "github-token", label: "GitHub token", category: "secret", regex: /\b(?:gh[pousr]_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{22,})\b/g, placeholder: "ghp_REDACTED" },
-    { id: "gitlab-token", label: "GitLab token", category: "secret", regex: /\bglpat-[A-Za-z0-9_-]{20}\b/g, placeholder: "glpat-REDACTED" },
-    { id: "slack-token", label: "Slack token", category: "secret", regex: /\bxox[baprs]-[A-Za-z0-9-]{10,}\b/g, placeholder: "xoxb-REDACTED" },
+    { id: "gitlab-token", label: "GitLab token", category: "secret", regex: /\bglpat-[A-Za-z0-9_-]{20,300}(?:\.[0-9a-z]{9})?\b/g, placeholder: "glpat-REDACTED" },
+    { id: "slack-token", label: "Slack token", category: "secret", regex: /\b(?:xox[baprs]-[A-Za-z0-9-]{10,}|xapp-\d-[A-Za-z0-9]+-\d+-[A-Za-z0-9]+)\b/g, placeholder: "xoxb-REDACTED" },
     { id: "slack-webhook", label: "Slack webhook", category: "secret", regex: /https:\/\/hooks\.slack\.com\/services\/[A-Za-z0-9/_-]+/g, placeholder: "https://hooks.slack.com/services/REDACTED" },
+    { id: "airtable-pat", label: "Airtable token", category: "secret", regex: /\bpat[A-Za-z0-9]{14}\.[a-f0-9]{64}\b/g, placeholder: "patREDACTED" },
+    { id: "azure-ad-secret", label: "Azure AD (Entra ID) client secret", category: "secret", regex: /(?<![A-Za-z0-9_~.-])[A-Za-z0-9_~.]{3}\dQ~[A-Za-z0-9_~.-]{31,34}(?![A-Za-z0-9_~.-])/g, placeholder: "REDACTED" },
+    { id: "terraform-token", label: "Terraform Cloud token", category: "secret", regex: /\b[A-Za-z0-9]{14}\.atlasv1\.[A-Za-z0-9_=-]{60,70}(?![A-Za-z0-9_=-])/g, placeholder: "REDACTED.atlasv1.REDACTED" },
+    { id: "twilio-key", label: "Twilio API key", category: "secret", regex: /\bSK[0-9a-fA-F]{32}\b/g, placeholder: "SKREDACTED" },
     { id: "stripe-key", label: "Stripe key", category: "secret", regex: /\b(?:sk|rk)_(?:live|test)_[A-Za-z0-9]{16,}\b/g, placeholder: "sk_live_REDACTED" },
     { id: "anthropic-key", label: "Anthropic (Claude) key", category: "secret", regex: /\bsk-ant-[A-Za-z0-9_-]{20,}\b/g, placeholder: "sk-ant-REDACTED" },
     { id: "openai-key", label: "OpenAI y compatibles (sk-\u2026)", category: "secret", regex: /\bsk-(?:proj-)?[A-Za-z0-9_-]{20,}\b/g, placeholder: "sk-REDACTED" },
-    { id: "hf-token", label: "Hugging Face token", category: "secret", regex: /\bhf_[A-Za-z0-9]{20,}\b/g, placeholder: "hf_REDACTED" },
+    { id: "hf-token", label: "Hugging Face token", category: "secret", regex: /\b(?:hf_[A-Za-z0-9]{20,}|api_org_[A-Za-z]{34})\b/g, placeholder: "hf_REDACTED" },
     { id: "xai-key", label: "xAI (Grok) key", category: "secret", regex: /\bxai-[A-Za-z0-9_-]{20,}\b/g, placeholder: "xai-REDACTED" },
     { id: "groq-key", label: "Groq key", category: "secret", regex: /\bgsk_[A-Za-z0-9]{20,}\b/g, placeholder: "gsk_REDACTED" },
     { id: "replicate-key", label: "Replicate token", category: "secret", regex: /\br8_[A-Za-z0-9]{20,}\b/g, placeholder: "r8_REDACTED" },
@@ -134,7 +148,8 @@ export const DETECTORS: Detector[] = [
     { id: "email", label: "Correo electr\u00F3nico", category: "pii", regex: /(?<![A-Za-z0-9._%+-])(?<!:\/\/[^\s/:@]+:)[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, placeholder: "email@redacted.com" },
     { id: "url-auth", label: "Credencial en URL", category: "pii", regex: /:\/\/[^:\s/]+:([^@\s]+)@/g, group: 1, placeholder: "REDACTED" },
     { id: "mac", label: "Direcci\u00F3n MAC", category: "pii", regex: /\b(?:[0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}\b/g, placeholder: "00:00:00:00:00:00" },
-    { id: "phone", label: "Tel\u00E9fono", category: "pii", validate: digitCount, regex: /(?<!\d[-/.])(?!(?:19|20)\d{2}[-/.](?:0[1-9]|1[0-2])[-/.](?:0[1-9]|[12]\d|3[01])(?!\d)|(?:0[1-9]|[12]\d|3[01])[-/.](?:0[1-9]|1[0-2])[-/.](?:19|20)\d{2}(?!\d))(?:\((?:\d{2,3}|0\d{1,3})\)[ \t.-]?)?\b(?:\+?\d{1,3}[ \t.-]?)?(?:\(\d{1,4}\)[ \t.-]?)?\d{2,4}(?:[ \t.-]?\d{2,4}){1,4}\b/g, placeholder: "+00 000 000 000" },
+    ...DETECTORES_IDENTIDAD,
+    { id: "phone", label: "Tel\u00E9fono", category: "pii", validate: telefono, regex: /(?<!\d[-/.])(?!(?:19|20)\d{2}[-/.](?:0[1-9]|1[0-2])[-/.](?:0[1-9]|[12]\d|3[01])(?!\d)|(?:0[1-9]|[12]\d|3[01])[-/.](?:0[1-9]|1[0-2])[-/.](?:19|20)\d{2}(?!\d))(?:\((?:\d{2,3}|0\d{1,3})\)[ \t.-]?)?\b(?:\+?\d{1,3}[ \t.-]?)?(?:\(\d{1,4}\)[ \t.-]?)?\d{2,4}(?:[ \t.-]?\d{2,4}){1,4}\b/g, placeholder: "+00 000 000 000" },
     { id: "ipv4", label: "Direcci\u00F3n IPv4", category: "pii", defaultOff: true, regex: /\b(?:(?:25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(?:25[0-5]|2[0-4]\d|1?\d?\d)\b/g, placeholder: "127.0.0.1" },
     { id: "ipv6", label: "Direcci\u00F3n IPv6", category: "pii", defaultOff: true, regex: /\b(?:[A-Fa-f0-9]{1,4}:){2,7}[A-Fa-f0-9]{1,4}\b/g, placeholder: "::1" },
     { id: "credit-card", label: "Tarjeta de cr\u00E9dito", category: "financial", validate: luhnValid, regex: /\b\d(?:[ -]?\d){12,18}\b/g, placeholder: "4111 1111 1111 1111" },

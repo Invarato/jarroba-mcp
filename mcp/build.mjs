@@ -158,7 +158,7 @@ for (const p of PAQUETES) {
         excedidos.push(`${p.nombre}: ${mb.toFixed(2)} MB > tope ${p.topeMB} MB`);
 }
 for (const d of DIFERIDOS) {
-    const r = await build({ metafile: true, entryPoints: [d.entrada], bundle: true, platform: "node", format: "esm", target: "node20", outfile: d.salida, minify: true, legalComments: "external", alias: d.alias, plugins: [sinComentarioJson, ...(d.plugins ?? [])],
+    const r = await build({ metafile: true, entryPoints: [d.entrada], bundle: true, platform: "node", format: "esm", target: "node20", outfile: d.salida, minify: true, legalComments: "external", alias: d.alias, plugins: [sinComentarioJson, ...(d.plugins ?? [])], external: EXTERNAS_TODAS,
     });
     anotar(dirname(d.salida), r.metafile);
     const mb = readFileSync(d.salida).length / 1048576;

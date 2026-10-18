@@ -38,6 +38,7 @@ check("cada tool declara lo que dice el cat\u00E1logo, sin copiarlo a mano en do
 const anot = (n: string) => tools.find((t: any) => t.name === n)?.annotations as any;
 check("hash_text es de solo lectura y de mundo cerrado", anot("hash_text")?.readOnlyHint === true && anot("hash_text")?.openWorldHint === false, anot("hash_text"));
 check("diagram_render NO es de solo lectura: escribe un PNG en la ruta que le pases", anot("diagram_render")?.readOnlyHint === false && anot("diagram_render")?.destructiveHint === true, anot("diagram_render"));
+check("spreadsheet_audit tampoco: lee la hoja por la ruta que le pasan (se hab\u00EDa quedado como funci\u00F3n pura)", anot("spreadsheet_audit")?.openWorldHint === true && anot("spreadsheet_audit")?.idempotentHint === false, anot("spreadsheet_audit"));
 check("log_analyze no es idempotente ni de mundo cerrado: lee un fichero que cambia", anot("log_analyze")?.idempotentHint === false && anot("log_analyze")?.openWorldHint === true, anot("log_analyze"));
 check("todas las tools registradas tienen dominio declarado", tools.every((t: any) => mapaDeDominios().has(t.name)), tools.filter((t: any) => !mapaDeDominios().has(t.name)).map((t: any) => t.name));
 const deuda = (await call("test_debt", { folder: join(here, "..", "..", "scripts", "corpus") })).o;
@@ -320,16 +321,20 @@ const auditoria = await call("mcp_catalog_audit", {
     serverJson: JSON.stringify({ name: "ejemplo-trampa", version: "0.1.0", description: "12 deterministic tools." }),
     packageJson: JSON.stringify({ version: "0.2.0" }),
 });
-const reglasMcp = (auditoria.o?.hallazgos ?? []).map((h: any) => h.regla);
-check("mcp_catalog_audit acusa el nombre que no cuadra con su annotation", reglasMcp.includes("annotation-sospechosa"), reglasMcp);
-check("mcp_catalog_audit acusa la descripcion vacia", reglasMcp.includes("description-vacia"), reglasMcp);
-check("mcp_catalog_audit acusa el recuento desincronizado (\"12\" vs 4 tools reales)", reglasMcp.includes("recuento-desincronizado"), reglasMcp);
-check("mcp_catalog_audit acusa la version desincronizada (0.1.0 vs 0.2.0)", reglasMcp.includes("version-desincronizada"), reglasMcp);
-check("mcp_catalog_audit acusa el tool poisoning de \"add\" (caso real de Invariant Labs)", reglasMcp.includes("posible-envenenamiento"), reglasMcp);
-const envenenadoMcp = (auditoria.o?.hallazgos ?? []).find((h: any) => h.regla === "posible-envenenamiento" && h.tool === "add");
-check("\u2026y sale CR\u00CDTICO, no un acierto l\u00E9xico suelto", envenenadoMcp?.gravedad === "critico", envenenadoMcp);
-check("mcp_catalog_audit NO acusa a hash_text, que es la tool sana", !(auditoria.o?.hallazgos ?? []).some((h: any) => h.tool === "hash_text"), auditoria.o?.hallazgos);
-check("mcp_catalog_audit mide tokens con el BPE real", typeof auditoria.o?.tokensTotal === "number" && auditoria.o.tokensTotal > 0);
+const reglasMcp = (auditoria.o?.findings ?? []).map((h: any) => h.rule);
+check("mcp_catalog_audit acusa el nombre que no cuadra con su annotation", reglasMcp.includes("name-annotation-mismatch"), reglasMcp);
+check("mcp_catalog_audit acusa la descripcion vacia", reglasMcp.includes("missing-description"), reglasMcp);
+check("mcp_catalog_audit acusa el recuento desincronizado (\"12\" vs 4 tools reales)", reglasMcp.includes("stale-tool-count"), reglasMcp);
+check("mcp_catalog_audit acusa la version desincronizada (0.1.0 vs 0.2.0)", reglasMcp.includes("version-mismatch"), reglasMcp);
+check("mcp_catalog_audit acusa el tool poisoning de \"add\" (caso real de Invariant Labs)", reglasMcp.includes("possible-tool-poisoning"), reglasMcp);
+const envenenadoMcp = (auditoria.o?.findings ?? []).find((h: any) => h.rule === "possible-tool-poisoning" && h.tool === "add");
+check("\u2026y sale CR\u00CDTICO, no un acierto l\u00E9xico suelto", envenenadoMcp?.severity === "critical", envenenadoMcp);
+check("mcp_catalog_audit NO acusa a hash_text, que es la tool sana", !(auditoria.o?.findings ?? []).some((h: any) => h.tool === "hash_text"), auditoria.o?.findings);
+check("mcp_catalog_audit mide tokens con el BPE real", typeof auditoria.o?.tokens === "number" && auditoria.o.tokens > 0);
+check("mcp_catalog_audit: el informe, en ingl\u00E9s \u2014 claves, reglas y frases (con sus n\u00FAmeros)", !/"(hallazgos|regla|gravedad|fragmento|porGravedad|porTool|datos|tokensTotal)"/.test(JSON.stringify(auditoria.o))
+    && !/[áéíóúñ]|señales|falta|catálogo|registro/.test(JSON.stringify(auditoria.o?.findings))
+    && auditoria.o?.findings?.find((h: any) => h.rule === "version-mismatch")?.message?.includes("\"0.1.0\"")
+    && /3 signals/.test(envenenadoMcp?.message ?? ""), auditoria.o?.findings);
 const mmd = await call("db_docs", { ddl: DDL, format: "mermaid" });
 check("db_docs genera Mermaid con la cardinalidad", /erDiagram/.test(mmd.o?.output ?? "") && /cliente \|\|--\|\{ pedido/.test(mmd.o?.output ?? ""), mmd.o?.output);
 const md = await call("db_docs", { ddl: DDL, format: "markdown" });
@@ -420,6 +425,36 @@ check("log_trends encuentra el patr\u00F3n que se dispar\u00F3", /no se pudo con
 check("log_trends dice a qu\u00E9 HORA fue", (ten?.findings?.[0]?.when ?? "").includes("10:40"), ten?.findings?.[0]);
 check("log_trends no llama hallazgo al tr\u00E1fico normal", !JSON.stringify(ten?.findings ?? []).includes("peticion servida"), ten?.findings);
 check("log_trends lo dice en vez de inventarse una l\u00EDnea de tiempo sin fechas", ((await call("log_trends", { text: "INFO uno\nINFO dos" })).o?.note ?? "").includes("timestamps"), 1);
+{
+    const { mkdtempSync, writeFileSync, readFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const { tmpdir } = await import("node:os");
+    const dir = mkdtempSync(join(tmpdir(), "jt-csvdiff-"));
+    const pa = join(dir, "a.csv"), pb = join(dir, "b.csv"), po = join(dir, "diff.csv");
+    writeFileSync(pa, "id;nombre;importe\n1;\"P\u00E9rez; Ana\";10\n2;Luis;20\n3;Eva;30\n");
+    writeFileSync(pb, "importe;id;nombre\n10;1;\"P\u00E9rez; Ana\"\n25;2;Luis\n40;4;Nuevo\n");
+    const d = (await call("csv_diff", { pathA: pa, pathB: pb, key: "id", outPath: po })).o;
+    check("csv_diff: columnas reordenadas por nombre y separador `;` detectado", d?.identical === 1 && d?.changed === 1, d);
+    check("csv_diff: solo en A y solo en B", d?.onlyInA === 1 && d?.onlyInB === 1, d);
+    check("csv_diff: dice qu\u00E9 columna cambi\u00F3", d?.changedCellsByColumn?.importe === 1, d?.changedCellsByColumn);
+    check("csv_diff: escribe el diff completo", /cambiada;2;importe;20;25/.test(readFileSync(po, "utf8")), readFileSync(po, "utf8"));
+    const malo = await call("csv_diff", { pathA: pa, pathB: pb, key: "no_existe" });
+    check("csv_diff: una clave que no existe se dice, con la cabecera", /not found/.test(JSON.stringify(malo)), malo);
+}
+{
+    const l: string[] = [];
+    for (let i = 0; i < 200; i++) {
+        const error = i % 5 === 0;
+        l.push(JSON.stringify({ ts: new Date(Date.UTC(2026, 9, 15, 10, 0, i)).toISOString(), level: error ? "error" : "info", msg: error ? "pago rechazado" : "pago ok", version: error || i % 50 === 1 ? "2.4.1" : "2.3.9", metodo: i % 2 ? "tarjeta" : "bizum", req_id: `r-${i}` }));
+    }
+    const d = (await call("log_distinguish", { text: l.join("\n") })).o;
+    check("log_distinguish: por defecto compara los ERRORES con el resto", d?.selected === 40 && d?.rest === 160, d);
+    check("log_distinguish: la versi\u00F3n que comparten los errores sale la primera", d?.distinguishing?.[0]?.field === "version" && d?.distinguishing?.[0]?.value === "2.4.1", d?.distinguishing);
+    check("log_distinguish: el nivel (el propio selector) no sale", !(d?.distinguishing ?? []).some((x: {
+        field: string;
+    }) => x.field === "level"), d?.distinguishing);
+    check("log_distinguish: el id por evento se salta", (d?.skippedUniqueFields ?? []).includes("req_id"), d?.skippedUniqueFields);
+}
 const LOG_INC = (() => {
     const T0 = Date.UTC(2026, 7, 27, 10, 0, 0), MIN = 60000;
     const L = (ms: number, s: string) => `${new Date(ms).toISOString()} ${s}`;
@@ -467,7 +502,14 @@ check("make_lint encuentra la falta de .DELETE_ON_ERROR", lint?.findings?.some((
 check("make_lint trae qu\u00E9, c\u00F3mo se rompe y c\u00F3mo se arregla", lint?.findings?.every((h: any) => h.what && h.howItBreaks && h.fix), lint?.findings?.[0]);
 const lintMal = (await call("make_lint", { text: "all:\n    echo hola\n" })).o;
 check("make_lint caza los espacios en vez del tabulador", lintMal?.findings?.some((h: any) => h.rule === "receta-con-espacios"), lintMal?.findings);
+check("make_lint explica en ingl\u00E9s", lint?.findings?.some((h: any) => h.rule === "sin-delete-on-error" && /^`\.DELETE_ON_ERROR:` is missing/.test(h.what))
+    && lintMal?.findings?.some((h: any) => /missing separator/.test(h.howItBreaks) && /^Recipe indented/.test(h.what)), [lint?.findings?.map((h: any) => h.what), lintMal?.findings?.map((h: any) => h.what)]);
+const simCiclo = (await call("make_simulate", { text: "a: b\n\ttouch a\nb: a\n\ttouch b\n", targets: ["a"] })).o;
+check("make_simulate da sus errores en ingl\u00E9s", simCiclo?.errors?.some((e: string) => /^Circular dependency: /.test(e)), simCiclo?.errors);
 const gen = (await call("make_generate", { stack: "node", projectName: "demo" })).o;
+const genG = (await call("make_generate", { stack: "generic", projectName: "demo" })).o;
+const genMvn = (await call("make_generate", { stack: "maven", projectName: "demo" })).o;
+check("make_generate acepta generic (en ingl\u00E9s) y maven, sin hallazgos de su propio linter", genG?.findingsFromItsOwnLinter === 0 && genMvn?.findingsFromItsOwnLinter === 0 && /mvn/.test(JSON.stringify(genMvn)), [genG?.findingsFromItsOwnLinter, genMvn?.findingsFromItsOwnLinter]);
 check("make_generate no se contradice a s\u00ED mismo", gen?.findingsFromItsOwnLinter === 0, gen?.findingsFromItsOwnLinter);
 check("make_generate trae las tres l\u00EDneas que casi nunca est\u00E1n", gen?.makefile?.includes(".DELETE_ON_ERROR") && gen.makefile.includes("pipefail") && gen.makefile.includes(".PHONY"), gen?.makefile?.slice?.(0, 120));
 const rol = (await call("make_role", { project: PRO, convertTo: "just" })).o;
@@ -477,6 +519,9 @@ check("make_role ve que `build:` crea su propio directorio (receta EXPANDIDA)", 
 check("make_role omite los objetivos de fichero con su motivo", rol?.conversion?.omitted?.some((o: any) => o.target ?? o.name === "build/prog")
     && !rol?.conversion?.content?.includes("build/prog:"), rol?.conversion?.omitted);
 check("make_role arrastra en cascada lo que depend\u00EDa de lo omitido", rol?.conversion?.omitted?.some((o: any) => o.target === "all"), rol?.conversion?.omitted);
+check("make_role explica en ingl\u00E9s", rol?.conversion?.omitted?.some((o: any) => /^it is a file target/.test(o.why))
+    && rol?.targets?.some((o: any) => /^(the recipe|declared in|it is a pattern|the name)/.test(o.decidingSignal ?? ""))
+    && rol?.whatMakeGivesYouToday?.every((p: any) => typeof p === "string" && !/[áéíóúñ]/.test(p)), [rol?.conversion?.omitted, rol?.whatMakeGivesYouToday]);
 check("make_role sin destino solo diagnostica", (await call("make_role", { project: PRO })).o?.conversion === undefined);
 const rolLanz = (await call("make_role", {
     text: ".PHONY: test lint\ntest:\n\tgo test ./...\nlint:\n\tgolangci-lint run\n",
@@ -491,12 +536,14 @@ check("ignore_check se\u00F1ala QU\u00C9 carpeta bloquea la excepci\u00F3n", ign
 const ignDiv = (await call("ignore_check", { files: ["node_modules/x.js", "app/node_modules/y.js"], text: "node_modules\n" })).o;
 check("ignore_check caza el .dockerignore copiado del .gitignore", ignDiv?.gitVersusDocker?.some((d: any) => d.path === "app/node_modules/y.js" && d.ignoredByGit && !d.ignoredByDocker), ignDiv?.gitVersusDocker);
 check("\u2026y dice el arreglo exacto", ignDiv?.gitVersusDocker?.[0]?.explanation?.includes("**/node_modules"), ignDiv?.gitVersusDocker?.[0]);
+check("ignore_check explica en ingl\u00E9s", /^The rule on line \d+ .* has no slashes/.test(ignDiv?.gitVersusDocker?.[0]?.explanation ?? ""), ignDiv?.gitVersusDocker?.[0]?.explanation);
 const dfSin = (await call("dockerfile_cache", { project: PRO })).o;
 check("dockerfile_cache sin cambios no rehace nada", dfSin?.layersRebuilt === 0, dfSin?.layersRebuilt);
 const dfCon = (await call("dockerfile_cache", { project: PRO, changed: ["src/main.c"] })).o;
 check("dockerfile_cache arrastra el npm ci al tocar c\u00F3digo", dfCon?.runsRepeated?.some((r: any) => r.command === "npm ci"), dfCon?.runsRepeated);
 check("dockerfile_cache se\u00F1ala la primera capa que se cae", dfCon?.firstToFall?.instruction === "COPY . .", dfCon?.firstToFall);
 check("dockerfile_cache propone el arreglo con el manifiesto correcto", dfCon?.warnings?.some((a: any) => a.rule === "copia-amplia-antes-de-instalar" && a.fix.includes("package-lock.json")), dfCon?.warnings?.map((a: any) => a.rule));
+check("dockerfile_cache explica en ingl\u00E9s", dfCon?.warnings?.some((a: any) => a.rule === "copia-amplia-antes-de-instalar" && /^The whole project is copied/.test(a.what)), dfCon?.warnings?.map((a: any) => a.what));
 const dfIgn = (await call("dockerfile_cache", { project: PRO, changed: ["src/main.c"], dockerignore: "src\n" })).o;
 check("dockerfile_cache respeta el .dockerignore: fuera del contexto no invalida", dfIgn?.layersRebuilt === 0 && dfIgn.excludedByDockerignore > 0, dfIgn);
 const cr = (await call("element_config", { element: "Cr" })).o;
@@ -595,7 +642,7 @@ check("\u2026y una orden que no casa con ning\u00FAn objetivo NO se inventa como
     ?.rebuiltUnexpectedly ?? null) === "null");
 const dErr = (await call("make_log_diff", { project: PRO, log: "make: *** [Makefile:6: build/main.o] Error 1\n" })).o;
 check("make_log_diff lee el error con su objetivo y su l\u00EDnea del Makefile", dErr?.errors?.[0]?.target === "build/main.o" && dErr.errors[0].makefileLine === 6, dErr?.errors);
-check("make_log_diff dice que no puede medir tiempos en vez de estimarlos", /no trae fechas/.test(dOk?.timings ?? ""), dOk?.timings);
+check("make_log_diff dice que no puede medir tiempos en vez de estimarlos", /has no timestamps/.test(dOk?.timings ?? ""), dOk?.timings);
 check("make_log_diff exige un log", (await call("make_log_diff", { project: PRO })).isError === true);
 const ev = await call("calc_eval", { expression: "100 km/h to m/s" });
 check("calc_eval convierte con unidades", ev.o?.result === "27.777777777778 m / s", ev.o);
@@ -681,9 +728,9 @@ const trampaCurl = [
     `curl 'https://api.x.com/v1/otra'`,
 ].join("\n");
 const ac1 = await call("api_collection_convert", { input: trampaCurl, to: "bruno" });
-check("api_collection_convert detecta curl", ac1.o?.formatoDetectado === "curl", ac1.o?.formatoDetectado);
-check("y NO parte por el \u00ABcurl\u00BB de dentro del cuerpo", ac1.o?.peticiones === 2, ac1.o?.peticiones);
-check("saca el \u00E1rbol de ficheros de Bruno", (ac1.o?.ficheros ?? []).some((f: any) => f.ruta === "bruno.json"), (ac1.o?.ficheros ?? []).map((f: any) => f.ruta));
+check("api_collection_convert detecta curl", ac1.o?.detectedFormat === "curl", ac1.o?.detectedFormat);
+check("y NO parte por el \u00ABcurl\u00BB de dentro del cuerpo", ac1.o?.requests === 2, ac1.o?.requests);
+check("saca el \u00E1rbol de ficheros de Bruno", (ac1.o?.files ?? []).some((f: any) => f.path === "bruno.json"), (ac1.o?.files ?? []).map((f: any) => f.path));
 const postman = JSON.stringify({
     info: { name: "Con secretos", schema: "https://schema.getpostman.com/json/collection/v2.1.0/collection.json" },
     variable: [{ key: "token", value: "sk_live_51H8xQ2eZvKYlo2C" }],
@@ -694,16 +741,16 @@ const postman = JSON.stringify({
         }],
 });
 const ac2 = await call("api_collection_convert", { input: postman, to: "curl" });
-check("api_collection_convert detecta Postman", ac2.o?.formatoDetectado === "postman", ac2.o?.formatoDetectado);
-check("y AVISA de los scripts que no puede traducir", /script/i.test((ac2.o?.avisos ?? []).join(" ")), ac2.o?.avisos);
+check("api_collection_convert detecta Postman", ac2.o?.detectedFormat === "postman", ac2.o?.detectedFormat);
+check("y AVISA de los scripts que no puede traducir", /script/i.test((ac2.o?.warnings ?? []).join(" ")), ac2.o?.warnings);
 const as1 = await call("api_collection_secrets", { input: postman });
-check("api_collection_secrets encuentra las dos credenciales", as1.o?.encontrados === 2, as1.o);
+check("api_collection_secrets encuentra las dos credenciales", as1.o?.found === 2 && as1.o.findings.every((f: any) => f.request && f.location && f.maskedSample), as1.o);
 check("y NO las devuelve en claro", !JSON.stringify(as1.o).includes("tok-secreto")
-    && !JSON.stringify(as1.o).includes("sk_live_51H8xQ2eZvKYlo2C"), as1.o?.hallazgos);
+    && !JSON.stringify(as1.o).includes("sk_live_51H8xQ2eZvKYlo2C"), as1.o?.findings);
 const cg1 = await call("api_code_generate", { input: `curl -X POST 'https://x.com/a' -H 'Content-Type: application/json' -d '{"a":1}'`, language: "csharp" });
-check("api_code_generate no mete el Content-Type en req.Headers (C#)", !/req\.Headers\.Add\("Content-Type"/.test(cg1.o?.codigo ?? ""), cg1.o?.codigo?.slice(0, 120));
+check("api_code_generate no mete el Content-Type en req.Headers (C#)", !/req\.Headers\.Add\("Content-Type"/.test(cg1.o?.code ?? ""), cg1.o?.code?.slice(0, 120));
 const cg2 = await call("api_code_generate", { input: `curl 'https://x.com/a'`, language: "go" });
-check("api_code_generate no importa \"strings\" en un Go sin cuerpo", !/"strings"/.test(cg2.o?.codigo ?? ""), cg2.o?.codigo?.slice(0, 120));
+check("api_code_generate no importa \"strings\" en un Go sin cuerpo", !/"strings"/.test(cg2.o?.code ?? ""), cg2.o?.code?.slice(0, 120));
 const espec = (params: unknown[]) => JSON.stringify({
     openapi: "3.0.3",
     info: { title: "T", version: "1" },
@@ -713,16 +760,18 @@ const bc1 = await call("api_breaking_changes", {
     before: espec([]),
     after: espec([{ name: "nuevo", in: "query", required: true, schema: { type: "string" } }]),
 });
-check("api_breaking_changes: un par\u00E1metro OBLIGATORIO nuevo ROMPE", bc1.o?.rompe === 1 && bc1.o?.compatible === false, bc1.o);
+check("api_breaking_changes: un par\u00E1metro OBLIGATORIO nuevo ROMPE", bc1.o?.breaking === 1 && bc1.o?.compatible === false && bc1.o.changes.some((c: any) => c.rule === "required-parameter-added" && c.severity === "breaking"), bc1.o);
 const bc2 = await call("api_breaking_changes", {
     before: espec([]),
     after: espec([{ name: "nuevo", in: "query", schema: { type: "string" } }]),
 });
-check("y el MISMO par\u00E1metro, OPCIONAL, es compatible", bc2.o?.compatible === true && bc2.o?.rompe === 0, bc2.o);
+check("y el MISMO par\u00E1metro, OPCIONAL, es compatible", bc2.o?.compatible === true && bc2.o?.breaking === 0, bc2.o);
 const bc3 = await call("api_breaking_changes", { before: espec([]), after: espec([]), format: "markdown" });
 check("api_breaking_changes sabe salir en Markdown", /^# Cambios de API/m.test(bc3.text ?? ""), (bc3.text ?? "").slice(0, 60));
 const pf1 = await call("api_cors_preflight", { method: "POST", headers: { "Content-Type": "application/json" } });
 check("api_cors_preflight: un POST con JSON S\u00CD lleva preflight", pf1.o?.preflight === true, pf1.o);
+check("api_*: claves en ingl\u00E9s \u2014 nada de formatoDetectado, encontrados, hallazgos, rompe, porque\u2026", !/"(formatoDetectado|peticiones|avisos|ficheros|ruta|contenido|encontrados|hallazgos|peticion|donde|muestra|codigo|lenguaje|disponibles|cambios|rompe|regla|gravedad|operacion|deA|aB|porque|queHacer)"/.test(JSON.stringify([ac1.o, ac2.o, as1.o, cg1.o, bc1.o, pf1.o]))
+    && pf1.o?.because && pf1.o?.whatToDo, JSON.stringify(pf1.o));
 const pf2 = await call("api_cors_preflight", { method: "POST", headers: { "Content-Type": "text/plain; charset=utf-8" } });
 check("y un text/plain con charset NO", pf2.o?.preflight === false, pf2.o);
 check("las cinco tools de /api est\u00E1n publicadas", ["api_collection_convert", "api_collection_secrets", "api_code_generate", "api_breaking_changes", "api_cors_preflight"].every((n) => tools.some((t: any) => t.name === n)), tools.filter((t: any) => t.name.startsWith("api_")).map((t: any) => t.name));
@@ -762,6 +811,22 @@ const worldAwsScpGate = {
     identidades: { ana: [{ efecto: "permitir", acciones: ["*"] }], bob: [{ efecto: "permitir", acciones: ["*"] }] },
     scps: { ou: [{ efecto: "permitir", acciones: ["ec2:*"] }] },
 };
+const worldAwsCond = {
+    ambitos: [{ id: "raiz", tipo: "raiz" }, { id: "cuenta", tipo: "cuenta", padreId: "raiz" }, { id: "bucket", tipo: "recurso", padreId: "cuenta" }],
+    identidades: { ana: [
+            { efecto: "permitir", acciones: ["s3:*"], condicion: JSON.stringify({ Bool: { "aws:MultiFactorAuthPresent": "true" } }) },
+            { efecto: "denegar", acciones: ["s3:*"], condicion: JSON.stringify({ NotIpAddress: { "aws:SourceIp": "10.0.0.0/8" } }) },
+        ] },
+};
+const conds = { provider: "aws", world: worldAwsCond, principalId: "ana", action: "s3:GetObject", scopeId: "bucket" };
+const cSin = (await call("access_check", conds)).o;
+const cVpn = (await call("access_check", { ...conds, requestContext: { "aws:SourceIp": "10.1.2.3", "aws:MultiFactorAuthPresent": "true" } })).o;
+const cFuera = (await call("access_check", { ...conds, requestContext: { "aws:SourceIp": "203.0.113.9", "aws:MultiFactorAuthPresent": "true" } })).o;
+const cSinMfa = (await call("access_check", { ...conds, requestContext: { "aws:SourceIp": ["10.1.2.3"] } })).o;
+check("access_check (aws) requestContext: sin \u00E9l indeterminado; VPN+MFA permitido; fuera de la VPN denegado; sin MFA denegado", cSin?.result === "indeterminate" && cVpn?.result === "allowed" && cFuera?.result === "denied" && cSinMfa?.result === "denied", [cSin?.result, cVpn?.result, cFuera?.result, cSinMfa?.result]);
+check("access_check (aws) requestContext: la traza lo explica en ingl\u00E9s (qu\u00E9 clave, qu\u00E9 esperaba, qu\u00E9 trajo; origen \u00ABidentity-based\u00BB)", cSinMfa.trace.some((t: any) => /identity-based Allow .*aws:MultiFactorAuthPresent/.test(t.explanation))
+    && cVpn.trace.some((t: any) => /Deny covers this action but its condition does not hold/.test(t.explanation))
+    && !/identidad|recurso|sesion|aws\.[a-zA-Z]+PorCondicion/.test(JSON.stringify([cVpn, cFuera, cSinMfa])), [cSinMfa?.trace, cVpn?.trace]);
 const wc1 = await call("access_who_can", {
     provider: "aws",
     world: worldAwsScpGate,
@@ -891,8 +956,8 @@ check("mcp_catalog_audit: el mismo cat\u00E1logo aprobado no da cambios", Array.
 const sinAprobado = await call("mcp_catalog_audit", { toolsListJson: aprobado });
 check("mcp_catalog_audit: sin approvedToolsListJson no aparece el campo (comportamiento de siempre)", sinAprobado.o && !("changesSinceApproved" in sinAprobado.o), Object.keys(sinAprobado.o ?? {}));
 const autoAuditoria = await call("mcp_catalog_audit", { toolsListJson: JSON.stringify({ tools }) });
-const envenenadas = (autoAuditoria.o?.hallazgos ?? []).filter((h: any) => /envenenamiento|poison/i.test(h.regla));
-check("ninguna tool de NUESTRO cat\u00E1logo da tool poisoning en nuestro propio auditor", Array.isArray(autoAuditoria.o?.hallazgos) && envenenadas.length === 0, envenenadas.map((h: any) => h.tool));
+const envenenadas = (autoAuditoria.o?.findings ?? []).filter((h: any) => /poison/i.test(h.rule));
+check("ninguna tool de NUESTRO cat\u00E1logo da tool poisoning en nuestro propio auditor", Array.isArray(autoAuditoria.o?.findings) && envenenadas.length === 0, envenenadas.map((h: any) => h.tool));
 const rutaMala = await call("log_analyze", { path: "/no/such/dir/app.log" });
 check("una ruta que no existe da un error EN INGL\u00C9S", rutaMala.isError === true && /^Could not read "\/no\/such\/dir\/app\.log": .*ENOENT/.test(rutaMala.text ?? ""), rutaMala.text);
 const carpetaMala = await call("test_debt", { folder: "/no/such/dir" });
@@ -999,6 +1064,7 @@ const segDe = (o: any, r: string) => (o?.findings ?? []).find((x: any) => x.rule
 check("headers_audit: la frase del motor NO cruza la frontera (csp-missing sin excerpt)\u2026", segDe(hd.o, "csp-missing") && segDe(hd.o, "csp-missing").excerpt === undefined, segDe(hd.o, "csp-missing"));
 check("\u2026pero el trozo real de la entrada S\u00CD (server-version-exposed lleva la cabecera)", /nginx\/1\.18\.0/.test(segDe(hd.o, "server-version-exposed")?.excerpt ?? ""), segDe(hd.o, "server-version-exposed"));
 const hdBueno = await seg("headers_audit", { https: true, headers: "HTTP/1.1 200 OK\nContent-Security-Policy: default-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'\nStrict-Transport-Security: max-age=63072000; includeSubDomains\nX-Content-Type-Options: nosniff\nReferrer-Policy: no-referrer\nSet-Cookie: sid=abc; Secure; HttpOnly; SameSite=Lax" });
+check("headers_audit: nota A+\u2026F como /headers-audit \u2014 la mala suspende, la buena saca A o A+, con su regla", ["C", "D", "F"].includes(hd.o?.grade) && ["A", "A+"].includes(hdBueno.o?.grade) && /A\+: none/.test(hd.o?.gradeRule ?? ""), [hd.o?.grade, hdBueno.o?.grade]);
 check("headers_audit: una configuraci\u00F3n sana no da nada cr\u00EDtico ni alto", !(hdBueno.o?.findings ?? []).some((x: any) => x.severity === "critical" || x.severity === "high"), hdBueno.o?.findings);
 const em = await seg("email_auth_audit", { input: "v=spf1 +all\nv=DMARC1; p=none" });
 check("email_auth_audit: SPF +all y DMARC p=none", ["spf-plus-all", "dmarc-policy-none"].every((r) => segReglas(em.o).includes(r)), segReglas(em.o));
@@ -1115,6 +1181,8 @@ metadata: { name: w }
 `;
 const km = (await call("k8s_manifest_check", { manifests: K8M })).o;
 const prob = (p: string) => (km?.schemaErrors ?? []).find((e: any) => e.problem === p);
+check("k8s_manifest_check: fiabilidad al estilo kube-score aparte (nginx sin versi\u00F3n, sin recursos), con reglas en ingl\u00E9s", Array.isArray(km?.reliability) && km.reliability.length >= 2 && km.reliability.every((h: any) => typeof h.rule === "string" && h.rule && h.object)
+    && !/[áéíóúñ]|sin-|imagen/.test(JSON.stringify(km.reliability.map((h: any) => [h.rule, h.data]))), km?.reliability);
 check("k8s_manifest_check: \"3\" donde va un entero", prob("wrong-type")?.path === "spec.replicas", km?.schemaErrors);
 check("k8s_manifest_check: la errata livenesProbe \u2192 didYouMean livenessProbe", prob("unknown-field")?.didYouMean === "livenessProbe", prob("unknown-field"));
 check("k8s_manifest_check: batch/v1beta1 CronJob \u2192 retirada en 1.25, usar batch/v1", prob("removed-api")?.removed?.use === "batch/v1", prob("removed-api"));
@@ -1271,6 +1339,8 @@ action view appliesTo { principal: [User], resource: [Doc, Folder] };`;
         const f = (await call("practice_check", { topic: fuera })).o;
         check(`practice_check: «${fuera}» no casa con nada (dos falsos positivos ya arreglados)`, f?.found === false, f?.results?.map((x: any) => x.id));
     }
+    const det = (await call("practice_check", { topic: "AI detector to catch students cheating" })).o;
+    check("practice_check: con resultados, tambi\u00E9n alsoConsider (vecinas con id y t\u00EDtulo, como nearest)", det?.found === true && Array.isArray(det.alsoConsider) && det.alsoConsider.length > 0 && det.alsoConsider.length <= 5 && det.alsoConsider.every((n: any) => n.id && n.practice), det?.alsoConsider);
     check("practice_check: sin coincidencia, candidatas (nearest) con id y t\u00EDtulo para que el agente juzgue", nada?.nearest === undefined || (nada.nearest.length <= 20 && nada.nearest.every((n: any) => n.id && n.practice && Object.keys(n).length === 2)), nada?.nearest);
     check("practice_check: nada en espa\u00F1ol cruza la frontera (c\u00F3digos)", !/"(vigente|superada|antipatron|innecesaria|depende|medido|documentado|consenso|opinion|desarrollo|datos|año|mes|dia)"/.test(JSON.stringify([ox, tls, tok])), JSON.stringify(tok).slice(0, 300));
 }
@@ -1300,7 +1370,24 @@ action view appliesTo { principal: [User], resource: [Doc, Folder] };`;
     check("kafka_assign sticky con suscripciones distintas \u2192 error en ingl\u00E9s", /same topics/.test(st?.error ?? ""), st);
     const coop = (await call("kafka_assign", { strategy: "cooperative-sticky", topics: [{ name: "t", partitions: 2 }], members: [{ id: "a", topics: ["t"], owned: [{ topic: "t", partition: 0 }, { topic: "t", partition: 1 }], generation: 1 }, { id: "b", topics: ["t"] }] })).o;
     check("kafka_assign cooperative-sticky: entra b \u2192 a suelta UNA (transferring a\u2192b) y se queda la otra", coop?.transferring?.length === 1 && coop.transferring[0].from === "a" && coop.transferring[0].to === "b" && coop.assignment.a.length === 1 && coop.assignment.b.length === 0, coop);
-    check("br\u00F3keres: nada en espa\u00F1ol cruza la frontera", !/"(casa|falla|ignorada|presencia|igual|razon|indice|orden|codigo)"/.test(JSON.stringify([r1, r2, r3, h, rg, st])), JSON.stringify(h).slice(0, 300));
+    const POL = { store: ["example_corp"], event: [{ "anything-but": "order_cancelled" }], price_usd: [{ numeric: [">=", 100] }] };
+    const attrs = (event: string) => ({ store: { Type: "String", Value: "example_corp" }, event: { Type: "String", Value: event }, price_usd: { Type: "Number", Value: "210.75" } });
+    const sOk = (await call("sns_filter", { policy: POL, message: attrs("order_placed") })).o;
+    check("sns_filter: el ejemplo de AWS pasa, y cada clave dice qu\u00E9 patr\u00F3n cas\u00F3", sOk?.matches === true && sOk.keys.length === 3 && sOk.keys.every((k: any) => k.matches && k.matchedPatternIndex === 0) && /documentation/.test(sOk.source), sOk);
+    const sNo = (await call("sns_filter", { policy: JSON.stringify(POL), message: attrs("order_cancelled") })).o;
+    check("sns_filter: pol\u00EDtica como texto JSON; anything-but corta order_cancelled y dice qu\u00E9 clave", sNo?.matches === false && sNo.keys.find((k: any) => k.path === "event")?.matches === false && sNo.keys.find((k: any) => k.path === "event").matchedPatternIndex === null, sNo);
+    const sBody = (await call("sns_filter", { policy: { patient: { age: [{ numeric: [">", 18] }] } }, message: { patient: { age: 30 } }, scope: "MessageBody" })).o;
+    check("sns_filter: MessageBody con clave anidada \u2192 path patient.age", sBody?.matches === true && sBody.keys[0].path === "patient.age", sBody);
+    const sAnid = await call("sns_filter", { policy: { patient: { age: [30] } }, message: attrs("x") });
+    check("sns_filter: pol\u00EDtica anidada en MessageAttributes \u2192 error que dice que hace falta MessageBody", sAnid.isError && /MessageBody/.test(sAnid.text ?? ""), sAnid.text);
+    const seisClaves = Object.fromEntries(["a", "b", "c", "d", "e", "f"].map((k) => [k, ["x"]]));
+    const sMuchas = await call("sns_filter", { policy: seisClaves, message: attrs("x") });
+    check("sns_filter: 6 claves \u2192 error (SNS admite 5)", sMuchas.isError && /5/.test(sMuchas.text ?? ""), sMuchas.text);
+    const tres = { type: "topic", bindings: [{ queue: "q", bindingKey: "#.a.#.b.#" }], routingKey: "x.a.y.b.z" };
+    const v43 = await call("rabbit_route", tres);
+    const v40 = (await call("rabbit_route", { ...tres, version: "4.0" })).o;
+    check("rabbit_route: tres \u00AB#\u00BB \u2192 error en 4.3 (por defecto) y entrega en 4.0", /406|4\.3/.test(JSON.stringify(v43.o ?? v43.text)) && JSON.stringify(v40?.queues) === "[\"q\"]", [v43.o ?? v43.text, v40]);
+    check("br\u00F3keres: nada en espa\u00F1ol cruza la frontera", !/"(casa|falla|ignorada|presencia|igual|razon|indice|orden|codigo)"/.test(JSON.stringify([r1, r2, r3, h, rg, st, sOk, sNo, sBody])), JSON.stringify(h).slice(0, 300));
 }
 {
     const cerca = (a: number, b: number, tol: number) => Math.abs(a - b) <= tol;

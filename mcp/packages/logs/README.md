@@ -28,6 +28,7 @@ only what fits. An agent debugging a red CI run cannot read the log; it can ask 
 | `log_analyze` | Format, number of **events** (a 40-line stack trace is **one**), levels, time range, errors with their **root cause resolved**, most frequent patterns. |
 | `log_trends` | **When did it start.** Compares each pattern against **itself**, not against total volume — in a busy service everything rises at 9am and nothing happened. Returns what spiked, what is **new**, and what **stopped appearing**: the last one raises no counter anywhere and is often the worse news. |
 | `log_around` | What else clustered around a moment. What started **before** is a candidate explanation; what came after is usually a consequence. Correlation is not causation, and order is what separates them. |
+| `log_distinguish` | What sets a group of events apart from the rest: the field=value pairs over-represented in it (by default, in the errors). Of 300 errors, 92% on `version=2.4.1` against 4% of the rest is the deploy that broke it — found without reading 300 errors. Unique-per-event fields are skipped: they identify, they do not distinguish. |
 | `log_patterns` | Groups lines into templates (Drain): "connected to 10.0.0.1" and "connected to 10.0.0.7" are one message. Also returns the **rare** ones, which is usually what you were looking for. |
 | `log_reduce` | Cuts to a character budget keeping errors with their full trace, the window before, and whatever appears only once. Repeats collapse to `[xN]`. For handing a big log to a model without spending the context on the same line repeated. |
 | `log_stacktrace` | Java/JVM, Python, Node, Go, .NET, Rust, Ruby, PHP: the `Caused by` chain, the root cause, and the first frame of **your** code — inferred from the trace if you do not say. |
@@ -35,6 +36,18 @@ only what fits. An agent debugging a red CI run cannot read the log; it can ask 
 | `log_convert` | JSON / logfmt / syslog 5424 / CSV / OpenTelemetry / ECS — saying **up front what the conversion loses**. |
 | `log_rotation` | Puts rotated logs in **time order**. Rotation numbering runs backwards against time (`app.log.3` is older than `app.log.1`) and alphabetically `app.log.10` sorts before `app.log.9`. Use it first, or you read them backwards. |
 | `log_profile_check`<br>`log_profile_suggest` | A reusable profile describing how your team's logs look. `check` returns every error with its exact field, so a model can correct itself in one pass. |
+
+## Make your agent use it (Claude Code hook)
+
+An agent with these tools will still `Read` a 300 MB log out of habit. [`hooks/big-log-read.mjs`](hooks/big-log-read.mjs)
+is a `PreToolUse` hook that stops a `Read` of a big log (by name: `*.log`, rotated `*.log.N[.gz]`, `*.jsonl`,
+anything under `logs/`; by size: 2 MB, `JT_BIG_LOG_BYTES` to change it) and tells the agent to call
+`log_analyze` / `log_reduce` with the path instead. Everything else goes through untouched.
+
+```json
+{ "hooks": { "PreToolUse": [ { "matcher": "Read", "hooks": [
+  { "type": "command", "command": "node /path/to/big-log-read.mjs" } ] } ] } }
+```
 
 ## Two things it will not do
 

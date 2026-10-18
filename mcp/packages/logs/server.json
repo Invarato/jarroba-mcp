@@ -1,18 +1,18 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.Invarato/jarroba-tools-logs",
-  "description": "Lets your AI read a CI log far too big for its context. 11 tools, takes a file path.",
+  "description": "Lets your AI read a CI log far too big for its context. 12 tools, takes a file path.",
   "repository": {
     "url": "https://github.com/Invarato/jarroba-mcp",
     "source": "github",
     "subfolder": "mcp/packages/logs"
   },
-  "version": "0.1.9",
+  "version": "0.1.10",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "@jarroba/mcp-logs",
-      "version": "0.1.9",
+      "version": "0.1.10",
       "transport": {
         "type": "stdio"
       },

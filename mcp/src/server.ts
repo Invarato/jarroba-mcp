@@ -48,6 +48,10 @@ import { TimingService, factorPorCaida } from "../../src/app/services/timing.ser
 import { elementByZ, elementBySymbol, trendValue } from "../../src/app/services/elements-data";
 import { groupRotations, looksLikeLog } from "../../src/app/services/log-rotation.service";
 import { trends as minarTendencias, notable, around as alrededorDe } from "../../src/app/services/log-trends.service";
+import { distinguir } from "../../src/app/services/log-distinguir";
+import { diffPorClave } from "../../src/app/shared/data-engine/diff";
+import { fileSource } from "../../src/app/shared/data-engine/file-source";
+import { adivinarSeparador, detectarCodificacion, partirCsv } from "../../src/app/shared/data-engine/csv";
 import { ClaimCheckService } from "../../src/app/services/claim-check.service";
 import { EvalBankService, type Caso } from "../../src/app/services/eval-bank.service";
 import { HashService } from "../../src/app/services/hash.service";
@@ -86,7 +90,10 @@ import { erlangB, mmc, mmck, mmcLoss, serversNeeded, simulateQueue, littleError 
 import { rabbitRoute } from "../../src/app/services/brokers/rabbit-route";
 import { partitionForKey } from "../../src/app/services/brokers/kafka-partition";
 import { kafkaAssign } from "../../src/app/services/brokers/kafka-assign";
-import { rabbitEn, kafkaAssignEn } from "./brokers";
+import { snsFilter } from "../../src/app/services/brokers/sns-filter";
+import { rabbitEn, kafkaAssignEn, snsFilterEn } from "./brokers";
+import { informeCatalogoEn } from "./mcp-audit-en";
+import { secretosEn, informeApiEn } from "./api-en";
 import { CodeGenService, type CodeTarget } from "../../src/app/services/code-gen.service";
 import { CATALOG_QUERIES, assembleSchema, type SchemaModel } from "../../src/app/services/schema-catalog";
 import { candidates as fkCandidates, evidenceSql, orphanSql, addFkSql, cobertura, ordenarPorEvidencia, esRelevante, type FkEvidence, } from "../../src/app/services/fk-infer.service";
@@ -100,6 +107,7 @@ import { diagnosticar as diagnosticarRol, convertir as convertirMake, type Desti
 import { leerReglas, decidir, comparar as compararIgnore, revisarIgnore } from "../../src/app/services/ignore-rules";
 import { leerDockerfile, simularCache, revisarDockerfile } from "../../src/app/services/dockerfile";
 import { analizarLogDeMake } from "../../src/app/services/make-log";
+import { avisoDfEn, diagMkEn, carreraEn, hallazgoMkEn, divergenciaEn, avisoIgnoreEn, senalEn, perdidaEn, omitidoEn, avisoConvEn } from "./proyecto-en";
 import { PIPELINE_AZURE, crearMundoAzure } from "../../src/app/services/accesos-azure";
 import { PIPELINE_AWS, crearMundoAws } from "../../src/app/services/accesos-aws";
 import { PIPELINE_GCP, crearMundoGcp } from "../../src/app/services/accesos-gcp";
@@ -1333,13 +1341,15 @@ async function prepararLog(a: {
     const mined = S.logPat.mine(parsed.events);
     return { ...r, parsed, mined };
 }
-server.tool("log_analyze", "Understand a log without reading it: detected format, number of EVENTS (a 40-line stack trace counts as one), breakdown by level, time range, the errors with their ROOT CAUSE resolved, and the most frequent patterns. Accepts a file PATH \u2014 that is how you look at a log that does not fit in your context, such as a CI log of hundreds of MB.", LOG_IN, async (a) => {
+server.tool("log_analyze", "Understand a log without reading it: detected format, number of EVENTS (a 40-line stack trace counts as one), breakdown by level, time range, the errors with their ROOT CAUSE resolved, and the most frequent patterns. Accepts a file PATH \u2014 that is how you look at a log that does not fit in your context, such as a CI log of hundreds of MB. Logs WRAPPED by whatever collected them (Docker json-file, CRI/Kubernetes `P`/`F` lines, `journalctl -o json`, OpenTelemetry OTLP JSON, AWS CloudTrail) are unwrapped first and the pieces the runtime split are joined back, so a stack trace spread over 40 records is one event; `wrapper` says which.", LOG_IN, async (a) => {
     const p = await prepararLog(a);
     if ("error" in p)
         return err(p.error);
     const { parsed, mined } = p;
     return ok({
         format: parsed.info.format,
+        wrapper: parsed.info.envoltorio,
+        rejoinedPieces: parsed.info.unidos || undefined,
         timestamps: parsed.info.tsPattern
             ?? (parsed.events.some(e => e.ts != null) ? "from a field (no anchor pattern)" : "no recognizable date"),
         timeOnly: parsed.info.tsDateless || undefined,
@@ -1524,13 +1534,13 @@ server.registerTool("mcp_catalog_audit", {
 }, async ({ toolsListJson, serverJson, packageJson, instructions, encoding, approvedToolsListJson }) => {
     const r = await auditarCatalogo({ toolsListJson, serverJson, packageJson, instructions, encoding }, S.token);
     if ("error" in r)
-        return err(r.error);
+        return err("This is not a tools/list response: paste the whole JSON ({\"tools\": [...]}) or the bare array.");
     if (approvedToolsListJson === undefined)
-        return ok(r);
+        return ok(informeCatalogoEn(r));
     const antes = parseToolsList(approvedToolsListJson);
     if (!antes)
         return err("approvedToolsListJson is not a tools/list response: paste the whole JSON ({\"tools\": [...]}) or the bare array.");
-    return ok({ ...r, changesSinceApproved: cambiosCatalogoEn(compararCatalogos(antes, parseToolsList(toolsListJson) ?? [])) });
+    return ok({ ...informeCatalogoEn(r), changesSinceApproved: cambiosCatalogoEn(compararCatalogos(antes, parseToolsList(toolsListJson) ?? [])) });
 });
 server.tool("log_trends", "Answer WHEN IT STARTED, which is what a log is really asked. Compares each pattern against ITSELF rather than against total volume \u2014 in a busy service everything rises at 9am and nothing has happened \u2014 and returns three different things: what SPIKED relative to its own normal and at what time; what is NEW, which did not exist before and is usually what a deploy left behind; and what STOPPED APPEARING, which raises no counter and is often the worse news.", {
     ...LOG_IN,
@@ -1594,6 +1604,158 @@ server.tool("log_around", "What ELSE happened around a moment in time. Given an 
         })),
         warning: "Correlation is not causation. What started before may explain the failure; what came after is usually a consequence of it.",
     });
+});
+server.tool("log_distinguish", "What sets a group of events APART from the rest of the log: the field=value pairs over-represented in the selection. E.g. of 300 errors, 92% have `version=2.4.1` against 4% of everything else \u2014 the deploy that broke it, found without reading 300 errors. Select by minimum level (default: errors), by text, or by one field=value; that selector is left out of the answer, since it would trivially top it. Fields that are unique per event (request ids, trace ids) are skipped: they identify, they do not distinguish. A difference in proportions, not causation.", {
+    ...LOG_IN,
+    minLevel: z.enum(["trace", "debug", "info", "warn", "error", "fatal"]).optional().describe("Select events at this level or above (default \"error\" if nothing else is given)"),
+    contains: z.string().optional().describe("Select events whose raw text contains this (case-insensitive)"),
+    field: z.string().optional().describe("Select events with this field\u2026"),
+    value: z.string().optional().describe("\u2026equal to this value"),
+    limit: z.number().int().min(1).max(50).default(10),
+}, async (a) => {
+    if ((a.field == null) !== (a.value == null))
+        return err("`field` and `value` go together.");
+    const p = await prepararLog(a);
+    if ("error" in p)
+        return err(p.error);
+    const evs = p.parsed.events;
+    const orden = ["trace", "debug", "info", "warn", "error", "fatal"];
+    const nivel = a.minLevel ?? (a.contains == null && a.field == null ? "error" : undefined);
+    const aguja = a.contains?.toLowerCase();
+    const sel = (i: number) => {
+        const e = evs[i];
+        if (nivel && (!e.level || orden.indexOf(e.level) < orden.indexOf(nivel)))
+            return false;
+        if (aguja && !e.raw.toLowerCase().includes(aguja))
+            return false;
+        if (a.field != null && e.fields[a.field] !== a.value)
+            return false;
+        return true;
+    };
+    const excluir = [...(nivel ? ["level"] : []), ...(a.field ? [a.field] : [])];
+    const r = distinguir(evs, sel, { excluir, max: a.limit });
+    if (!r.seleccion)
+        return ok({ selected: 0, note: "Nothing matches the selection." });
+    if (!r.resto)
+        return ok({ selected: r.seleccion, note: "Everything matches the selection: there is no rest to compare against." });
+    return ok({
+        selected: r.seleccion,
+        rest: r.resto,
+        distinguishing: r.distintivos.map(d => ({
+            field: d.campo,
+            value: d.valor,
+            inSelection: `${Math.round(d.pctSeleccion * 100)}% (${d.enSeleccion})`,
+            inRest: `${Math.round(d.pctResto * 100)}% (${d.enResto})`,
+        })),
+        skippedUniqueFields: r.descartados.length ? r.descartados : undefined,
+        note: r.distintivos.length ? undefined : "No field=value stands out: the selection looks like the rest. If the log has no fields (plain text), convert it or try log_patterns.",
+    });
+});
+server.tool("csv_diff", "Compare two CSV files by a KEY column, of ANY size: which rows are only in A, only in B, and which changed and in WHICH columns. Columns are matched by header name, so a re-exported file with reordered columns or rows is not \"everything changed\" (it is for a line diff). Both files are streamed from disk; only the keys of B are held in memory, so do not read them into your context \u2014 pass the paths. Quoted cells with commas or line breaks inside are handled (RFC 4180). Optionally writes the FULL difference, one row per changed cell (`estado,clave,columna,valor_a,valor_b`), to `outPath`.", {
+    pathA: z.string().describe("First CSV (the reference, e.g. yesterday's export)"),
+    pathB: z.string().describe("Second CSV (e.g. today's)"),
+    key: z.string().describe("Key column: its header name, or its 1-based position if there is no header"),
+    keyB: z.string().optional().describe("Key column in B, if named differently"),
+    header: z.boolean().default(true).describe("Both files have a header row"),
+    delimiter: z.string().optional().describe("Field delimiter (default: detected, e.g. \",\" \";\" or tab)"),
+    trim: z.boolean().default(false).describe("Ignore leading/trailing spaces in values"),
+    caseInsensitiveKey: z.boolean().default(false),
+    outPath: z.string().optional().describe("Write the full long-format difference here (CSV)"),
+    examples: z.number().int().min(0).max(100).default(10),
+}, async (a) => {
+    let blobA: Blob, blobB: Blob;
+    try {
+        const { openAsBlob } = await import("node:fs");
+        blobA = await openAsBlob(a.pathA);
+        blobB = await openAsBlob(a.pathB);
+    }
+    catch (e: any) {
+        return err(noSeLee(e?.path ?? a.pathA, e));
+    }
+    const preparar = async (blob: Blob) => {
+        const cab = new Uint8Array(await blob.slice(0, 1 << 16).arrayBuffer());
+        const cod = detectarCodificacion(cab);
+        if (cod.codificacion === "utf-16")
+            return { error: "UTF-16 file: save it as UTF-8 first (it cannot be read in byte ranges)." } as const;
+        const texto = new TextDecoder(cod.codificacion).decode(cab);
+        const lineas = texto.split("\n").slice(0, 5).map(l => l.replace(/\r$/, ""));
+        const d = a.delimiter ?? adivinarSeparador(lineas);
+        return { src: fileSource(blob, "", cod.codificacion), d, cabecera: a.header ? partirCsv(lineas[0] ?? "", d) : [], cod: cod.codificacion };
+    };
+    const pa = await preparar(blobA), pb = await preparar(blobB);
+    if ("error" in pa)
+        return err(pa.error!);
+    if ("error" in pb)
+        return err(pb.error!);
+    const columna = (nombre: string, cab: string[]) => {
+        if (a.header) {
+            const i = cab.indexOf(nombre);
+            if (i >= 0)
+                return i;
+        }
+        return /^\d+$/.test(nombre) ? +nombre - 1 : -1;
+    };
+    const ka = columna(a.key, pa.cabecera), kb = columna(a.keyB ?? a.key, pb.cabecera);
+    if (ka < 0)
+        return err(`Key column "${a.key}" not found in A. Header: ${pa.cabecera.join(", ")}`);
+    if (kb < 0)
+        return err(`Key column "${a.keyB ?? a.key}" not found in B. Header: ${pb.cabecera.join(", ")}`);
+    let fd: number | null = null, pend = "";
+    const fs = await import("node:fs");
+    if (a.outPath) {
+        try {
+            fd = fs.openSync(a.outPath, "w");
+        }
+        catch (e: any) {
+            return err(`Cannot write ${a.outPath}: ${e?.message ?? e}`);
+        }
+    }
+    const writer = { write: (s: string) => { if (fd === null)
+            return; pend += s; if (pend.length > 1 << 20) {
+            fs.writeSync(fd, pend);
+            pend = "";
+        } } };
+    try {
+        const r = await diffPorClave(pa.src, pb.src, {
+            aKeyCol: ka,
+            bKeyCol: kb,
+            aDelim: pa.d,
+            bDelim: pb.d,
+            aHeaderRows: a.header ? 1 : 0,
+            bHeaderRows: a.header ? 1 : 0,
+            trim: a.trim,
+            caseInsensitive: a.caseInsensitiveKey,
+            maxEjemplos: a.examples,
+        }, writer);
+        if (fd !== null) {
+            if (pend)
+                fs.writeSync(fd, pend);
+            fs.closeSync(fd);
+        }
+        return ok({
+            rowsA: r.filasA,
+            rowsB: r.filasB,
+            identical: r.iguales,
+            changed: r.cambiadas,
+            onlyInA: r.soloA,
+            onlyInB: r.soloB,
+            duplicateKeys: (r.duplicadasA || r.duplicadasB) ? { a: r.duplicadasA, b: r.duplicadasB, note: "first occurrence compared, the rest only counted" } : undefined,
+            changedCellsByColumn: r.porColumna,
+            columnsOnlyInA: r.soloColumnasA.length ? r.soloColumnasA : undefined,
+            columnsOnlyInB: r.soloColumnasB.length ? r.soloColumnasB : undefined,
+            examples: { changed: r.ejemplos.cambiadas, onlyInA: r.ejemplos.soloA, onlyInB: r.ejemplos.soloB },
+            encoding: pa.cod !== "utf-8" || pb.cod !== "utf-8" ? { a: pa.cod, b: pb.cod } : undefined,
+            fullDiff: a.outPath,
+        });
+    }
+    catch (e: any) {
+        if (fd !== null)
+            try {
+                fs.closeSync(fd);
+            }
+            catch { }
+        return err(String(e?.message ?? e));
+    }
 });
 server.tool("log_rotation", "Put a folder or a list of rotated logs into TIME ORDER, split into series. Rotation numbering runs BACKWARDS against time: `app.log.3.gz` is older than `app.log.1.gz`, and plain `app.log` is the newest; alphabetically `app.log.10` sorts before `app.log.9` while in time it comes after. Use this BEFORE reading several logs of one service, or you will read them backwards. Returns the paths already ordered, ready to feed to log_analyze one by one.", {
     directory: z.string().optional().describe("Folder to look in (does not recurse). Alternative to `names`."),
@@ -1774,8 +1936,9 @@ server.tool("queue_simulate", "Simulate the queue customer by customer (discrete
     });
 });
 const HEADER_VALUE = z.union([z.string().max(1000), z.number(), z.boolean(), z.null()]);
-server.tool("rabbit_route", "Which queues a RabbitMQ exchange delivers a message to, and why each binding matches or not: direct, topic (* and # words), fanout and headers (x-match all/any/all-with-x/any-with-x). Ported from RabbitMQ 4.0.5 and checked against its own tests. Unroutable means the message is dropped (or returned with mandatory). One difference: in headers, 1 and 1.0 are different values in RabbitMQ and equal here.", {
+server.tool("rabbit_route", "Which queues a RabbitMQ exchange delivers a message to, and why each binding matches or not: direct, topic (* and # words), fanout and headers (x-match all/any/all-with-x/any-with-x). Ported from RabbitMQ and calibrated against real 4.0.5 and 4.3.6 brokers (thousands of seeded cases, all equal). Unroutable means the message is dropped (or returned with mandatory). One difference: in headers, 1 and 1.0 are different values in RabbitMQ and equal here.", {
     type: z.enum(["direct", "topic", "fanout", "headers"]),
+    version: z.enum(["4.0", "4.3"]).optional().describe("Broker line (default 4.3): from 4.3.5 a topic binding with more than two # is rejected"),
     bindings: z.array(z.object({
         queue: z.string().max(255),
         bindingKey: z.string().max(1000).optional().describe("direct/topic; ignored by fanout and headers"),
@@ -1784,6 +1947,22 @@ server.tool("rabbit_route", "Which queues a RabbitMQ exchange delivers a message
     routingKey: z.string().max(1000).optional(),
     headers: z.record(HEADER_VALUE).optional().describe("headers exchange: the message headers"),
 }, async (input) => ok(rabbitEn(rabbitRoute(input))));
+server.tool("sns_filter", "Does an AWS SNS subscription filter policy let this message through, and which key decided it: exact values, prefix, suffix, equals-ignore-case, wildcard, cidr, numeric ranges, anything-but, exists and $or, on MessageAttributes or on the JSON body (FilterPolicyScope=MessageBody). Also rejects what SNS would reject: more than 5 keys, more than 150 combinations, a policy over 256 KB. Built from the AWS documentation; there is no emulator to calibrate it against, and the answer says so.", {
+    policy: z.union([z.record(z.unknown()), z.string().max(300000)]).describe("The filter policy, as an object or JSON text"),
+    message: z.union([z.record(z.unknown()), z.string().max(300000)])
+        .describe("MessageAttributes scope: { name: { \"Type\": \"String\"|\"String.Array\"|\"Number\"|\"Binary\", \"Value\": \"...\" } }. MessageBody scope: the JSON body"),
+    scope: z.enum(["MessageAttributes", "MessageBody"]).default("MessageAttributes"),
+}, async ({ policy, message, scope }) => {
+    const leer = (x: unknown) => { if (typeof x !== "string")
+        return x; try {
+        return JSON.parse(x);
+    }
+    catch {
+        return x;
+    } };
+    const r = snsFilterEn(snsFilter(leer(policy), leer(message), scope));
+    return "error" in r && r.error ? err(r.error) : ok(r);
+});
 server.tool("kafka_partition", "The partition Kafka's default partitioner picks for a message key: murmur2 over the UTF-8 bytes, made positive, modulo the partition count \u2014 with the intermediate numbers so the result can be checked. Ported from Kafka 4.3.1 and checked against its murmur2 test vectors. Only for messages WITH a key (without one, Kafka uses the sticky partitioner, which is not deterministic).", {
     key: z.string().max(100000),
     partitions: z.number().int().min(1).max(1000000),
@@ -1909,8 +2088,8 @@ server.tool("make_simulate", "Simulate `make` WITHOUT RUNNING ANYTHING: which ta
             waves: plan.ondas,
             note: "Each wave can run at once with `make -j`. The number of waves is the critical path.",
         } : undefined,
-        possibleRaces: plan.carreras.length ? plan.carreras.map(c => c.mensaje) : undefined,
-        errors: plan.diags.filter(d => d.gravedad === "error").map(d => d.mensaje),
+        possibleRaces: plan.carreras.length ? plan.carreras.map(carreraEn) : undefined,
+        errors: plan.diags.filter(d => d.gravedad === "error").map(diagMkEn),
         unreliable: plan.noFiable || undefined,
         note: plan.noFiable
             ? "The Makefile uses $(shell ...) or $(eval ...), which cannot be executed here: the result is INDICATIVE only."
@@ -1935,28 +2114,26 @@ server.tool("make_lint", "Review a Makefile and return the mistakes that actuall
             rule: h.regla,
             severity: h.gravedad,
             line: h.linea || undefined,
-            what: h.que,
-            howItBreaks: h.como,
-            fix: h.arreglo,
+            ...hallazgoMkEn(h),
         })),
     });
 });
-server.tool("make_generate", "Generate a ready-to-use Makefile for a stack (node, python, go, rust, c or generic). What it generates PASSES its own linter with zero findings: it always ships `.DELETE_ON_ERROR`, `SHELL := /bin/bash` with `.SHELLFLAGS := -eu -o pipefail -c`, and declared `.PHONY` targets \u2014 the three lines that are almost never there and that prevent the most expensive failures. With `withLogs`, targets record their output through `tee`, redirect stderr, timestamp the file name, and take the log directory as an order-only prerequisite.", {
-    stack: z.enum(["generico", "node", "python", "go", "rust", "c"]).describe("Project stack"),
+server.tool("make_generate", "Generate a ready-to-use Makefile for a stack (node, python, go, rust, c, maven, gradle or generic). What it generates PASSES its own linter with zero findings: it always ships `.DELETE_ON_ERROR`, `SHELL := /bin/bash` with `.SHELLFLAGS := -eu -o pipefail -c`, and declared `.PHONY` targets \u2014 the three lines that are almost never there and that prevent the most expensive failures. With `withLogs`, targets record their output through `tee`, redirect stderr, timestamp the file name, and take the log directory as an order-only prerequisite.", {
+    stack: z.enum(["generic", "node", "python", "go", "rust", "c", "maven", "gradle", "generico"]).describe("Project stack"),
     projectName: z.string().optional().describe("Project name (default \"mi-proyecto\")"),
     withLogs: z.boolean().optional().describe("Targets that record their output to files (default yes)"),
     withHelp: z.boolean().optional().describe("Self-documenting `make help` built from ## comments (default yes)"),
     withDocker: z.boolean().optional().describe("Docker image targets (default no)"),
 }, async (a) => {
     const texto = generarMakefile({
-        stack: a.stack as Stack,
+        stack: (a.stack === "generic" ? "generico" : a.stack) as Stack,
         nombreProyecto: a.projectName ?? "mi-proyecto",
         conLogs: a.withLogs ?? true,
         conHelp: a.withHelp ?? true,
         conDocker: a.withDocker ?? false,
     });
     const hallazgos = revisarMakefile(leerMakefile(texto), {}).filter(h => h.gravedad !== "info");
-    return ok({ makefile: texto, findingsFromItsOwnLinter: hallazgos.length ? hallazgos : 0 });
+    return ok({ makefile: texto, findingsFromItsOwnLinter: hallazgos.length ? hallazgos.map(h => ({ rule: h.regla, ...hallazgoMkEn(h) })) : 0 });
 });
 server.tool("make_role", "Answer the question that decides whether `make` is giving you anything: is this Makefile a BUILD, or a script LAUNCHER? make exists in order NOT to redo what is already done \u2014 mtimes, a dependency graph, skipping what did not change \u2014 and most Makefiles today use none of it: they are `make test`, `make lint`, `make docker-up`, all .PHONY, all running every time. Here each target is classified WITH THE SIGNAL that decided it (including the signals that pointed the other way: a .PHONY whose recipe creates that very file is a bug waiting to happen), what make is giving you TODAY is measured, and with `convertTo` it is converted to just, Taskfile or npm scripts. Whatever cannot be converted is OMITTED with its reason, rather than emitting a recipe that would look the same and rebuild every time. Honest caveat: `make` is POSIX and is everywhere; just and task have to be installed.", {
     project: z.string().optional().describe("Project folder: its Makefile and its real paths are read"),
@@ -1975,21 +2152,21 @@ server.tool("make_role", "Answer the question that decides whether `make` is giv
     return ok({
         verdict: d.veredicto,
         counts: { file: d.ficheros, action: d.acciones, unclear: d.dudosos },
-        whatMakeGivesYouToday: d.sePierde,
+        whatMakeGivesYouToday: d.sePierde.map(perdidaEn),
         counterArgument: "make is POSIX and ships with any distro and any CI image. just and task have to be installed: on your machine, on the machine of whoever clones the repo, and on every runner. Converting has a real cost.",
         targets: d.objetivos.map(o => ({
             target: o.nombre,
             role: o.rol,
             line: o.linea || undefined,
-            decidingSignal: o.senales.find(s => s.decisiva)?.texto,
-            otherSignals: o.senales.filter(s => !s.decisiva).map(s => `(${s.hacia}) ${s.texto}`),
+            decidingSignal: ((x) => x ? senalEn(x.motivo, o.nombre) : undefined)(o.senales.find(s => s.decisiva)),
+            otherSignals: o.senales.filter(s => !s.decisiva).map(s => `(${s.hacia}) ${senalEn(s.motivo, o.nombre)}`),
         })),
         conversion: conv ? {
             file: conv.nombreFichero,
             content: conv.texto,
             converted: conv.convertidos,
-            omitted: conv.omitidos.map(o => ({ target: o.nombre, why: o.porque })),
-            warnings: conv.avisos,
+            omitted: conv.omitidos.map(o => ({ target: o.nombre, why: omitidoEn(o) })),
+            warnings: conv.avisos.map(avisoConvEn),
         } : undefined,
         unreliable: d.noFiable || undefined,
         note: d.noFiable
@@ -2038,16 +2215,15 @@ server.tool("ignore_check", "Say which paths a `.gitignore` or `.dockerignore` i
                 path: d.ruta,
                 ignoredByGit: d.ignoradoGit,
                 ignoredByDocker: d.ignoradoDocker,
-                explanation: d.explicacion,
+                cause: d.causa,
+                explanation: divergenciaEn(d),
             }))
             : undefined,
         warnings: revisarIgnore(ctx.texto!, modo, rutas, dirs).map(x => ({
             rule: x.regla,
             severity: x.gravedad,
             line: x.linea,
-            what: x.que,
-            howItBreaks: x.como,
-            fix: x.arreglo,
+            ...avisoIgnoreEn(x),
         })),
     });
 });
@@ -2099,9 +2275,7 @@ server.tool("dockerfile_cache", "Say which LAYERS of a Dockerfile would be rebui
             rule: x.regla,
             severity: x.gravedad,
             line: x.linea,
-            what: x.que,
-            howItBreaks: x.como,
-            fix: x.arreglo,
+            ...avisoDfEn(x),
         })),
         note: "Docker compares CONTENTS (a checksum), not dates: here \"changed\" is whatever you say in `changed`.",
     });
@@ -2700,7 +2874,9 @@ server.tool("make_log_diff", "Compare the output of a REAL `make` run with what 
         mostRepeated: r.patrones,
         subMakes: r.subMakes.length ? r.subMakes : undefined,
         looksParallel: r.pareceParalelo || undefined,
-        timings: r.tiempos.nota,
+        timings: r.tiempos.hayFechas
+            ? "The log has timestamps: it can be ordered in time."
+            : "This log has no timestamps, so it is NOT possible to say how long anything took. make does not emit them: to get them, pipe the output through `ts` (moreutils) or use `--output-sync` with markers.",
     });
 });
 server.tool("test_cases", "From a TYPE to the cases worth testing, with no model involved: equivalence partitions and boundary values derived from a TypeScript signature or a JSON Schema. For each parameter it returns the TECHNIQUE that applies and why \u2014 boundary values only mean something where there is an ordering, so they are NOT applied to a boolean or an enum. It adds the properties that can be asserted without knowing the domain, plus a fast-check test ready to paste. Use it BEFORE writing the tests, so you do not miss the cases everyone misses.", {
@@ -2913,14 +3089,14 @@ server.tool("api_collection_convert", "Convert an API collection between formats
     const r = leerColeccion(input);
     if (!r.ok)
         return err(r.error);
-    const salida = to === "postman" ? { archivo: `${r.coleccion.nombre}.postman_collection.json`, contenido: escribirPostman(r.coleccion) }
-        : to === "curl" ? { archivo: `${r.coleccion.nombre}.sh`, contenido: r.coleccion.peticiones.map((p) => escribirCurl(p)).join("\n\n") }
-            : { ficheros: escribirColeccionBru(r.coleccion) };
+    const salida = to === "postman" ? { file: `${r.coleccion.nombre}.postman_collection.json`, content: escribirPostman(r.coleccion) }
+        : to === "curl" ? { file: `${r.coleccion.nombre}.sh`, content: r.coleccion.peticiones.map((p) => escribirCurl(p)).join("\n\n") }
+            : { files: escribirColeccionBru(r.coleccion).map((f) => ({ path: f.ruta, content: f.contenido })) };
     return ok({
-        formatoDetectado: r.formato,
-        peticiones: r.coleccion.peticiones.length,
+        detectedFormat: r.formato,
+        requests: r.coleccion.peticiones.length,
         variables: r.coleccion.variables.length,
-        avisos: r.avisos,
+        warnings: r.avisos,
         ...salida,
     });
 });
@@ -2930,10 +3106,10 @@ server.tool("api_collection_secrets", "List the credentials hidden inside an API
         return err(r.error);
     const h = buscarSecretos(r.coleccion);
     return ok({
-        formatoDetectado: r.formato,
-        encontrados: h.length,
-        hallazgos: h,
-        nota: "Heuristic by header/variable name. A secret with an unusual name will not show up here.",
+        detectedFormat: r.formato,
+        found: h.length,
+        findings: secretosEn(h),
+        note: "Heuristic by header/variable name. A secret with an unusual name will not show up here.",
     });
 });
 server.tool("api_code_generate", "Turn a request into pasteable code in one of eleven targets: curl, fetch, axios, Python requests, HTTPie, Go, Java, C#, PHP, PowerShell or Rust. Emits the import lines and escapes per language, and gets right the things that are habitually wrong (in C# the Content-Type belongs to the content, not the headers; in Go an unused import does not compile).", {
@@ -2951,10 +3127,10 @@ server.tool("api_code_generate", "Turn a request into pasteable code in one of e
     if (!p)
         return err(`No request at index ${index} (there are ${r.coleccion.peticiones.length})`);
     return ok({
-        peticion: `${p.metodo} ${p.url}`,
-        lenguaje: language,
-        codigo: generar(p, language),
-        disponibles: r.coleccion.peticiones.length,
+        request: `${p.metodo} ${p.url}`,
+        language,
+        code: generar(p, language),
+        requestsAvailable: r.coleccion.peticiones.length,
     });
 });
 server.tool("api_breaking_changes", "Compare two OpenAPI specifications and say which changes BREAK a client that already exists - which is the question you actually ask before deploying, and the one a colour diff does not answer. Tells apart pairs that look identical in a diff: adding an OPTIONAL parameter breaks nothing, adding a REQUIRED one does; ADDING an enum value is safe, REMOVING one is not; dropping a query parameter is ignored, dropping a path one changes the URL. Every finding says why.", {
@@ -2971,7 +3147,7 @@ server.tool("api_breaking_changes", "Compare two OpenAPI specifications and say 
     const inf = comparar(a.espec, b.espec);
     return format === "markdown"
         ? { content: [{ type: "text" as const, text: informeMarkdown(inf) }] }
-        : ok(inf);
+        : ok(informeApiEn(inf));
 });
 server.tool("api_cors_preflight", "Will the browser send an OPTIONS preflight before this request, and WHY? Answers without touching the network. Half of \"it works in curl but not in my page\" is a preflight the server does not answer, and knowing which of the three things triggers it (the method, the Content-Type or a custom header) changes where to look. Also lists the headers the browser refuses to let a page set.", {
     method: z.string().default("GET"),
@@ -2981,11 +3157,11 @@ server.tool("api_cors_preflight", "Will the browser send an OPTIONS preflight be
     const pf = necesitaPreflight(method, cs);
     return ok({
         preflight: pf !== null,
-        porque: pf?.metodo ? `the method ${pf.metodo}`
+        because: pf?.metodo ? `the method ${pf.metodo}`
             : pf?.cabecera ? `the custom header "${pf.cabecera}"`
                 : pf?.contentType ? `the Content-Type "${pf.contentType}"`
                     : null,
-        queHacer: pf
+        whatToDo: pf
             ? "The server must answer that OPTIONS with Access-Control-Allow-Methods and Access-Control-Allow-Headers, not only the real request."
             : "No preflight: the browser sends the request directly and then checks Access-Control-Allow-Origin on the response.",
     });
@@ -3009,13 +3185,24 @@ function accessExtra(provider: AccessProvider, plane: "control" | "data" | undef
     return provider === "azure" ? { plano: plane === "data" ? "datos" : "control" } : {};
 }
 const ACCESS_EFFECT_EN: Record<string, string> = { permitido: "allowed", denegado: "denied", indeterminado: "indeterminate" };
+function origenAwsEn(o: unknown): string {
+    const s = String(o ?? "");
+    const ORIGEN: Record<string, string> = { identidad: "identity-based", recurso: "resource-based", boundary: "permissions-boundary", sesion: "session" };
+    const m = /^(scp|rcp):(.*)$/.exec(s);
+    return m ? `${m[1].toUpperCase()} (at "${m[2]}")` : ORIGEN[s] ?? s;
+}
+const cap = (t: string) => t[0].toUpperCase() + t.slice(1);
+const conArticulo = (o: unknown) => `${/^[aeiouAEIOU]/.test(String(o)) ? "an" : "a"} ${o}`;
+const condicionEn = (v: Record<string, unknown>) => v["clave"] !== undefined
+    ? `${v["operador"]} on ${v["clave"]}: expected ${v["esperado"]}, the request has ${v["recibido"]}`
+    : String(v["condicion"] ?? "");
 function accessExplainStep(p: {
     etapaId: string;
     detalleKey: string;
     params?: Record<string, unknown>;
     final: boolean;
 }): string {
-    const v = p.params ?? {};
+    const v: Record<string, unknown> = { ...(p.params ?? {}), ...(p.params?.["origen"] !== undefined ? { origen: origenAwsEn(p.params["origen"]) } : {}) };
     switch (p.detalleKey) {
         case "azure.denegadoPor": return `Denied by deny assignment "${v["asignacion"]}" at scope "${v["ambito"]}".`;
         case "azure.sinDenegacion": return "No deny assignment applies.";
@@ -3023,7 +3210,7 @@ function accessExplainStep(p: {
         case "azure.sinAsignacion": return "No role assignment grants this action.";
         case "azure.implicito": return "Nothing granted it: denied by default (Azure has no implicit allow).";
         case "azure.condicionDesconocida": return `Assignment "${v["asignacion"]}" carries a condition this model does not evaluate: ${v["condicion"]}.`;
-        case "aws.denegadoPor": return `Explicitly denied by a ${v["origen"]} policy.`;
+        case "aws.denegadoPor": return `Explicitly denied by ${conArticulo(v["origen"])} policy.`;
         case "aws.sinDenegacion": return "No explicit Deny applies.";
         case "aws.scpNoAplicaGestion": return "This is the management account: SCPs don't affect it.";
         case "aws.scpSinAllowEnNivel": return `SCP level "${v["nivel"]}" doesn't include this action — an Allow is required at every level in the path.`;
@@ -3039,7 +3226,11 @@ function accessExplainStep(p: {
         case "aws.sesionNoPermite": return "The session policy does not include this action \u2014 session policies limit, they never grant.";
         case "aws.sesionOk": return "The session policy allows this action.";
         case "aws.implicito": return "Nothing denied it and it passed every gate: allowed (AWS has no implicit deny once identity/resource grants it).";
-        case "aws.condicionDesconocida": return `A ${v["origen"]} policy carries a condition this model does not evaluate: ${v["condicion"]}.`;
+        case "aws.condicionDesconocida": return `${cap(conArticulo(v["origen"]))} policy carries a condition this model does not evaluate: ${v["condicion"]}. Pass requestContext to evaluate it.`;
+        case "aws.condicionNoEvaluable": return `${cap(conArticulo(v["origen"]))} policy carries a condition with an operator this model cannot evaluate (${v["condicion"]}).`;
+        case "aws.denegadoPorCondicion": return `Denied by ${conArticulo(v["origen"])} Deny whose condition DOES hold with this context (${v["condicion"]}).`;
+        case "aws.denyNoAplicaPorCondicion": return `${cap(conArticulo(v["origen"]))} Deny covers this action but its condition does not hold, so it does not apply: ${condicionEn(v)}.`;
+        case "aws.allowFueraPorCondicion": return `${cap(conArticulo(v["origen"]))} Allow covers this action but its condition does not hold with this context: ${condicionEn(v)}.`;
         case "gcp.denegadoPor": return `Denied by deny policy "${v["politica"]}" at scope "${v["ambito"]}" (deny policies are checked before allow policies).`;
         case "gcp.sinDenegacion": return "No deny policy applies.";
         case "gcp.concedidoPor": return `Granted by binding "${v["binding"]}" (role "${v["rol"]}" at scope "${v["ambito"]}").`;
@@ -3052,6 +3243,23 @@ function accessExplainStep(p: {
         default: return p.detalleKey;
     }
 }
+const ETAPA_EN: Record<string, string> = {
+    "azure.denegacion": "azure.deny-assignments",
+    "azure.asignaciones": "azure.role-assignments",
+    "azure.implicito": "azure.default",
+    "aws.denegacion": "aws.explicit-deny",
+    "aws.scpNiveles": "aws.scp-levels",
+    "aws.identidadRecurso": "aws.identity-and-resource",
+    "aws.boundary": "aws.permissions-boundary",
+    "aws.sesion": "aws.session-policy",
+    "aws.implicito": "aws.default",
+    "gcp.denegacion": "gcp.deny-policies",
+    "gcp.binding": "gcp.allow-bindings",
+    "gcp.implicito": "gcp.default",
+    "k8s.binding": "k8s.bindings",
+    "k8s.implicito": "k8s.default",
+    "motor.pipelineIncompleto": "engine.incomplete",
+};
 function accessFormatVerdict(v: {
     efecto: string;
     traza: {
@@ -3063,7 +3271,7 @@ function accessFormatVerdict(v: {
 }) {
     return {
         result: ACCESS_EFFECT_EN[v.efecto] ?? v.efecto,
-        trace: v.traza.map((p) => ({ stage: p.etapaId, explanation: accessExplainStep(p), decisive: p.final })),
+        trace: v.traza.map((p) => ({ stage: ETAPA_EN[p.etapaId] ?? p.etapaId, explanation: accessExplainStep(p), decisive: p.final })),
     };
 }
 const accessWorldSchema = z.record(z.any()).describe("Scenario data. Shape depends on \"provider\" \u2014 azure: {ambitos, pertenencias?, roles?, asignaciones?, denegaciones?}; "
@@ -3078,10 +3286,14 @@ server.tool("access_check", "Evaluate \"can this principal do this action on thi
     action: z.string().describe("e.g. \"Microsoft.Storage/storageAccounts/blobServices/containers/blobs/read\" (Azure), \"s3:GetObject\" (AWS), \"storage.objects.get\" (GCP), \"get:pods\" (Kubernetes: \"verb:resource\")"),
     scopeId: z.string(),
     plane: z.enum(["control", "data"]).optional().describe("Azure only: control-plane or data-plane action (Azure keeps them as separate grant sets; ignored for the other providers)."),
-}, async ({ provider, world, principalId, action, scopeId, plane }) => {
+    requestContext: z.record(z.union([z.string(), z.array(z.string())])).optional()
+        .describe("AWS only: the request context, so Condition blocks are evaluated instead of left indeterminate, e.g. {\"aws:SourceIp\": \"10.1.2.3\", \"aws:PrincipalTag/team\": \"data\", \"aws:MultiFactorAuthPresent\": \"true\"}"),
+}, async ({ provider, world, principalId, action, scopeId, plane, requestContext }) => {
     try {
         const w = accessWorld(provider, world);
-        const req = { principalId, accion: action, ambitoId: scopeId, ...accessExtra(provider, plane) };
+        const contexto = provider === "aws" && requestContext
+            ? Object.fromEntries(Object.entries(requestContext).map(([k, x]) => [k.toLowerCase(), Array.isArray(x) ? x : [x]])) : undefined;
+        const req = { principalId, accion: action, ambitoId: scopeId, ...accessExtra(provider, plane), ...(contexto ? { contexto } : {}) };
         const v = evaluarAcceso(accessPipeline(provider) as any, req, w as any);
         return ok(accessFormatVerdict(v));
     }
@@ -3646,7 +3858,7 @@ server.tool("actions_audit", "Audit GitHub Actions workflows for the injection a
     const r = conPresupuesto(() => c.m.auditarAcciones(files.map((f) => ({ ruta: f.path, contenido: f.content }))), PRESUPUESTO_SEG);
     return "agotado" in r ? agotado("The audit") : ok(accionesEn(r.valor));
 });
-server.tool("headers_audit", "Audit the HTTP response headers of a site as you pasted them (from curl -I, DevTools or a HAR): Content-Security-Policy (missing, unsafe-inline/eval, wildcards, missing object-src/base-uri/frame-ancestors), HSTS (missing, too short, invalid preload), nosniff, frame options, Referrer-Policy, the obsolete X-XSS-Protection, cookies without Secure/HttpOnly/SameSite, and a Server header that exposes the version. Nothing is requested over the network: it reads what you give it.", {
+server.tool("headers_audit", "Audit the HTTP response headers of a site as you pasted them (from curl -I, DevTools or a HAR): an A+\u2026F grade like /headers-audit; Content-Security-Policy (missing, unsafe-inline/eval, wildcards, missing object-src/base-uri/frame-ancestors), HSTS (missing, too short, invalid preload), nosniff, frame options, Referrer-Policy, the obsolete X-XSS-Protection, cookies without Secure/HttpOnly/SameSite, and a Server header that exposes the version. Nothing is requested over the network: it reads what you give it.", {
     headers: z.string().max(MAX_SEG).describe("Raw response headers, one per line; a status line is fine"),
     https: z.boolean().optional().describe("Whether the response came over HTTPS; decides if HSTS applies. Guessed from the input when omitted"),
 }, async ({ headers, https }) => {
@@ -3654,7 +3866,9 @@ server.tool("headers_audit", "Audit the HTTP response headers of a site as you p
     if ("error" in c)
         return c.error;
     const r = conPresupuesto(() => c.m.analizarCabeceras(headers, https), PRESUPUESTO_SEG);
-    return "agotado" in r ? agotado("The audit") : ok(cabecerasEn(r.valor));
+    if ("agotado" in r)
+        return agotado("The audit");
+    return ok({ grade: c.m.notaDe(r.valor.porGravedad), gradeRule: "F: any critical \u00B7 D: 3+ high \u00B7 C: 1-2 high \u00B7 B: 4+ warnings \u00B7 A: 1-3 warnings \u00B7 A+: none", ...cabecerasEn(r.valor) });
 });
 server.tool("email_auth_audit", "Check the authentication of an email and of a domain's mail records: paste the raw headers of a message (Authentication-Results, DKIM-Signature, From, Reply-To, Return-Path) and/or the DNS TXT records (v=spf1, v=DMARC1, v=DKIM1). Finds SPF/DKIM/DMARC failures, a Reply-To or Return-Path on another domain, a DKIM signature that does not cover From or only part of the body (l=), weak or revoked keys, SPF +all / ?all / more than 10 DNS lookups, and DMARC p=none or without reports. Verifies DKIM key strength locally; it does NOT query DNS \u2014 paste the records you want checked.", { input: z.string().max(MAX_SEG).describe("Raw message headers, DNS TXT records, or both") }, async ({ input }) => {
     const c = await seguridadMod();
@@ -3765,7 +3979,7 @@ server.tool("regex_redos_check", "Check a regex for catastrophic backtracking (R
     });
 });
 const VERSIONES_K8S = ["1.33", "1.34", "1.35", "1.36", "1.37"] as const;
-server.tool("k8s_manifest_check", "Will the cluster accept these Kubernetes manifests? Validates them against the OFFICIAL schema of the Kubernetes version you target (1.33\u20131.37; checked against kubeconform --strict): unknown fields with the one you probably meant (a typo in livenessProbe silently leaves the pod without a probe), wrong types (\"80\" where an integer goes), missing required fields, removed APIs with what to migrate to. And Pod Security Standards, ported from the official admission controller: the highest level each workload meets, what it violates (the controller's own check ids), and whether its namespace's pod-security.kubernetes.io labels would reject it. If you include RBAC (Roles, Bindings, ServiceAccounts), what each pod could do if compromised: read secrets, exec into pods, escalate\u2026. Not covered: CEL rules, formats, CRDs (reported as not validated). For who-can-reach-whom, use k8s_network_reach.", {
+server.tool("k8s_manifest_check", "Will the cluster accept these Kubernetes manifests? Validates them against the OFFICIAL schema of the Kubernetes version you target (1.33\u20131.37; checked against kubeconform --strict): unknown fields with the one you probably meant (a typo in livenessProbe silently leaves the pod without a probe), wrong types (\"80\" where an integer goes), missing required fields, removed APIs with what to migrate to. And Pod Security Standards, ported from the official admission controller: the highest level each workload meets, what it violates (the controller's own check ids), and whether its namespace's pod-security.kubernetes.io labels would reject it. If you include RBAC (Roles, Bindings, ServiceAccounts), what each pod could do if compromised: read secrets, exec into pods, escalate\u2026. And reliability checks in the style of kube-score (probes, resources, :latest images, replicas without a PodDisruptionBudget\u2026), which do not affect acceptance. Not covered: CEL rules, formats, CRDs (reported as not validated). For who-can-reach-whom, use k8s_network_reach.", {
     manifests: z.string().min(1).max(5000000).describe("Kubernetes YAML, several documents separated by ---"),
     kubernetesVersion: z.enum(VERSIONES_K8S).default("1.37").describe("Target cluster version"),
     podSecurityLevel: z.enum(["baseline", "restricted"]).default("restricted").describe("Level to list violations against"),
@@ -3779,11 +3993,11 @@ server.tool("k8s_manifest_check", "Will the cluster accept these Kubernetes mani
     const r = conPresupuesto(() => {
         const m = c.m.leerK8s(manifests);
         const rbac = c.m.analizarRbac(manifests, m);
-        return { m, esquema: c.m.validarManifiestos(manifests, esq), pss: m.cargas.map(c.m.evaluarPss), rbac, hallazgos: [...c.m.hallazgosPss(m), ...(rbac.hayRbac ? c.m.hallazgosRbac(rbac, m.cargas) : [])] };
+        return { m, esquema: c.m.validarManifiestos(manifests, esq), pss: m.cargas.map(c.m.evaluarPss), rbac, fiabilidad: c.m.hallazgosFiabilidad(m), hallazgos: [...c.m.hallazgosPss(m), ...(rbac.hayRbac ? c.m.hallazgosRbac(rbac, m.cargas) : [])] };
     }, PRESUPUESTO_SEG);
     if ("agotado" in r)
         return agotado("The check");
-    const { m, esquema, pss, rbac, hallazgos } = r.valor;
+    const { m, esquema, pss, rbac, hallazgos, fiabilidad } = r.valor;
     return ok({
         kubernetesVersion,
         accepted: !esquema.some((x) => x.tipo !== "sin-esquema") && !hallazgos.some((h) => h.regla === "pss-rechazado") && !m.errores.length,
@@ -3792,6 +4006,7 @@ server.tool("k8s_manifest_check", "Will the cluster accept these Kubernetes mani
         podSecurity: pssEn(pss, podSecurityLevel),
         serviceAccounts: rbac.hayRbac ? rbacEn(rbac) : undefined,
         findings: hallazgosK8sEn(hallazgos),
+        reliability: fiabilidad.length ? hallazgosK8sEn(fiabilidad) : undefined,
         note: "\"no-schema\" means the kind is not in the official API (e.g. a CRD) and was NOT validated.",
     });
 });

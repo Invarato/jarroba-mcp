@@ -9,10 +9,12 @@ export interface DefVar {
 }
 export type TablaVars = Map<string, DefVar>;
 export type GravedadMk = "error" | "aviso" | "info";
+export type ReglaDiagMk = "expansion-infinita" | "parentesis-sin-cerrar" | "word-indice" | "shell-no-ejecutable" | "error-explicito" | "warning-explicito" | "info-explicito" | "eval-no-soportado" | "condicional-mal-formada" | "receta-sin-regla" | "else-suelto" | "endif-suelto" | "define-sin-endef" | "include-no-encontrado" | "include-circular" | "nombre-variable-invalido" | "receta-con-espacios" | "linea-no-entendida" | "if-sin-cerrar" | "regla-sin-objetivo" | "estatica-no-casa" | "dependencia-circular" | "grafo-demasiado-grande" | "cadena-demasiado-profunda" | "sin-regla-ni-fichero" | "sin-objetivo";
+export type DatosMk = Record<string, string | number>;
 export interface DiagMk {
     gravedad: GravedadMk;
-    regla: string;
-    mensaje: string;
+    regla: ReglaDiagMk;
+    datos: DatosMk;
     linea: number;
 }
 export interface CtxExpand {
@@ -27,8 +29,8 @@ export interface CtxExpand {
     };
 }
 const MAX_PROFUNDIDAD = 60;
-function diag(ctx: CtxExpand, gravedad: GravedadMk, regla: string, mensaje: string): void {
-    ctx.diags?.push({ gravedad, regla, mensaje, linea: ctx.linea ?? 0 });
+function diag(ctx: CtxExpand, gravedad: GravedadMk, regla: ReglaDiagMk, datos: DatosMk = {}): void {
+    ctx.diags?.push({ gravedad, regla, datos, linea: ctx.linea ?? 0 });
 }
 export function palabras(s: string): string[] {
     return s.split(/\s+/).filter(w => w.length > 0);
@@ -150,7 +152,7 @@ function recortarArgs(args: string[], n: number): string[] {
 }
 export function expandir(texto: string, ctx: CtxExpand, prof = 0): string {
     if (prof > MAX_PROFUNDIDAD) {
-        diag(ctx, "error", "expansion-infinita", "La expansi\u00F3n se ha ido a m\u00E1s de " + MAX_PROFUNDIDAD + " niveles: hay una variable que se referencia a s\u00ED misma.");
+        diag(ctx, "error", "expansion-infinita", { max: MAX_PROFUNDIDAD });
         return "";
     }
     let out = "";
@@ -173,7 +175,7 @@ export function expandir(texto: string, ctx: CtxExpand, prof = 0): string {
         if (sig === "(" || sig === "{") {
             const cierre = buscarCierre(texto, i + 1);
             if (cierre < 0) {
-                diag(ctx, "error", "parentesis-sin-cerrar", "Falta cerrar el par\u00E9ntesis de una referencia `$(\u2026)`.");
+                diag(ctx, "error", "parentesis-sin-cerrar");
                 out += texto.slice(i);
                 break;
             }
@@ -256,7 +258,7 @@ function llamarFuncion(nombre: string, resto: string, ctx: CtxExpand, prof: numb
         case "word": {
             const n = parseInt(ex(0).trim(), 10);
             if (!Number.isFinite(n) || n < 1) {
-                diag(ctx, "error", "word-indice", "`$(word n,\u2026)` necesita un \u00EDndice mayor que cero.");
+                diag(ctx, "error", "word-indice");
                 return "";
             }
             return palabras(ex(1))[n - 1] ?? "";
@@ -380,19 +382,19 @@ function llamarFuncion(nombre: string, resto: string, ctx: CtxExpand, prof: numb
                 return stub;
             if (ctx.marcaNoFiable)
                 ctx.marcaNoFiable.valor = true;
-            diag(ctx, "aviso", "shell-no-ejecutable", "`$(shell " + cmd + ")` no se puede ejecutar en el navegador: se expande a vac\u00EDo. Dale un valor a mano para simular con \u00E9l.");
+            diag(ctx, "aviso", "shell-no-ejecutable", { comando: cmd });
             return "";
         }
         case "error": {
-            diag(ctx, "error", "error-explicito", "$(error) del propio Makefile: " + ex(0).trim());
+            diag(ctx, "error", "error-explicito", { texto: ex(0).trim() });
             return "";
         }
         case "warning": {
-            diag(ctx, "aviso", "warning-explicito", "$(warning) del propio Makefile: " + ex(0).trim());
+            diag(ctx, "aviso", "warning-explicito", { texto: ex(0).trim() });
             return "";
         }
         case "info": {
-            diag(ctx, "info", "info-explicito", ex(0).trim());
+            diag(ctx, "info", "info-explicito", { texto: ex(0).trim() });
             return "";
         }
         case "abspath":
@@ -400,7 +402,7 @@ function llamarFuncion(nombre: string, resto: string, ctx: CtxExpand, prof: numb
         case "eval": {
             if (ctx.marcaNoFiable)
                 ctx.marcaNoFiable.valor = true;
-            diag(ctx, "aviso", "eval-no-soportado", "`$(eval \u2026)` genera reglas o variables sobre la marcha; el simulador no lo aplica, as\u00ED que lo que dependa de \u00E9l no aparecer\u00E1.");
+            diag(ctx, "aviso", "eval-no-soportado");
             return "";
         }
         default:

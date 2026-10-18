@@ -1,5 +1,6 @@
 import type { RabbitRouteResult, RabbitRouteError, RazonBinding, CondicionHeader } from "../../src/app/services/brokers/rabbit-route";
 import type { KafkaAssignResult, KafkaAssignError } from "../../src/app/services/brokers/kafka-assign";
+import type { ResultadoFiltro, ErrorFiltro } from "../../src/app/services/brokers/sns-filter";
 const MODO: Record<CondicionHeader["modo"], string> = { presencia: "present", igual: "equals" };
 const RESULTADO: Record<CondicionHeader["resultado"], string> = { casa: "match", falla: "no-match", ignorada: "ignored" };
 function razonEn(r: RazonBinding) {
@@ -20,6 +21,7 @@ const ERROR_RABBIT: {
     "clave-larga": (e) => `${e.donde === "routingKey" ? "The routing key" : `Binding ${e.binding}'s binding key`} is ${e.bytes} bytes; AMQP 0-9-1 allows 255 (the broker would close the channel).`,
     "demasiados-bindings": (e) => `Too many bindings (max ${e.maximo}).`,
     "cola-vacia": (e) => `Binding ${e.binding} has no queue name.`,
+    "demasiados-comodines": (e) => `Binding ${e.binding} uses ${e.cuantos} '#' wildcards; RabbitMQ 4.3.5+ allows at most ${e.maximo} (the broker rejects the binding with a 406). 4.0.5 accepts it.`,
 };
 export function rabbitEn(r: RabbitRouteResult) {
     if (!r.ok)
@@ -55,5 +57,34 @@ export function kafkaAssignEn(r: KafkaAssignResult) {
         idleMembers: r.idle,
         memberOrder: r.orden,
         ...(r.transferring.length ? { transferring: r.transferring } : {}),
+    };
+}
+const ERROR_SNS: {
+    [K in ErrorFiltro["codigo"]]: (e: Extract<ErrorFiltro, {
+        codigo: K;
+    }>) => string;
+} = {
+    "politica-no-objeto": () => "The filter policy must be a JSON object.",
+    "politica-grande": (e) => `The filter policy is ${e.bytes} bytes; SNS allows ${e.maximo}.`,
+    "clave-sin-array": (e) => `Key "${e.clave}": its value must be a non-empty array of patterns (or, in MessageBody scope, a nested object).`,
+    "anidada-en-atributos": (e) => `Key "${e.clave}" is nested: SNS only accepts nested policies with FilterPolicyScope=MessageBody.`,
+    "patron-invalido": (e) => `Key "${e.clave}": ${e.patron} is not a valid pattern (exact value, prefix, suffix, equals-ignore-case, wildcard, cidr, numeric, anything-but or exists).`,
+    "numero-fuera-de-rango": (e) => `Key "${e.clave}": ${e.valor} is outside SNS's numeric range (-1e9 to 1e9).`,
+    "demasiadas-claves": (e) => `The policy has ${e.cuantas} leaf keys; SNS allows ${e.maximo}.`,
+    "demasiadas-combinaciones": (e) => `The policy has ${e.cuantas} combinations; SNS allows ${e.maximo}.`,
+    "demasiados-comodines": (e) => `Key "${e.clave}": a pattern has ${e.cuantos} '*' wildcards; SNS allows ${e.maximo}.`,
+    "comodin-complejo": (e) => `Wildcard complexity is ${e.puntos} points; SNS allows ${e.maximo}.`,
+    "mensaje-invalido": (e) => e.motivo === "cuerpo-no-json"
+        ? "In MessageBody scope the message must be a JSON object."
+        : "In MessageAttributes scope the message must be { name: { \"Type\": \"String\" | \"String.Array\" | \"Number\" | \"Binary\", \"Value\": \"...\" } }.",
+};
+export function snsFilterEn(r: ResultadoFiltro) {
+    if (!r.ok)
+        return { error: (ERROR_SNS[r.error.codigo] as (e: ErrorFiltro) => string)(r.error) };
+    return {
+        matches: r.casa,
+        combinations: r.combinaciones,
+        keys: r.claves.map((c) => ({ path: c.ruta, matches: c.casa, messageValues: c.valores, matchedPatternIndex: c.patron >= 0 ? c.patron : null })),
+        source: "AWS SNS documentation (2026-10-09); not calibrated against AWS or an emulator.",
     };
 }

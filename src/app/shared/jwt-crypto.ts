@@ -1,3 +1,4 @@
+import { base64url, fromBase64url } from "./b64url";
 export type JwtAlg = "HS256" | "HS384" | "HS512" | "RS256" | "RS384" | "RS512" | "PS256" | "PS384" | "PS512" | "ES256" | "ES384" | "ES512";
 export const JWT_ALGS: JwtAlg[] = [
     "HS256",
@@ -27,16 +28,7 @@ export function algFamily(alg: JwtAlg): AlgFamily {
 export function isSymmetric(alg: JwtAlg): boolean { return algFamily(alg) === "HMAC"; }
 const enc = new TextEncoder();
 const dec = new TextDecoder();
-export function base64url(bytes: Uint8Array): string {
-    let s = "";
-    for (const b of bytes)
-        s += String.fromCharCode(b);
-    return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
-export function fromBase64url(s: string): Uint8Array {
-    const b64 = s.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((s.length + 3) % 4);
-    return fromBase64(b64);
-}
+export { base64url, fromBase64url } from "./b64url";
 function fromBase64(b64: string): Uint8Array {
     const bin = atob(b64.replace(/\s+/g, ""));
     const out = new Uint8Array(bin.length);

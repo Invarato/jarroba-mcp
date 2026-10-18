@@ -1,6 +1,6 @@
 import { DETECTORS } from "../shared/redact/detectors";
 export type Gravedad = "critico" | "alto" | "aviso" | "info";
-export type ReglaSaml = "sin-firma" | "algoritmo-firma-debil" | "algoritmo-digest-debil" | "ids-duplicados" | "referencia-no-coincide" | "sin-notonorafter" | "expirado" | "sin-audience" | "sin-inresponseto" | "sin-cifrar" | "estado-no-exito" | "secreto-en-atributo" | "xml-invalido" | "doctype-presente" | "comentario-en-identidad" | "transformacion-peligrosa" | "sin-recipient" | "sin-destination" | "recipient-no-coincide" | "issuer-no-coincide";
+export type ReglaSaml = "sin-firma" | "algoritmo-firma-debil" | "algoritmo-digest-debil" | "ids-duplicados" | "referencia-no-coincide" | "sin-notonorafter" | "expirado" | "sin-audience" | "sin-inresponseto" | "sin-cifrar" | "estado-no-exito" | "secreto-en-atributo" | "xml-invalido" | "doctype-presente" | "comentario-en-identidad" | "transformacion-peligrosa" | "sin-recipient" | "sin-destination" | "recipient-no-coincide" | "issuer-no-coincide" | "firma-invalida" | "certificado-distinto" | "certificado-idp-caducado";
 export interface HallazgoSaml {
     regla: ReglaSaml;
     gravedad: Gravedad;

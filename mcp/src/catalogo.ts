@@ -34,7 +34,8 @@ export const DOMINIOS: Record<Dominio, {
             "wcag_contrast",
             "format_convert",
             "unicode_info",
-            "json_schema_validate"
+            "json_schema_validate",
+            "csv_diff"
         ] },
     calc: { titulo: "c\u00E1lculo con unidades, hojas y ecuaciones", tools: [
             "calc_eval",
@@ -87,6 +88,7 @@ export const DOMINIOS: Record<Dominio, {
             "log_convert",
             "log_trends",
             "log_around",
+            "log_distinguish",
             "log_rotation",
             "log_profile_check",
             "log_profile_suggest"
@@ -98,7 +100,8 @@ export const DOMINIOS: Record<Dominio, {
             "queue_simulate",
             "rabbit_route",
             "kafka_partition",
-            "kafka_assign"
+            "kafka_assign",
+            "sns_filter"
         ] },
     project: { titulo: "taller de proyecto", tools: [
             "make_simulate",
@@ -181,6 +184,7 @@ export const NO_IDEMPOTENTES = new Set([
     ...DOMINIOS.project.tools,
     "test_audit",
     "test_debt",
+    "spreadsheet_audit",
 ]);
 export const MUNDO_ABIERTO = new Set([
     ...DOMINIOS.logs.tools,
@@ -188,6 +192,7 @@ export const MUNDO_ABIERTO = new Set([
     "test_audit",
     "test_debt",
     "test_diff_audit",
+    "spreadsheet_audit",
     "diagram_render",
 ]);
 export function mapaDeDominios(): Map<string, Dominio> {

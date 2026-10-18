@@ -25,7 +25,6 @@ export interface AvisoCarrera {
     a: string;
     b: string;
     ficheroImplicado: string;
-    mensaje: string;
 }
 export interface Plan {
     objetivosPedidos: string[];
@@ -139,12 +138,12 @@ function actualizar(e: Estado, objetivo: string, varsHeredadas: DefVar[]): NodoP
             gravedad: "error",
             regla: "dependencia-circular",
             linea: 0,
-            mensaje: "Dependencia circular: " + cadena.join(" \u2192 ") + ". make la descarta y el resultado deja de ser fiable.",
+            datos: { cadena: cadena.join(" \u2192 ") },
         });
         return null;
     }
     if (++e.visitados > MAX_NODOS) {
-        e.diags.push({ gravedad: "error", regla: "grafo-demasiado-grande", linea: 0, mensaje: "El grafo pasa de " + MAX_NODOS + " objetivos: la simulaci\u00F3n se corta aqu\u00ED." });
+        e.diags.push({ gravedad: "error", regla: "grafo-demasiado-grande", linea: 0, datos: { max: MAX_NODOS } });
         return null;
     }
     if (e.enCurso.length >= MAX_PROFUNDIDAD) {
@@ -152,7 +151,7 @@ function actualizar(e: Estado, objetivo: string, varsHeredadas: DefVar[]): NodoP
             gravedad: "error",
             regla: "cadena-demasiado-profunda",
             linea: 0,
-            mensaje: "Hay una cadena de m\u00E1s de " + MAX_PROFUNDIDAD + " dependencias encadenadas (\u2026\u2192 " + objetivo + "): la simulaci\u00F3n se corta ah\u00ED.",
+            datos: { max: MAX_PROFUNDIDAD, objetivo },
         });
         return null;
     }
@@ -200,7 +199,7 @@ function actualizar(e: Estado, objetivo: string, varsHeredadas: DefVar[]): NodoP
             gravedad: "error",
             regla: "sin-regla-ni-fichero",
             linea: 0,
-            mensaje: "`" + objetivo + "`: no existe el fichero y ninguna regla sabe construirlo. make dice \u00ABNo rule to make target\u00BB.",
+            datos: { objetivo },
         });
     }
     else if (!regla) {
@@ -312,7 +311,6 @@ function detectarCarreras(nodos: Map<string, NodoPlan>, ondas: string[][]): Avis
                     a,
                     b,
                     ficheroImplicado: b,
-                    mensaje: "La receta de `" + a + "` usa `" + b + "`, pero no lo declara como requisito. En serie funciona por casualidad del orden; con `make -j` los dos arrancan a la vez y `" + a + "` puede leer un `" + b + "` a medio escribir.",
                 });
             }
         }
@@ -343,7 +341,7 @@ export function planificar(mk: MakefileLeido, ficheros: readonly FicheroVirtual[
         visitados: 0,
     };
     if (pedidos.length === 0) {
-        e.diags.push({ gravedad: "error", regla: "sin-objetivo", linea: 0, mensaje: "No hay ning\u00FAn objetivo que construir: el Makefile no declara ninguna regla." });
+        e.diags.push({ gravedad: "error", regla: "sin-objetivo", linea: 0, datos: {} });
     }
     for (const t of pedidos)
         actualizar(e, t, []);

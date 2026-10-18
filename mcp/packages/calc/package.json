@@ -1,6 +1,6 @@
 {
   "name": "@jarroba/mcp-calc",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "type": "module",
   "description": "MCP server (stdio, local) for maths a model gets wrong: arithmetic WITH UNITS and dimensional checking (adding metres to kilos is an error, not a silent number), equations and linear systems that say whether the answer is EXACT or approximate, multi-line calculation sheets where variables carry downwards, exact derivatives that keep the units, and worked step-by-step that admits when it cannot explain a case. 5 tools, ~1.7k tokens of context. Nothing leaves your machine.",
   "keywords": [
@@ -29,7 +29,7 @@
     "LICENSE"
   ],
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.12.0",
+    "@modelcontextprotocol/sdk": "^1.32.1",
     "mathjs": "^15.2.0",
     "zod": "^3.23.0"
   },

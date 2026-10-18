@@ -10,12 +10,12 @@ second implementation to drift.
 
 ## Four packages, because context is not free
 
-Loading all 134 tools costs **~50,000 tokens of context** before you type anything, in a client that
+Loading all 137 tools costs **~50,500 tokens of context** before you type anything, in a client that
 loads every tool definition up front (Cursor and most others; Claude Code with Tool Search turned off).
 That is Claude Code's own count: measured with `/context` on 0.1.7 (120 tools: 41,996 tokens) and
 extrapolated with `npm run tokens`. Claude Code's **Tool Search**, on by default, only loads a definition
 when it is about to be used: there the whole catalogue costs a few hundred tokens. GitHub's official MCP
-server is the usual example of the problem; Cursor caps out around 40 tools. A catalogue of 134 is not "more
+server is the usual example of the problem; Cursor caps out around 40 tools. A catalogue of 137 is not "more
 complete", it is more expensive — and the model also *chooses* worse, because the usual failure of a
 big catalogue is not a missing tool, it is calling the one next to it.
 
@@ -23,10 +23,10 @@ So pick the one you actually want:
 
 | Package | Tools | Context | For |
 |---|---|---|---|
-| **`@jarroba/mcp-logs`** | 11 | **~4,800 tok** | Reading logs that do not fit in your context |
+| **`@jarroba/mcp-logs`** | 12 | **~4,800 tok** | Reading logs that do not fit in your context |
 | **`@jarroba/mcp-tests`** | 4 | **~1,800 tok** | Auditing tests — including your own |
 | **`@jarroba/mcp-calc`** | 5 | **~1,700 tok** | Maths with units, equations and sheets |
-| `@jarroba/mcp` | 134 | ~50,000 tok | Everything |
+| `@jarroba/mcp` | 137 | ~50,500 tok | Everything |
 
 All four come from the same source. The filter is the `JARROBA_MCP_DOMAINS` environment variable and
 each binary sets its own as a **default**, not a cage: install `mcp-logs` and add
@@ -85,6 +85,8 @@ the log; it can ask questions about it.
   one raises no counter anywhere and is often the worse news.
 - **`log_around`** — what else clustered around a moment. What started **before** is a candidate
   explanation; what came after is usually a consequence.
+- **`log_distinguish`** — what sets a group of events (the errors, by default) **apart** from the
+  rest: the field=value pairs over-represented in it, like the version all the failures share.
 - **`log_stacktrace`** — Java/JVM, Python, Node, Go, .NET, Rust, Ruby, PHP: the `Caused by` chain,
   the root cause, and the first frame of **your** code.
 - **`log_lint`** — whether the log is *well written*: secrets printed, one line flooding the file,
@@ -175,10 +177,10 @@ it and how wrong it is (`chem_ph`), titrations with their equivalence points and
 (`chem_titration`) and whether a salt precipitates and how much dissolves (`chem_solubility`). Every constant
 comes with the paper it was measured in.
 
-**Queueing and message brokers (`queue`, 7)** — Erlang B and M/M/c: how many resources you need, how long people wait,
+**Queueing and message brokers (`queue`, 8)** — Erlang B and M/M/c: how many resources you need, how long people wait,
 what fraction is turned away. Plus a simulation to **cross-check** the formula. And the broker arithmetic a model
-gets wrong in its head, ported from RabbitMQ 4.0.5 and Kafka 4.3.1 and checked against their own tests: which queues a
-RabbitMQ exchange routes to and why (`rabbit_route`), which partition a Kafka key lands in (`kafka_partition`, murmur2
+gets wrong in its head, ported from RabbitMQ and Kafka and calibrated against real 4.0.5/4.3.6 and 4.3.1 brokers: which queues a
+RabbitMQ exchange routes to and why (`rabbit_route`), whether an AWS SNS filter policy lets a message through (`sns_filter`, from the AWS documentation), which partition a Kafka key lands in (`kafka_partition`, murmur2
 with the working shown) and how a consumer group splits partitions (`kafka_assign`: range, roundrobin, sticky,
 cooperative-sticky).
 
@@ -226,9 +228,9 @@ accept: alg none, no exp, kid injection, a key carried in the header, and — gi
 confusion and short HMAC secrets. Static analysis of what you pass: nothing
 is fetched, nothing is run.
 
-**General purpose (`core`, 31)** — CIDR/subnetting, token counting with the real tokenizer (OpenAI's, plus Qwen3 and Mistral run locally, and a measured
+**General purpose (`core`, 32)** — CIDR/subnetting, token counting with the real tokenizer (OpenAI's, plus Qwen3 and Mistral run locally, and a measured
 estimate for Claude), hashes, JWT
-decoding, regex (and a static ReDoS check, `regex_redos_check`), spreadsheet formula audit (`spreadsheet_audit`: recalculates an .xlsx/.ods and flags stale values and cycles), timestamps, cron, colors, WCAG contrast, chmod, JSON diff, units (kB vs KiB),
+decoding, regex (and a static ReDoS check, `regex_redos_check`), spreadsheet formula audit (`spreadsheet_audit`: recalculates an .xlsx/.ods and flags stale values and cycles), a CSV diff by key of any size (`csv_diff`: which rows are missing, extra or changed, and in which columns), timestamps, cron, colors, WCAG contrast, chmod, JSON diff, units (kB vs KiB),
 Hamming, IEEE-754, number bases, a programmer's calculator, semver, format conversion, Unicode, and
 `json_schema_validate` (a JSON document against a real JSON Schema, draft 2020-12/2019-09/07, with
 every error's JSON Pointer — the check for your own structured output).

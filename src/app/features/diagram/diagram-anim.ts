@@ -266,9 +266,19 @@ export function resolveCameras(frames: ReadonlyArray<Cam | null>, content: Reado
 export interface FrameTiming {
     holdMs?: number;
     transition?: SceneTransition | null;
+    steps?: number;
+    stepMs?: number[];
 }
 export const DEFAULT_HOLD_MS = 2000;
-export const holdOf = (f: FrameTiming): number => Math.max(100, f.holdMs ?? DEFAULT_HOLD_MS);
+export const STEP_MS = 1800;
+export const holdOf = (f: FrameTiming): number => Math.max(100, f.holdMs ?? DEFAULT_HOLD_MS, stepsNeed(f));
+export function stepsNeed(f: FrameTiming): number { const n = f.steps ?? 0; if (!n)
+    return 0; let t = 0; for (let i = 0; i < n; i++)
+    t += f.stepMs?.[i] ?? STEP_MS; return t; }
+export function stepFractions(f: FrameTiming): number[] { const n = f.steps ?? 0, tot = stepsNeed(f) || 1, out = [0]; let acc = 0; for (let i = 0; i < n; i++) {
+    acc += f.stepMs?.[i] ?? STEP_MS;
+    out.push(acc / tot);
+} return out; }
 export const transOf = (fs: readonly FrameTiming[], k: number): number => (k > 0 && fs[k].transition && fs[k].transition!.kind !== "none" ? Math.max(100, fs[k].transition!.ms ?? DEFAULT_TRANSITION_MS) : 0);
 export interface TimeSeg {
     kind: "trans" | "hold";
@@ -309,6 +319,19 @@ export function frameAt(fs: readonly FrameTiming[], ms: number): {
     const x = Math.max(0, Math.min(total - 0.000001, ms));
     const s = segs.find(g => x >= g.start && x < g.end) ?? segs[segs.length - 1];
     return s.kind === "hold" ? { kind: "hold", frame: s.frame } : { kind: "trans", from: s.frame - 1, to: s.frame, t: (x - s.start) / Math.max(1, s.end - s.start) };
+}
+export function pasoEn(fs: readonly FrameTiming[], k: number, ms: number): number {
+    const n = fs[k]?.steps ?? 0;
+    if (!n)
+        return -1;
+    const t0 = holdStart(fs, k), h = holdOf(fs[k]);
+    if (ms < t0 || ms > t0 + h)
+        return -1;
+    const fr = stepFractions(fs[k]), x = (ms - t0) / h;
+    for (let i = 0; i < n; i++)
+        if (x < fr[i + 1])
+            return i;
+    return n - 1;
 }
 export function holdStart(fs: readonly FrameTiming[], k: number): number {
     return timelineSegments(fs).segs.find(g => g.kind === "hold" && g.frame === k)?.start ?? 0;
@@ -402,9 +425,11 @@ export function presentItems(scenes: ReadonlyArray<FrameTiming & {
         if (tr)
             out.push({ kind: "trans", from: k - 1, to: k, tkind: s.transition?.kind === "morph" ? "morph" : "fade", ms: tr });
         const h = holdOf(s);
-        if (s.steps > 0)
+        if (s.steps > 0) {
+            const need = stepsNeed(s) || 1, k2 = h / need;
             for (let i = 0; i < s.steps; i++)
-                out.push({ kind: "step", scene: k, step: i, ms: Math.max(100, h / s.steps) });
+                out.push({ kind: "step", scene: k, step: i, ms: Math.max(100, (s.stepMs?.[i] ?? STEP_MS) * k2) });
+        }
         else
             out.push({ kind: "hold", scene: k, ms: h });
     });

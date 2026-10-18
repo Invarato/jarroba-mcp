@@ -18,4 +18,6 @@ cd mcp && npm install
 npm run build && npm test && npm run test:paquete
 ```
 
+Security: see [SECURITY.md](SECURITY.md) — report vulnerabilities privately, not in a public issue.
+
 License: MIT (see [LICENSE](LICENSE)). Third-party notices ship in each package's `dist/`.

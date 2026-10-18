@@ -53,19 +53,48 @@ export interface ModelProfile {
     label: string;
     latencyMs: number;
     costPerReq: number;
+    inPer1M: number;
+    outPer1M: number;
 }
+export const TYPICAL_TOKENS = { input: 1500, output: 500 } as const;
+const model = (id: string, label: string, latencyMs: number, inPer1M: number, outPer1M: number): ModelProfile => ({ id, label, latencyMs, inPer1M, outPer1M, costPerReq: (TYPICAL_TOKENS.input * inPer1M + TYPICAL_TOKENS.output * outPer1M) / 1000000 });
+export const MODEL_PRICES_FROM = "2026-10-15.json";
 export const MODEL_PROFILES: ModelProfile[] = [
-    { id: "gemini-flash", label: "Gemini Flash (r\u00E1pido/barato)", latencyMs: 300, costPerReq: 0.0003 },
-    { id: "gpt-4o-mini", label: "GPT-4o mini (r\u00E1pido/barato)", latencyMs: 400, costPerReq: 0.0004 },
-    { id: "claude-haiku", label: "Claude Haiku (r\u00E1pido/barato)", latencyMs: 350, costPerReq: 0.0005 },
-    { id: "claude-sonnet", label: "Claude Sonnet (equilibrado)", latencyMs: 700, costPerReq: 0.008 },
-    { id: "gpt-4o", label: "GPT-4o (equilibrado)", latencyMs: 800, costPerReq: 0.006 },
-    { id: "claude-opus", label: "Claude Opus (potente/lento)", latencyMs: 2200, costPerReq: 0.05 },
-    { id: "o1", label: "o1 (razonamiento/lento)", latencyMs: 3000, costPerReq: 0.06 },
-    { id: "custom", label: "Otro / personalizado", latencyMs: 800, costPerReq: 0.01 },
+    model("gemini-3-5-flash-lite", "Gemini 3.5 Flash-Lite (r\u00E1pido/barato)", 300, 0.3, 2.5),
+    model("gpt-6-luna", "GPT-6 Luna (r\u00E1pido/barato)", 400, 0.1, 0.5),
+    model("claude-haiku-4-5", "Claude Haiku 4.5 (r\u00E1pido/barato)", 350, 1, 5),
+    model("gemini-3-8-flash", "Gemini 3.8 Flash (equilibrado)", 500, 0.75, 3.75),
+    model("claude-sonnet-5-5", "Claude Sonnet 5.5 (equilibrado)", 700, 2, 10),
+    model("gpt-6-1-sol", "GPT-6.1 Sol (equilibrado)", 800, 2, 10),
+    model("gemini-3-1-pro", "Gemini 3.1 Pro (potente)", 2000, 2, 12),
+    model("claude-opus-5-5", "Claude Opus 5.5 (potente/lento)", 2200, 4, 20),
+    model("gpt-6-astra", "GPT-6 Astra (potente/lento)", 3000, 10, 50),
+    { id: "custom", label: "Otro / personalizado", latencyMs: 800, costPerReq: 0.01, inPer1M: 0, outPer1M: 0 },
 ];
+export const LEGACY_MODEL_IDS: Readonly<Record<string, string>> = {
+    "gemini-flash": "gemini-3-5-flash-lite",
+    "gpt-4o-mini": "gpt-6-luna",
+    "claude-haiku": "claude-haiku-4-5",
+    "claude-sonnet": "claude-sonnet-5-5",
+    "gpt-4o": "gpt-6-1-sol",
+    "claude-opus": "claude-opus-5-5",
+    "o1": "gpt-6-astra",
+};
 export function modelProfile(id: string): ModelProfile {
-    return MODEL_PROFILES.find(m => m.id === id) ?? MODEL_PROFILES[MODEL_PROFILES.length - 1];
+    const real = LEGACY_MODEL_IDS[id] ?? id;
+    return MODEL_PROFILES.find(m => m.id === real) ?? MODEL_PROFILES[MODEL_PROFILES.length - 1];
+}
+const MODEL_FIELDS = ["model", "strong_model", "fallback_model"] as const;
+export function migrateModelIds<T extends {
+    ai?: Record<string, unknown>;
+}>(n: T): T {
+    if (!n.ai || !MODEL_FIELDS.some(k => typeof n.ai![k] === "string" && LEGACY_MODEL_IDS[n.ai![k] as string]))
+        return n;
+    const ai = { ...n.ai };
+    for (const k of MODEL_FIELDS)
+        if (typeof ai[k] === "string" && LEGACY_MODEL_IDS[ai[k] as string])
+            ai[k] = LEGACY_MODEL_IDS[ai[k] as string];
+    return { ...n, ai };
 }
 export const AI_CATALOG: Record<AiNodeKind, AiNodeMeta> = {
     ai_agent: {
@@ -110,13 +139,14 @@ export const AI_CATALOG: Record<AiNodeKind, AiNodeMeta> = {
             { key: "escalation", label: "Cascada: % que escala al modelo fuerte", type: "number", help: "Router coste-calidad: el resto lo resuelve el modelo principal (barato)." },
             { key: "strong_model", label: "Modelo fuerte (cascada)", type: "select", options: MODEL_PROFILES.map(m => ({ value: m.id, label: m.label })) },
             { key: "tpm_limit", label: "L\u00EDmite del proveedor (tokens/min)", type: "number", help: "La TPM (no la RPM) suele ser el techo real. 0 = sin l\u00EDmite." },
-            { key: "retry_policy", label: "Pol\u00EDtica de reintento", type: "select", help: "Ante 429/l\u00EDmite: los reintentos ingenuos ampl\u00EDan la carga (death spiral).", options: [{ value: "none", label: "Sin reintentos" }, { value: "immediate", label: "Inmediato (peligroso)" }, { value: "backoff", label: "Backoff + jitter" }] },
+            { key: "retry_policy", label: "Pol\u00EDtica de reintento", type: "select", help: "Ante un 429: el backoff reparte los reintentos en el tiempo (absorbe un pico breve) y cobra la espera en latencia; si el l\u00EDmite se pasa de forma sostenida, los reintentos se multiplican igual. Lo que los acota es el circuit breaker (presupuesto del 10 %).", options: [{ value: "none", label: "Sin reintentos" }, { value: "immediate", label: "Inmediato (peligroso)" }, { value: "backoff", label: "Backoff + jitter" }] },
+            { key: "num_retries", label: "Reintentos por petici\u00F3n", type: "number", help: "Cu\u00E1ntas veces se reintenta lo que el proveedor rechaza (num_retries de LiteLLM). Cada rechazo cuenta para tu l\u00EDmite." },
             { key: "fallback_model", label: "Modelo de respaldo (failover)", type: "select", help: "Si marcas el router \u00ABca\u00EDdo\u00BB, las peticiones van aqu\u00ED.", options: MODEL_PROFILES.map(m => ({ value: m.id, label: m.label })) },
             { key: "strategy", label: "Estrategia", type: "select", options: [{ value: "cost", label: "Coste (cascada)" }, { value: "latency", label: "Latencia" }, { value: "semantic", label: "Sem\u00E1ntica / clasificador" }, { value: "least_busy", label: "Menos ocupado" }, { value: "simple", label: "Simple" }] },
             { key: "models", label: "Modelos / niveles", type: "tags", help: "p.ej. tier-fast, tier-strong", placeholder: "gpt-mini, gpt-strong" },
             { key: "budget_tokens", label: "Budget de tokens", type: "number" },
         ],
-        defaults: { model: "gpt-4o", cache_hit: 0, escalation: 0, strong_model: "claude-opus", tpm_limit: 0, retry_policy: "backoff", fallback_model: "gpt-4o-mini", strategy: "cost", models: [], budget_tokens: 0 },
+        defaults: { model: "gpt-6-1-sol", cache_hit: 0, escalation: 0, strong_model: "claude-opus-5-5", tpm_limit: 0, retry_policy: "backoff", num_retries: 2, fallback_model: "gpt-6-luna", strategy: "cost", models: [], budget_tokens: 0 },
     },
     ai_tool: {
         label: "Herramienta / MCP",

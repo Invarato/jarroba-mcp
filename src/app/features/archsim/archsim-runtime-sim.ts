@@ -74,13 +74,16 @@ export interface RuntimeSimResult extends SimResult {
     asyncLost: number;
     asyncThroughput: number;
     edgeFlow: Record<string, number>;
+    edgeRetry: Record<string, number>;
+    p95Path: string[];
 }
 interface Physics {
     cap: number;
     svcMs: number;
     costReq: number;
     tokReq: number;
-    retryFactor: number;
+    selfRetries: number;
+    backoffSec: number;
     jitter: number;
 }
 function infraPhysics(n: ArchNode, isSource: boolean): Physics {
@@ -94,7 +97,61 @@ function infraPhysics(n: ArchNode, isSource: boolean): Physics {
         const r = Math.max(0, Math.min(1, n.readRatio ?? 0.8));
         cap = cap / ((1 - r) + r / (1 + replicas));
     }
-    return { cap, svcMs, costReq: 0, tokReq: 0, retryFactor: Math.max(0, n.retries ?? 0) * 8, jitter: Math.max(0, n.jitter ?? 0) };
+    return { cap, svcMs, costReq: 0, tokReq: 0, selfRetries: 0, backoffSec: 0, jitter: Math.max(0, n.jitter ?? 0) };
+}
+export function erlangC(c: number, a: number): number {
+    let b = 1;
+    for (let k = 1; k <= c; k++)
+        b = (a * b) / (k + a * b);
+    const rho = a / c;
+    return b / (1 - rho * (1 - b));
+}
+function serversOf(n: ArchNode, cap: number, svcMs: number): number {
+    if (n.concurrency === "blocking")
+        return Math.max(1, Math.min(2000, Math.round(n.pool ?? DEFAULT_POOL)));
+    return Math.max(1, Math.min(2000, Math.round(cap * svcMs / 1000)));
+}
+export function queueWait(lambda: number, cap: number, c: number, svcMs: number, jitter: number, qMax: number): {
+    mean: number;
+    p50: number;
+    p95: number;
+} | null {
+    if (!(svcMs > 0) || !(cap > 0) || !(lambda > 0))
+        return null;
+    if (lambda >= cap) {
+        if (!(qMax > 0))
+            return null;
+        const full = (qMax / cap) * 1000;
+        return { mean: full, p50: full, p95: full };
+    }
+    const C = erlangC(c, (lambda / cap) * c);
+    const cs = Math.max(0, jitter) / svcMs, v = (1 + cs * cs) / 2;
+    const gap = (cap - lambda) / 1000;
+    const top = qMax > 0 ? (qMax / cap) * 1000 : Infinity;
+    const pct = (p: number) => (C > 1 - p ? Math.min(top, (Math.log(C / (1 - p)) / gap) * v) : 0);
+    return { mean: Math.min(top, (C / gap) * v), p50: pct(0.5), p95: pct(0.95) };
+}
+export const CURVE_U_MAX = 0.97;
+export function waitCurve(n: ArchNode, steps = 50, uMax = CURVE_U_MAX): {
+    u: number;
+    p50: number;
+    p95: number;
+}[] | null {
+    if (isAiKind(n.kind) || isAsyncKind(n.kind) || n.kind === "client" || n.kind === "attacker" || n.kind === "ratelimit")
+        return null;
+    const p = infraPhysics(n, false);
+    if (!(p.svcMs > 0) || !(p.cap > 0))
+        return null;
+    const c = serversOf(n, p.cap, p.svcMs), qMax = Math.max(0, n.queue ?? 0), out: {
+        u: number;
+        p50: number;
+        p95: number;
+    }[] = [];
+    for (let i = 0; i <= steps; i++) {
+        const u = uMax * i / steps, w = queueWait(u * p.cap, p.cap, c, p.svcMs, p.jitter, qMax);
+        out.push({ u, p50: p.svcMs + (w?.p50 ?? 0), p95: p.svcMs + (w?.p95 ?? 0) });
+    }
+    return out;
 }
 export interface RuntimeScenario {
     loadMult?: number;
@@ -104,6 +161,7 @@ export interface RuntimeScenario {
 }
 export const DEFAULT_SCALE_DELAY_SEC = 60;
 export const SCALE_DOWN_SEC = 300;
+export const RETRY_BUDGET = 0.1;
 export const SPLIT_KINDS: ReadonlySet<string> = new Set(["client", "attacker", "lb", "gateway", "waf", "ratelimit", "cdn", "queue"]);
 export function fanoutOf(n: ArchNode): "split" | "all" {
     if (n.fanout === "split" || n.fanout === "all")
@@ -215,6 +273,39 @@ export function stepRuntimeSim(allNodes: ArchNode[], edges: ArchEdge[], prevQ: R
         p50: number;
         p95: number;
     }> = {};
+    const prev95: Record<string, string> = {};
+    const selfWait: [
+        number,
+        number
+    ] = [0, 0];
+    const retryMult = new Map<string, number>();
+    const retryExtra = new Map<string, [
+        number,
+        number
+    ]>();
+    const retriesOf = (n: ArchNode) => (isAiKind(n.kind) || isAsyncKind(n.kind) ? 0 : Math.max(0, Math.floor(n.retries ?? 0)));
+    const attempts = (id: string, t: string, n: ArchNode): number => {
+        const r = retriesOf(n);
+        if (!r)
+            return 1;
+        const f = Math.max(0, Math.min(1, prevQ[`${id}>${t}#f`] ?? 0));
+        let m = 0;
+        for (let k = 0, fk = 1; k <= r; k++, fk *= f)
+            m += fk;
+        if (n.breaker)
+            m = Math.min(m, 1 + RETRY_BUDGET);
+        let left = m - 1, e50 = 0, e95 = 0;
+        for (let k = 1, fk = f; k <= r; k++, fk *= f) {
+            const pk = Math.min(fk, left);
+            left -= pk;
+            if (pk >= 0.5 - 1e-9)
+                e50++;
+            if (pk >= 0.05 - 1e-9)
+                e95++;
+        }
+        retryExtra.set(`${id}>${t}`, [e50, e95]);
+        return m;
+    };
     const route = (id: string, n: ArchNode) => {
         const outs = outAdj.get(id)!;
         if (!outs.length)
@@ -232,9 +323,11 @@ export function stepRuntimeSim(allNodes: ArchNode[], edges: ArchEdge[], prevQ: R
             else if (asideHit > 0 && DATASTORE_KINDS.has(byId.get(t)!.kind))
                 w = 1 - asideHit;
             const key = `${id}>${t}`;
+            const m = attempts(id, t, n);
             edgeShare.set(key, share);
             edgeProb.set(key, w);
-            edgeOut.set(key, [(legitOut[id] ?? 0) * share * w, (attackOut[id] ?? 0) * share * w]);
+            retryMult.set(key, m);
+            edgeOut.set(key, [(legitOut[id] ?? 0) * share * w * m, (attackOut[id] ?? 0) * share * w * m]);
         }
     };
     const queues: Record<string, QueueSim> = {};
@@ -303,7 +396,10 @@ export function stepRuntimeSim(allNodes: ArchNode[], edges: ArchEdge[], prevQ: R
         let ub = 0, uf = 0, eb = 0, ef = 0;
         for (const u of ups) {
             ub = Math.max(ub, pathBase[u] ?? 0);
-            uf = Math.max(uf, pathFull[u] ?? 0);
+            if ((pathFull[u] ?? 0) > uf || prev95[id] === undefined) {
+                uf = Math.max(uf, pathFull[u] ?? 0);
+                prev95[id] = u;
+            }
             eb = Math.max(eb, e2eBase[u] ?? 0);
             ef = Math.max(ef, e2eFull[u] ?? 0);
         }
@@ -376,16 +472,22 @@ export function stepRuntimeSim(allNodes: ArchNode[], edges: ArchEdge[], prevQ: R
         let effCap = Math.max(0.001, p.cap);
         if (n.autoscale && !down && !source)
             effCap = scaledCap(id, p.cap, lambdaIn);
+        const lambdaReq = lambdaIn;
+        let selfF = 0, selfM = 1;
+        if (p.selfRetries > 0 && !source && !down) {
+            selfF = Math.max(0, Math.min(1, prevQ[`${id}#rf`] ?? 0));
+            selfM = 0;
+            for (let k = 0, fk = 1; k <= p.selfRetries; k++, fk *= selfF)
+                selfM += fk;
+            if (n.breaker)
+                selfM = Math.min(selfM, 1 + RETRY_BUDGET);
+            lambdaIn *= selfM;
+        }
         let breakerShed = 0;
-        let lambdaMix = lambdaIn;
+        const lambdaMix = lambdaReq;
         if (n.breaker && !source && !down && lambdaIn > effCap) {
             breakerShed = lambdaIn - effCap;
             lambdaIn = effCap;
-        }
-        else if (p.retryFactor > 0 && !source && !down && lambdaIn > effCap) {
-            const over = lambdaIn - effCap;
-            lambdaIn = Math.min(lambdaIn * (1 + p.retryFactor), lambdaIn + over * p.retryFactor);
-            lambdaMix = lambdaIn;
         }
         const qMax = isAiKind(n.kind) ? 200 : Math.max(0, n.queue ?? 0);
         const q0 = Math.max(0, prevQ[id] ?? 0);
@@ -422,7 +524,12 @@ export function stepRuntimeSim(allNodes: ArchNode[], edges: ArchEdge[], prevQ: R
             }
         }
         nextQ[id] = q1;
-        const servedRate = served / dt;
+        let servedRate = served / dt;
+        if (p.selfRetries > 0 && !source && !down) {
+            const att = lambdaReq * selfM, fNow = att > 0 ? Math.max(0, Math.min(1, droppedReq / dt / att)) : 0;
+            nextQ[`${id}#rf`] = p.backoffSec > 0 ? selfF + (fNow - selfF) * Math.min(1, dt / (2 * p.backoffSec)) : fNow;
+            servedRate = Math.min(servedRate, lambdaReq);
+        }
         const erroredRate = source ? 0 : servedRate * fr;
         const outRate = servedRate - erroredRate;
         const legitFrac = lambdaMix > 0 ? legitIn / lambdaMix : 1;
@@ -430,18 +537,53 @@ export function stepRuntimeSim(allNodes: ArchNode[], edges: ArchEdge[], prevQ: R
         attackOut[id] = outRate * (1 - legitFrac);
         const rho = down && !source ? (lambdaIn > 0 ? 2 : 0) : (effCap > 0 && !source ? lambdaIn / effCap : 0);
         const waitMs = (!down && effCap > 0) ? (q1 / effCap) * 1000 : 0;
-        const delayMs = p.svcMs + waitMs;
+        const qw = source || down || n.kind === "ratelimit" ? null
+            : queueWait(lambdaIn, effCap, serversOf(n, effCap, p.svcMs), p.svcMs, p.jitter, breakerShed > 0 ? 0 : qMax);
+        const delayMs = p.svcMs + Math.max(waitMs, qw?.mean ?? 0);
         perNode[id] = { q: q1, lambdaIn, rho, served: outRate, dropped: droppedReq / dt, errored: erroredRate, delayMs, down, degraded: marked(n) && !down || undefined };
+        if (qw && waitMs < 1e-9 && lambdaIn < effCap) {
+            perNode[id].queueWaitMs = qw.mean;
+            perNode[id].waitingAvg = lambdaIn * qw.mean / 1000;
+        }
+        if (selfM > 1 + 0.000001) {
+            perNode[id].retryX = selfM;
+            perNode[id].retryCapped = !!n.breaker && selfM >= 1 + RETRY_BUDGET - 1e-9;
+        }
         passL[id] = source ? 1 : legitIn > 0 ? Math.min(1, legitOut[id] / legitIn) : 1;
         const blocked = n.kind === "waf" ? attackInRaw - attackIn : 0;
         passA[id] = source ? 1 : attackInRaw > 0 ? Math.min(1, (attackOut[id] + blocked) / attackInRaw) : 1;
         route(id, n);
-        const p95Jitter = !source ? Math.max(0, p.jitter ?? 0) * Math.min(1, rho) : 0;
         const ce = coldExtra[id] ?? { p50: 0, p95: 0 };
-        pathBase[id] = ub + (source ? 0 : p.svcMs + ce.p50);
-        pathFull[id] = uf + (source ? 0 : delayMs + p95Jitter + ce.p95);
-        e2eBase[id] = eb + (source ? 0 : p.svcMs + ce.p50);
-        e2eFull[id] = ef + (source ? 0 : delayMs + p95Jitter + ce.p95);
+        let r50 = 0, r95 = 0;
+        for (const u of ups) {
+            const x = retryExtra.get(`${u}>${id}`);
+            if (x) {
+                r50 = Math.max(r50, x[0]);
+                r95 = Math.max(r95, x[1]);
+            }
+        }
+        let rb = r50 * p.svcMs, rf = r95 * delayMs;
+        const w50 = Math.max(waitMs, qw?.p50 ?? 0), w95 = Math.max(waitMs, qw?.p95 ?? 0);
+        if (p.selfRetries > 0 && p.backoffSec > 0) {
+            let left = selfM - 1, w50 = 0, w95 = 0;
+            for (let k = 1, fk = selfF; k <= p.selfRetries; k++, fk *= selfF) {
+                const pk = Math.min(fk, left);
+                left -= pk;
+                const wait = p.backoffSec * 1000 * 2 ** (k - 1);
+                if (pk >= 0.5 - 1e-9)
+                    w50 += wait;
+                if (pk >= 0.05 - 1e-9)
+                    w95 += wait;
+            }
+            rb += w50;
+            rf += w95;
+            selfWait[0] = Math.max(selfWait[0], w50);
+            selfWait[1] = Math.max(selfWait[1], w95);
+        }
+        pathBase[id] = ub + (source ? 0 : p.svcMs + w50 + ce.p50 + rb);
+        pathFull[id] = uf + (source ? 0 : p.svcMs + w95 + ce.p95 + rf);
+        e2eBase[id] = eb + (source ? 0 : p.svcMs + w50 + ce.p50 + rb);
+        e2eFull[id] = ef + (source ? 0 : p.svcMs + w95 + ce.p95 + rf);
     }
     for (const id of order)
         advanceScale(byId.get(id)!, id, phys.get(id)!.cap);
@@ -464,7 +606,7 @@ export function stepRuntimeSim(allNodes: ArchNode[], edges: ArchEdge[], prevQ: R
                 let acc = split ? 0 : 1;
                 for (const t of outs) {
                     const k = `${id}>${t}`, w = edgeProb.get(k) ?? 1, sh = edgeShare.get(k) ?? (split ? 1 / outs.length : 1);
-                    const leg = 1 - w + w * succ(t, cls, depth + 1);
+                    const leg = 1 - w + w * Math.min(1, succ(t, cls, depth + 1) * (retryMult.get(k) ?? 1));
                     if (split)
                         acc += sh * leg;
                     else
@@ -477,6 +619,23 @@ export function stepRuntimeSim(allNodes: ArchNode[], edges: ArchEdge[], prevQ: R
         m.set(id, v);
         return v;
     };
+    const edgeRetry: Record<string, number> = {};
+    for (const [k, m] of retryMult)
+        if (m > 1 + 0.000001) {
+            edgeRetry[k] = m;
+            const from = k.slice(0, k.indexOf(">")), s = perNode[from];
+            if (s) {
+                s.retryX = Math.max(s.retryX ?? 1, m);
+                if (byId.get(from)?.breaker)
+                    s.retryCapped = m >= 1 + RETRY_BUDGET - 1e-9;
+            }
+        }
+    for (const id of order) {
+        if (!retriesOf(byId.get(id)!) || asyncBoundary(id))
+            continue;
+        for (const t of outAdj.get(id)!)
+            nextQ[`${id}>${t}#f`] = 1 - succ(t, 0);
+    }
     const prob: Record<string, number> = {};
     for (const id of order) {
         if (isSource(id)) {
@@ -551,20 +710,34 @@ export function stepRuntimeSim(allNodes: ArchNode[], edges: ArchEdge[], prevQ: R
         }
     }
     throughput = legitThroughput + Math.max(0, attackOk);
+    let pctEnd: string | null = null;
     const pct = (ends: [
         string,
         number
     ][], path: Record<string, number>, thr: number) => {
         let v = -1;
+        pctEnd = null;
         for (const [id, pr] of ends)
-            if (pr >= thr - 1e-9)
-                v = Math.max(v, path[id] ?? 0);
+            if (pr >= thr - 1e-9 && (path[id] ?? 0) > v) {
+                v = path[id] ?? 0;
+                pctEnd = id;
+            }
         if (v < 0)
             for (const [id] of ends)
-                v = Math.max(v, path[id] ?? 0);
+                if ((path[id] ?? 0) > v) {
+                    v = path[id] ?? 0;
+                    pctEnd = id;
+                }
         return Math.max(0, v);
     };
-    let p50 = pct(respEnds, pathBase, 0.5), p95 = pct(respEnds, pathFull, 0.05);
+    let p50 = pct(respEnds, pathBase, 0.5);
+    let p95 = pct(respEnds, pathFull, 0.05);
+    const p95Path: string[] = [];
+    for (let id: string | null = pctEnd, guard = 0; id && guard < 200; id = prev95[id] ?? null, guard++) {
+        if (p95Path.includes(id))
+            break;
+        p95Path.unshift(id);
+    }
     let e2eP50 = pct(e2eEnds, e2eBase, 0.5), e2eP95 = pct(e2eEnds, e2eFull, 0.05);
     const availability = offered > 0 ? Math.max(0, Math.min(1, throughput / offered)) : 1;
     const fail = 1 - availability, de = dropped + errored;
@@ -574,8 +747,8 @@ export function stepRuntimeSim(allNodes: ArchNode[], edges: ArchEdge[], prevQ: R
     if (hasAi) {
         const est = estimateDesign(allNodes, edges);
         if (est.p50 > 0) {
-            p50 = est.p50;
-            p95 = Math.round(est.p95 * Math.max(1, bnRho > 0 ? bnRho : 1));
+            p50 = est.p50 + selfWait[0];
+            p95 = Math.round(est.p95 * Math.max(1, bnRho > 0 ? bnRho : 1)) + selfWait[1];
         }
     }
     if (!hasAsync) {
@@ -614,5 +787,7 @@ export function stepRuntimeSim(allNodes: ArchNode[], edges: ArchEdge[], prevQ: R
         asyncLost,
         asyncThroughput,
         edgeFlow,
+        edgeRetry,
+        p95Path,
     };
 }

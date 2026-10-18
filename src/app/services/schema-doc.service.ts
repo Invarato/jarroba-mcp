@@ -278,11 +278,11 @@ ${body.join("\n")}
     private actionWord(a: FkAction): string {
         return { a: "no action", r: "restrict", c: "cascade", n: "set null", d: "set default" }[a] ?? "no action";
     }
-    private md(s: string): string { return (s ?? "").replace(/\|/g, "\\|").replace(/\n/g, " "); }
+    private md(s: string): string { return (s ?? "").replace(/\\/g, "\\\\").replace(/\|/g, "\\|").replace(/\n/g, " "); }
     private esc(s: string): string {
         return (s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
     }
-    private q(s: string): string { return (s ?? "").replace(/'/g, "\\'").replace(/\n/g, " "); }
+    private q(s: string): string { return (s ?? "").replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/\n/g, " "); }
     private dbmlName(t: TableModel): string {
         return t.schema === "public" ? t.name : `"${t.schema}"."${t.name}"`;
     }

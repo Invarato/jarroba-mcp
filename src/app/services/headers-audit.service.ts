@@ -1,5 +1,6 @@
+import { bypassesCsp } from "./csp-bypass";
 export type Gravedad = "critico" | "alto" | "aviso" | "info";
-export type ReglaCabecera = "csp-ausente" | "csp-unsafe-inline" | "csp-unsafe-eval" | "csp-wildcard" | "csp-sin-object-src" | "csp-sin-base-uri" | "csp-sin-frame-ancestors" | "sin-nosniff" | "sin-hsts" | "hsts-corto" | "hsts-preload-invalido" | "sin-frame-options" | "xss-protection-obsoleto" | "sin-referrer-policy" | "cookie-sin-secure" | "cookie-sin-httponly" | "cookie-samesite-none-sin-secure" | "cookie-sin-samesite" | "servidor-expuesto" | "csp-solo-informe" | "csp-lista-hosts" | "csp-sin-form-action" | "cors-origen-null" | "cors-comodin-credenciales" | "cookie-prefijo-invalido" | "sin-coop" | "sin-permissions-policy";
+export type ReglaCabecera = "csp-ausente" | "csp-unsafe-inline" | "csp-unsafe-eval" | "csp-wildcard" | "csp-sin-object-src" | "csp-sin-base-uri" | "csp-sin-frame-ancestors" | "sin-nosniff" | "sin-hsts" | "hsts-corto" | "hsts-preload-invalido" | "sin-frame-options" | "xss-protection-obsoleto" | "sin-referrer-policy" | "cookie-sin-secure" | "cookie-sin-httponly" | "cookie-samesite-none-sin-secure" | "cookie-sin-samesite" | "servidor-expuesto" | "csp-solo-informe" | "csp-lista-hosts" | "csp-host-evitable" | "csp-sin-form-action" | "cors-origen-null" | "cors-comodin-credenciales" | "cookie-prefijo-invalido" | "sin-coop" | "sin-permissions-policy";
 export interface HallazgoCabecera {
     regla: ReglaCabecera;
     gravedad: Gravedad;
@@ -14,6 +15,18 @@ export interface AnalisisCabeceras {
     porGravedad: Record<Gravedad, number>;
 }
 const ORDEN: Record<Gravedad, number> = { critico: 0, alto: 1, aviso: 2, info: 3 };
+export type Nota = "A+" | "A" | "B" | "C" | "D" | "F";
+export function notaDe(p: Record<Gravedad, number>): Nota {
+    if (p.critico)
+        return "F";
+    if (p.alto >= 3)
+        return "D";
+    if (p.alto)
+        return "C";
+    if (p.aviso >= 4)
+        return "B";
+    return p.aviso ? "A" : "A+";
+}
 function parsearCabeceras(texto: string, httpsOverride?: boolean): {
     cabeceras: Record<string, string>;
     cookies: string[];
@@ -99,6 +112,9 @@ function revisarCsp(csp: string, emitir: (h: HallazgoCabecera) => void): void {
     if (hosts.length && !script.includes("'strict-dynamic'")) {
         emitir({ regla: "csp-lista-hosts", gravedad: "aviso", fragmento: evidenciaScript });
     }
+    for (const b of bypassesCsp(script).slice(0, 5)) {
+        emitir({ regla: "csp-host-evitable", gravedad: "alto", fragmento: `${b.fuente} → ${b.url} (${b.tipo === "jsonp" ? "JSONP" : "AngularJS"})` });
+    }
     if (!directivas.has("form-action")) {
         emitir({ regla: "csp-sin-form-action", gravedad: "info", fragmento: "" });
     }
@@ -110,7 +126,10 @@ function revisarHsts(valor: string, emitir: (h: HallazgoCabecera) => void): void
     const conPreload = /preload/i.test(valor);
     const SEIS_MESES = 15768000;
     const UN_ANO = 31536000;
-    if (conPreload && (maxAge < UN_ANO || !conSubdominios)) {
+    if (maxAge === 0) {
+        emitir({ regla: "sin-hsts", gravedad: "alto", fragmento: valor });
+    }
+    else if (conPreload && (maxAge < UN_ANO || !conSubdominios)) {
         emitir({ regla: "hsts-preload-invalido", gravedad: "alto", fragmento: valor });
     }
     else if (maxAge < SEIS_MESES) {

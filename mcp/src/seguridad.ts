@@ -61,6 +61,16 @@ export const REGLA_ACCION: Record<ReglaAccion, string> = {
     "secretos-heredados": "secrets-inherit",
     "secretos-volcados": "secrets-dumped",
     "sin-permisos": "no-permissions",
+    "condicion-bot": "bot-conditions",
+    "comandos-inseguros": "insecure-commands",
+    "imagen-sin-pin": "unpinned-images",
+    "condicion-siempre-cierta": "unsound-condition",
+    "contains-cadena": "unsound-contains",
+    "cache-en-publicacion": "cache-poisoning",
+    "ofuscacion": "obfuscation",
+    "publicacion-con-token": "use-trusted-publishing",
+    "dependabot-ejecucion": "dependabot-execution",
+    "dependabot-sin-cooldown": "dependabot-cooldown",
 };
 export const REGLA_CABECERA: Record<ReglaCabecera, string> = {
     "csp-ausente": "csp-missing",
@@ -84,6 +94,7 @@ export const REGLA_CABECERA: Record<ReglaCabecera, string> = {
     "servidor-expuesto": "server-version-exposed",
     "csp-solo-informe": "csp-report-only",
     "csp-lista-hosts": "csp-host-allowlist",
+    "csp-host-evitable": "csp-bypassable-host",
     "csp-sin-form-action": "csp-no-form-action",
     "cors-origen-null": "cors-null-origin",
     "cors-comodin-credenciales": "cors-wildcard-with-credentials",
@@ -122,6 +133,16 @@ export const REGLA_CORREO: Record<ReglaCorreo, string> = {
     "dkim-clave-debil": "dkim-key-weak",
     "dkim-clave-revocada": "dkim-key-revoked",
     "dkim-modo-pruebas": "dkim-test-mode",
+    "dns-error": "dns-error",
+    "dns-sin-spf": "no-spf-record",
+    "dns-sin-dmarc": "no-dmarc-record",
+    "dns-sin-dkim": "no-dkim-key",
+    "dns-sin-mta-sts": "no-mta-sts",
+    "dns-sin-tls-rpt": "no-tls-rpt",
+    "spf-consultas-recursivas": "spf-too-many-lookups-recursive",
+    "spf-vacias": "spf-too-many-void-lookups",
+    "spf-include-roto": "spf-include-without-record",
+    "spf-bucle": "spf-include-loop",
 };
 export const REGLA_SAML: Record<ReglaSaml, string> = {
     "sin-firma": "unsigned",
@@ -144,6 +165,9 @@ export const REGLA_SAML: Record<ReglaSaml, string> = {
     "sin-destination": "no-destination",
     "recipient-no-coincide": "recipient-mismatch",
     "issuer-no-coincide": "issuer-mismatch",
+    "firma-invalida": "invalid-signature",
+    "certificado-distinto": "keyinfo-certificate-mismatch",
+    "certificado-idp-caducado": "idp-certificate-expired",
 };
 export const REGLA_AGENTE: Record<ReglaAgente, string> = {
     "hook-comando": "hook-command",
@@ -248,6 +272,10 @@ const CLAVE_DATOS: Record<string, string> = {
     sa: "serviceAccount",
     riesgos: "risks",
     montado: "tokenMounted",
+    contenedor: "container",
+    faltan: "missing",
+    imagen: "image",
+    servicio: "service",
 };
 const datosEn = (d?: Record<string, string>) => d && Object.keys(d).length ? Object.fromEntries(Object.entries(d).map(([k, v]) => [CLAVE_DATOS[k] ?? k, v])) : undefined;
 const porGravedadEn = (p: Record<Gravedad4, number>) => Object.fromEntries((Object.keys(p) as Gravedad4[]).map((g) => [SEVERIDAD[g], p[g]]));
@@ -450,6 +478,14 @@ export const REGLA_K8S: Record<ReglaK8s, string> = {
     "pss-aviso": "pod-security-warning",
     "sa-peligrosa": "dangerous-service-account",
     "sa-token-innecesario": "unneeded-service-account-token",
+    "sin-recursos": "container-resources",
+    "sin-readiness": "pod-probes",
+    "sondas-iguales": "pod-probes-identical",
+    "imagen-sin-version": "container-image-tag",
+    "sin-pdb": "has-poddisruptionbudget",
+    "pdb-bloquea": "poddisruptionbudget-blocks-drain",
+    "una-replica": "deployment-replicas",
+    "sin-antiafinidad": "has-host-podantiaffinity",
 };
 export const EXTERNO_EN = "external";
 const nodoEn = (n: string, externo: string) => (n === externo ? EXTERNO_EN : n);
@@ -566,7 +602,7 @@ export const indicePracticasEn = (l: {
 export function practicasEn(r: RespuestaConsulta) {
     if (!r.found)
         return r;
-    return { found: true, results: r.results.map((p) => ({
+    return { found: true, ...(r.alsoConsider ? { alsoConsider: r.alsoConsider } : {}), results: r.results.map((p) => ({
             ...p,
             area: AREA_PRACTICA[p.area],
             verdict: ESTADO_PRACTICA[p.verdict],

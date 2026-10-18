@@ -333,7 +333,7 @@ export function hojaAMarkdown(texto: string, resultados: readonly LineaHoja[]): 
             out.push("| | |", "|---|---:|");
             enTabla = true;
         }
-        const celda = (s: string) => s.replace(/\|/g, "\\|").trim();
+        const celda = (s: string) => s.replace(/\\/g, "\\\\").replace(/\|/g, "\\|").trim();
         out.push(`| \`${celda(l)}\` | ${r.tipo === "error" ? "\u26A0" : celda(r.texto)} |`);
     }
     return out.join("\n");

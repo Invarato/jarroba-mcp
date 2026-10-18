@@ -52,7 +52,46 @@ export function runtimeInsights(nodes: ArchNode[], edges: ArchEdge[], res: Runti
     }
     for (const n of rt)
         if ((n.retries ?? 0) > 0 && !n.breaker) {
-            out.push({ sev: "warn", nodeId: n.id, key: "retries-no-breaker", params: { name: n.label || n.kind }, title: `Reintentos sin circuit breaker: ${n.label || n.kind}`, detail: "Si se satura, los reintentos amplifican la carga en vez de fallar r\u00E1pido (retry storm). Activa el circuit breaker para cortar el bucle en vez de agravarlo." });
+            out.push({ sev: "warn", nodeId: n.id, key: "retries-no-breaker", params: { name: n.label || n.kind }, title: `Reintentos sin circuit breaker: ${n.label || n.kind}`, detail: "Si lo que llama falla, cada fallo se reintenta y la carga que le llega se multiplica justo cuando no da abasto. Un circuit breaker limita los reintentos (como mucho un 10 % de llamadas extra)." });
+        }
+    const downstream = new Map<string, string[]>();
+    for (const e of edges)
+        if (byId.has(e.fromId) && byId.has(e.toId))
+            (downstream.get(e.fromId) ?? downstream.set(e.fromId, []).get(e.fromId)!).push(e.toId);
+    const retr = (n: ArchNode) => (isAiKind(n.kind) || n.kind === "queue" || n.kind === "pubsub" ? 0 : Math.max(0, Math.floor(n.retries ?? 0)));
+    const worst = (id: string, seen: Set<string>): [
+        number,
+        string[]
+    ] => {
+        const n = byId.get(id)!;
+        const r = retr(n);
+        let best: [
+            number,
+            string[]
+        ] = [1, []];
+        if (n.kind !== "queue" && n.kind !== "pubsub")
+            for (const t of downstream.get(id) ?? []) {
+                if (seen.has(t))
+                    continue;
+                const w = worst(t, new Set(seen).add(t));
+                if (w[0] > best[0])
+                    best = w;
+            }
+        return r > 0 ? [best[0] * (r + 1), [n.label || n.kind, ...best[1]]] : best;
+    };
+    const retriedAbove = (id: string, seen = new Set<string>([id])): boolean => (upstream.get(id) ?? []).some(u => {
+        const un = byId.get(u);
+        if (!un || seen.has(u) || un.kind === "queue" || un.kind === "pubsub")
+            return false;
+        seen.add(u);
+        return retr(un) > 0 || retriedAbove(u, seen);
+    });
+    for (const n of rt)
+        if (retr(n) > 0) {
+            const [factor, names] = worst(n.id, new Set([n.id]));
+            if (names.length < 2 || retriedAbove(n.id))
+                continue;
+            out.push({ sev: "warn", nodeId: n.id, key: "retries-multi-layer", params: { names: names.join(" \u2192 "), factor }, title: `Reintentos en varias capas: ${names.join(" \u2192 ")}`, detail: `Con la dependencia del final caída, cada capa reintenta lo que le falla a la de abajo y los intentos se multiplican: le llegan ${factor} veces la carga. Reintenta en un solo punto de la cadena, normalmente el más alto.` });
         }
     const callsCache = (u: string) => edges.some(e => e.fromId === u && byId.get(e.toId)?.kind === "cache");
     for (const n of rt)

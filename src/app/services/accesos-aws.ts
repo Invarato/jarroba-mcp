@@ -1,5 +1,6 @@
 import { Etapa } from "./accesos-motor";
-import { Ambito, caminoDesdeRaiz, coincideAlgunPatron, pasoContinua, pasoFinal, pasoNoAplica } from "./accesos-modelo";
+import { Ambito, PeticionAcceso, caminoDesdeRaiz, coincideAlgunPatron, pasoContinua, pasoFinal, pasoNoAplica } from "./accesos-modelo";
+import { ContextoAws, ResultadoCondicion, evaluarCondicionAws } from "./accesos-aws-condiciones";
 export interface DeclaracionAws {
     efecto: "permitir" | "denegar";
     acciones: string[];
@@ -29,15 +30,16 @@ export function crearMundoAws(datos: {
     rcps?: Record<string, DeclaracionAws[]>;
     sesiones?: Record<string, DeclaracionAws[]>;
 }): MundoAws {
+    const norm = <T extends DeclaracionAws>(r: Record<string, T[]> | undefined) => new Map(Object.entries(r ?? {}).map(([k, ds]) => [k, ds.map(d => (d.condicion !== undefined && typeof d.condicion !== "string" ? { ...d, condicion: JSON.stringify(d.condicion) } : d))]));
     return {
         ambitos: new Map((datos.ambitos ?? []).map(a => [a.id, a])),
         cuentasGestion: new Set(datos.cuentasGestion ?? []),
-        identidades: new Map(Object.entries(datos.identidades ?? {})),
-        recursos: new Map(Object.entries(datos.recursos ?? {})),
-        scps: new Map(Object.entries(datos.scps ?? {})),
-        boundaries: new Map(Object.entries(datos.boundaries ?? {})),
-        rcps: new Map(Object.entries(datos.rcps ?? {})),
-        sesiones: new Map(Object.entries(datos.sesiones ?? {})),
+        identidades: norm(datos.identidades),
+        recursos: norm(datos.recursos),
+        scps: norm(datos.scps),
+        boundaries: norm(datos.boundaries),
+        rcps: norm(datos.rcps),
+        sesiones: norm(datos.sesiones),
     };
 }
 export const FULL_AWS_ACCESS: DeclaracionAws[] = [{ efecto: "permitir", acciones: ["*"] }];
@@ -105,6 +107,45 @@ export const SERVICIOS_RCP: ReadonlySet<string> = new Set([
     "workspaces",
     "xray",
 ]);
+const contextoDe = (p: PeticionAcceso) => p["contexto"] as ContextoAws | undefined;
+function porCondicion(d: DeclaracionAws, p: PeticionAcceso): ResultadoCondicion {
+    if (!d.condicion)
+        return { estado: "cumple" };
+    const ctx = contextoDe(p);
+    return ctx ? evaluarCondicionAws(d.condicion, ctx) : { estado: "indeterminado", motivo: "no-json" };
+}
+function datosCondicion(origen: string, d: DeclaracionAws, r: ResultadoCondicion): Record<string, string> {
+    if (r.estado === "no-cumple") {
+        return { origen, operador: r.operador, clave: r.clave, esperado: r.esperado.join(", "), recibido: r.recibido ? r.recibido.join(", ") : "\u2014" };
+    }
+    return { origen, condicion: d.condicion ?? "" };
+}
+function buscarAllow<T extends DeclaracionAws>(ds: readonly T[], p: PeticionAcceso): {
+    d: T;
+} | {
+    indeterminado: T;
+} | {
+    descartado: T;
+    r: ResultadoCondicion;
+} | null {
+    let indet: T | null = null, fuera: {
+        d: T;
+        r: ResultadoCondicion;
+    } | null = null;
+    for (const d of ds) {
+        if (d.efecto !== "permitir" || !coincideAlgunPatron(p.accion, d.acciones))
+            continue;
+        const r = porCondicion(d, p);
+        if (r.estado === "cumple")
+            return { d };
+        if (r.estado === "indeterminado")
+            indet ??= d;
+        else
+            fuera ??= { d, r };
+    }
+    return indet ? { indeterminado: indet } : fuera ? { descartado: fuera.d, r: fuera.r } : null;
+}
+const pasoIndeterminado = (etapa: string, p: PeticionAcceso, origen: string, d: DeclaracionAws) => pasoFinal(etapa, "indeterminado", contextoDe(p) ? "aws.condicionNoEvaluable" : "aws.condicionDesconocida", { origen, condicion: d.condicion ?? "" });
 function idDeCuenta(mundo: MundoAws, ambitoId: string): string | null {
     const camino = caminoDesdeRaiz(mundo.ambitos, ambitoId);
     for (let i = camino.length - 1; i >= 0; i--) {
@@ -142,15 +183,20 @@ export const denegacionExplicitaAws: Etapa<MundoAws> = (peticion, mundo) => {
                     fuentes.push({ origen: `rcp:${nivelId}`, d });
         }
     }
+    let fueraPorCondicion: Record<string, string> | null = null;
     for (const { origen, d } of fuentes) {
         if (d.efecto !== "denegar" || !coincideAlgunPatron(peticion.accion, d.acciones))
             continue;
-        if (d.condicion) {
-            return pasoFinal("aws.denegacion", "indeterminado", "aws.condicionDesconocida", { origen, condicion: d.condicion });
+        const r = porCondicion(d, peticion);
+        if (r.estado === "indeterminado")
+            return pasoIndeterminado("aws.denegacion", peticion, origen, d);
+        if (r.estado === "no-cumple") {
+            fueraPorCondicion ??= datosCondicion(origen, d, r);
+            continue;
         }
-        return pasoFinal("aws.denegacion", "deniega", "aws.denegadoPor", { origen });
+        return pasoFinal("aws.denegacion", "deniega", d.condicion ? "aws.denegadoPorCondicion" : "aws.denegadoPor", { origen, condicion: d.condicion ?? "" });
     }
-    return pasoNoAplica("aws.denegacion", "aws.sinDenegacion");
+    return fueraPorCondicion ? pasoNoAplica("aws.denegacion", "aws.denyNoAplicaPorCondicion", fueraPorCondicion) : pasoNoAplica("aws.denegacion", "aws.sinDenegacion");
 };
 export const scpNivelesAws: Etapa<MundoAws> = (peticion, mundo) => {
     if (esCuentaDeGestion(mundo, peticion.ambitoId)) {
@@ -166,44 +212,45 @@ export const scpNivelesAws: Etapa<MundoAws> = (peticion, mundo) => {
     return pasoContinua("aws.scpNiveles", "aws.scpNivelesOk");
 };
 export const identidadYRecursoAws: Etapa<MundoAws> = (peticion, mundo) => {
-    const recursoAllow = (mundo.recursos.get(peticion.ambitoId) ?? [])
-        .find(d => d.principalId === peticion.principalId && d.efecto === "permitir" && coincideAlgunPatron(peticion.accion, d.acciones));
+    const delRecurso = (mundo.recursos.get(peticion.ambitoId) ?? []).filter(d => d.principalId === peticion.principalId);
+    const rec = buscarAllow(delRecurso, peticion);
+    const recursoAllow = rec && "d" in rec ? rec.d : null;
     if (recursoAllow && recursoAllow.via !== "rol") {
-        if (recursoAllow.condicion) {
-            return pasoFinal("aws.identidadRecurso", "indeterminado", "aws.condicionDesconocida", { origen: "recurso", condicion: recursoAllow.condicion });
-        }
         const sesion = mundo.sesiones.get(peticion.principalId);
         if (recursoAllow.via === "usuario" && sesion?.length) {
-            const permite = sesion.find(d => d.efecto === "permitir" && coincideAlgunPatron(peticion.accion, d.acciones));
-            if (!permite)
-                return pasoFinal("aws.identidadRecurso", "deniega", "aws.sesionNoPermite");
-            if (permite.condicion)
-                return pasoFinal("aws.identidadRecurso", "indeterminado", "aws.condicionDesconocida", { origen: "sesion", condicion: permite.condicion });
+            const s = buscarAllow(sesion, peticion);
+            if (s && "indeterminado" in s)
+                return pasoIndeterminado("aws.identidadRecurso", peticion, "sesion", s.indeterminado);
+            if (!s || "descartado" in s)
+                return pasoFinal("aws.identidadRecurso", "deniega", s ? "aws.allowFueraPorCondicion" : "aws.sesionNoPermite", s && "descartado" in s ? datosCondicion("sesion", s.descartado, s.r) : undefined);
         }
         return pasoFinal("aws.identidadRecurso", "permite", "aws.concedidoPorRecursoDirecto", { via: recursoAllow.via });
     }
-    const decisivo = recursoAllow ?? (mundo.identidades.get(peticion.principalId) ?? [])
-        .find(d => d.efecto === "permitir" && coincideAlgunPatron(peticion.accion, d.acciones));
-    if (!decisivo) {
-        return pasoFinal("aws.identidadRecurso", "deniega", "aws.sinAllowDeIdentidadNiRecurso");
+    const ide = recursoAllow ? null : buscarAllow(mundo.identidades.get(peticion.principalId) ?? [], peticion);
+    if (recursoAllow || (ide && "d" in ide)) {
+        return pasoContinua("aws.identidadRecurso", recursoAllow ? "aws.concedidoPorRecursoRol" : "aws.concedidoPorIdentidad");
     }
-    if (decisivo.condicion) {
-        return pasoFinal("aws.identidadRecurso", "indeterminado", "aws.condicionDesconocida", { origen: recursoAllow ? "recurso" : "identidad", condicion: decisivo.condicion });
-    }
-    return pasoContinua("aws.identidadRecurso", recursoAllow ? "aws.concedidoPorRecursoRol" : "aws.concedidoPorIdentidad");
+    if (rec && "indeterminado" in rec)
+        return pasoIndeterminado("aws.identidadRecurso", peticion, "recurso", rec.indeterminado);
+    if (ide && "indeterminado" in ide)
+        return pasoIndeterminado("aws.identidadRecurso", peticion, "identidad", ide.indeterminado);
+    const fuera = (rec && "descartado" in rec ? { o: "recurso", x: rec } : null) ?? (ide && "descartado" in ide ? { o: "identidad", x: ide } : null);
+    if (fuera)
+        return pasoFinal("aws.identidadRecurso", "deniega", "aws.allowFueraPorCondicion", datosCondicion(fuera.o, fuera.x.descartado, fuera.x.r));
+    return pasoFinal("aws.identidadRecurso", "deniega", "aws.sinAllowDeIdentidadNiRecurso");
 };
 export const boundaryAws: Etapa<MundoAws> = (peticion, mundo) => {
     const declaraciones = mundo.boundaries.get(peticion.principalId);
     if (!declaraciones || declaraciones.length === 0) {
         return pasoNoAplica("aws.boundary", "aws.sinBoundary");
     }
-    const permite = declaraciones.find(d => d.efecto === "permitir" && coincideAlgunPatron(peticion.accion, d.acciones));
-    if (!permite) {
+    const b = buscarAllow(declaraciones, peticion);
+    if (b && "indeterminado" in b)
+        return pasoIndeterminado("aws.boundary", peticion, "boundary", b.indeterminado);
+    if (b && "descartado" in b)
+        return pasoFinal("aws.boundary", "deniega", "aws.allowFueraPorCondicion", datosCondicion("boundary", b.descartado, b.r));
+    if (!b)
         return pasoFinal("aws.boundary", "deniega", "aws.boundaryNoPermite");
-    }
-    if (permite.condicion) {
-        return pasoFinal("aws.boundary", "indeterminado", "aws.condicionDesconocida", { origen: "boundary", condicion: permite.condicion });
-    }
     return pasoContinua("aws.boundary", "aws.boundaryOk");
 };
 export const sesionAws: Etapa<MundoAws> = (peticion, mundo) => {
@@ -211,13 +258,13 @@ export const sesionAws: Etapa<MundoAws> = (peticion, mundo) => {
     if (!declaraciones || declaraciones.length === 0) {
         return pasoNoAplica("aws.sesion", "aws.sinSesion");
     }
-    const permite = declaraciones.find(d => d.efecto === "permitir" && coincideAlgunPatron(peticion.accion, d.acciones));
-    if (!permite) {
+    const s = buscarAllow(declaraciones, peticion);
+    if (s && "indeterminado" in s)
+        return pasoIndeterminado("aws.sesion", peticion, "sesion", s.indeterminado);
+    if (s && "descartado" in s)
+        return pasoFinal("aws.sesion", "deniega", "aws.allowFueraPorCondicion", datosCondicion("sesion", s.descartado, s.r));
+    if (!s)
         return pasoFinal("aws.sesion", "deniega", "aws.sesionNoPermite");
-    }
-    if (permite.condicion) {
-        return pasoFinal("aws.sesion", "indeterminado", "aws.condicionDesconocida", { origen: "sesion", condicion: permite.condicion });
-    }
     return pasoContinua("aws.sesion", "aws.sesionOk");
 };
 export const implicitoAws: Etapa<MundoAws> = () => pasoFinal("aws.implicito", "permite", "aws.implicito");

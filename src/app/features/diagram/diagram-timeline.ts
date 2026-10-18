@@ -71,3 +71,56 @@ export function mapTimeline(tl: DiagramTimeline, nodeId: (id: string) => string 
         })),
     };
 }
+export const HOP_MS = 700;
+export const FLOW_STAGGER = 0.5;
+export function flowSchedule(flows: readonly {
+    label?: string;
+}[]): {
+    spans: [
+        number,
+        number
+    ][];
+    total: number;
+    chained: boolean;
+} {
+    const chains = new Map<string, number>(), next = new Map<string, number>();
+    let order = 0;
+    for (const f of flows)
+        if (f.label != null && f.label !== "" && !chains.has(f.label))
+            chains.set(f.label, order++);
+    const spans: [
+        number,
+        number
+    ][] = [];
+    let total = 0;
+    for (const f of flows) {
+        if (f.label == null || f.label === "") {
+            spans.push([0, -1]);
+            continue;
+        }
+        const at = next.get(f.label) ?? chains.get(f.label)! * FLOW_STAGGER;
+        spans.push([at, at + 1]);
+        next.set(f.label, at + 1);
+        total = Math.max(total, at + 1);
+    }
+    const chained = chains.size > 0;
+    if (!chained)
+        total = 1;
+    for (const s of spans)
+        if (s[1] < 0) {
+            s[0] = 0;
+            s[1] = total;
+        }
+    return { spans, total, chained };
+}
+export function stepNeedMs(step: {
+    flow?: readonly {
+        label?: string;
+    }[];
+}, base: number): number {
+    const f = step.flow ?? [];
+    if (!f.length)
+        return base;
+    const s = flowSchedule(f);
+    return s.chained ? Math.max(base, Math.round(s.total * HOP_MS + 600)) : base;
+}

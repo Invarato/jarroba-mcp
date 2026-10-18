@@ -17,6 +17,10 @@ export interface DslNode {
     replicas?: number;
     readRatio?: number;
     coldStartMs?: number;
+    retries?: number;
+    breaker?: boolean;
+    failRate?: number;
+    down?: boolean;
 }
 export interface DslEdgeObj {
     from: string;
@@ -134,7 +138,7 @@ export function importArchsim(input: string | object): DslResult {
         const c = col.get(n.id) ?? 0;
         const r = rowByCol.get(c) ?? 0;
         rowByCol.set(c, r + 1);
-        return { ref: n.id, kind: n.kind as ArchNodeKind, label: typeof n.label === "string" ? n.label : undefined, capacity: num(n.capacity), latency: num(n.latency), jitter: num(n.jitter), queue: num(n.queue), col: c, row: r, redelivery: num(n.redelivery), idempotent: typeof n.idempotent === "boolean" ? n.idempotent : undefined, partitions: num(n.partitions), hitRatio: num(n.hitRatio), burst: num(n.burst), replicas: num(n.replicas), readRatio: num(n.readRatio), coldStartMs: num(n.coldStartMs), fanout: n.fanout === "split" || n.fanout === "all" ? n.fanout as "split" | "all" : undefined };
+        return { ref: n.id, kind: n.kind as ArchNodeKind, label: typeof n.label === "string" ? n.label : undefined, capacity: num(n.capacity), latency: num(n.latency), jitter: num(n.jitter), queue: num(n.queue), col: c, row: r, redelivery: num(n.redelivery), idempotent: typeof n.idempotent === "boolean" ? n.idempotent : undefined, partitions: num(n.partitions), hitRatio: num(n.hitRatio), burst: num(n.burst), replicas: num(n.replicas), readRatio: num(n.readRatio), coldStartMs: num(n.coldStartMs), retries: num(n.retries), breaker: typeof n.breaker === "boolean" ? n.breaker : undefined, failRate: num(n.failRate) !== undefined ? Math.max(0, Math.min(1, num(n.failRate)!)) : undefined, down: typeof n.down === "boolean" ? n.down : undefined, fanout: n.fanout === "split" || n.fanout === "all" ? n.fanout as "split" | "all" : undefined };
     });
     const state = buildTemplate({ id: "dsl", title: "dsl", nodes: tplNodes, edges });
     return { state, mode: doc.mode === "cicd" ? "cicd" : "runtime" };

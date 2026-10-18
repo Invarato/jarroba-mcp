@@ -9,6 +9,10 @@ export interface NodeSim {
     delayMs: number;
     down: boolean;
     degraded?: boolean;
+    queueWaitMs?: number;
+    waitingAvg?: number;
+    retryX?: number;
+    retryCapped?: boolean;
 }
 export interface SimResult {
     perNode: Record<string, NodeSim>;

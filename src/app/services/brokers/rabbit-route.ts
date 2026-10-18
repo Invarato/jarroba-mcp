@@ -1,4 +1,6 @@
 export type ExchangeType = "direct" | "topic" | "fanout" | "headers";
+export type VersionRabbit = "4.0" | "4.3";
+export const MAX_ALMOHADILLAS = 2;
 export type HeaderValue = string | number | boolean | null;
 export interface RabbitBinding {
     queue: string;
@@ -10,6 +12,7 @@ export interface RabbitRouteInput {
     bindings: RabbitBinding[];
     routingKey?: string;
     headers?: Record<string, HeaderValue>;
+    version?: VersionRabbit;
 }
 export type RazonBinding = {
     tipo: "fanout";
@@ -67,6 +70,11 @@ export type RabbitRouteError = {
 } | {
     codigo: "cola-vacia";
     binding: number;
+} | {
+    codigo: "demasiados-comodines";
+    binding: number;
+    cuantos: number;
+    maximo: number;
 };
 export const MAX_BYTES_CLAVE = 255;
 export const MAX_BINDINGS = 10000;
@@ -154,6 +162,10 @@ export function rabbitRoute(input: RabbitRouteInput): RabbitRouteResult {
                 break;
             case "topic": {
                 const patron = palabrasTopic(bindingKey);
+                const cuantos = patron.filter(w => w === "#").length;
+                if ((input.version ?? "4.3") !== "4.0" && cuantos > MAX_ALMOHADILLAS) {
+                    return { ok: false, error: { codigo: "demasiados-comodines", binding: i, cuantos, maximo: MAX_ALMOHADILLAS } };
+                }
                 razon = { tipo: "topic", casa: casaTopic(patron, palabras), palabrasClave: palabras, palabrasPatron: patron };
                 break;
             }

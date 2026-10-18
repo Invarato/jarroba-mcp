@@ -149,7 +149,10 @@ export function anonymize(text: string, cfg: AnonymizeConfig, carry?: AnonymizeC
     const defOp = cfg.defaultOperator ?? "replace";
     const allow = (cfg.allowlist ?? []).map(w => w.toLowerCase()).filter(Boolean);
     const spans: Internal[] = [];
+    const vistas = palabrasPresentes(text, detectors);
     for (const det of [...detectors, ...keyDetectors(cfg.sensitiveKeys ?? [])]) {
+        if (det.keywords && !det.keywords.some(k => vistas.has(k)))
+            continue;
         for (const s of collect(text, det)) {
             if (det.validate && !det.validate(s.matchText))
                 continue;
@@ -228,18 +231,41 @@ export function anonymize(text: string, cfg: AnonymizeConfig, carry?: AnonymizeC
     const tokenMap = carry?.tokenMap ?? {};
     const counters = carry?.counters ?? new Map<string, number>();
     const valueToken = carry?.valueToken ?? new Map<string, string>();
-    let out = text;
-    for (const s of [...chosen].sort((a, b) => b.start - a.start)) {
-        const rep = applyOp(s, counters, valueToken, tokenMap, cfg.hashKey ?? claveDeSesion());
-        out = out.slice(0, s.start) + rep + out.slice(s.end);
+    const clave = cfg.hashKey ?? claveDeSesion();
+    const reps = new Array<string>(chosen.length);
+    for (let i = chosen.length - 1; i >= 0; i--) {
+        const s = chosen[i];
+        reps[i] = applyOp(s, counters, valueToken, tokenMap, clave);
         hits[s.entity] = (hits[s.entity] ?? 0) + 1;
     }
+    const trozos: string[] = [];
+    let desde = 0;
+    chosen.forEach((s, i) => { trozos.push(text.slice(desde, s.start), reps[i]); desde = s.end; });
+    trozos.push(text.slice(desde));
+    const out = trozos.join("");
     return {
         text: out,
         hits,
         tokenMap,
         spans: chosen.map(s => ({ start: s.start, end: s.end, entity: s.entity, value: s.value })),
     };
+}
+const combinadas = new Map<string, RegExp>();
+function palabrasPresentes(text: string, detectors: readonly Detector[]): Set<string> {
+    const todas = [...new Set(detectors.flatMap(d => d.keywords ?? []))];
+    const vistas = new Set<string>();
+    if (!todas.length)
+        return vistas;
+    const clave = todas.join("\0");
+    let re = combinadas.get(clave);
+    if (!re) {
+        re = new RegExp(todas.map(escapeRegExp).join("|"), "gi");
+        combinadas.set(clave, re);
+    }
+    re.lastIndex = 0;
+    for (const m of text.matchAll(re))
+        vistas.add(m[0].toLowerCase());
+    return vistas;
 }
 function applyOp(s: Internal, counters: Map<string, number>, valueToken: Map<string, string>, tokenMap: Record<string, string>, hashKey: Uint8Array): string {
     if (s.reversibleTo != null && s.fixed) {

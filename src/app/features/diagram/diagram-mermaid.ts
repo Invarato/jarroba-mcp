@@ -29,7 +29,7 @@ export interface ImportEdge {
     arrows?: "none" | "start" | "end" | "both";
     extra?: Record<string, unknown>;
 }
-export const IMPORT_NODE_EXTRA = ["bold", "italic", "textColor", "fontSize", "font", "align", "valign", "textRotation", "borderStyle", "borderWidth", "borderPattern", "corners", "opacity", "rotation", "skin", "group", "runs", "titleSide", "titleH", ...SHAPE_PARAM_KEYS] as const;
+export const IMPORT_NODE_EXTRA = ["bold", "italic", "textColor", "fontSize", "font", "align", "valign", "textRotation", "borderStyle", "borderWidth", "borderPattern", "corners", "opacity", "rotation", "skin", "group", "runs", "titleSide", "titleH", "pen", "annot", "link", ...SHAPE_PARAM_KEYS] as const;
 export const IMPORT_EDGE_EXTRA = ["color", "dash", "dashPattern", "width", "head"] as const;
 export interface ImportResult {
     nodes: ImportNode[];
@@ -74,12 +74,14 @@ const EXPORT_WRAP: Record<ShapeKind, [
     icon: ["[", "]"],
     image: ["[", "]"],
     chart: ["[", "]"],
+    line: ["[", "]"],
+    ink: ["[", "]"],
 };
 function mermaidExportable(n: {
     kind: ShapeKind;
     text: string;
 }): boolean {
-    return !!(n.text ?? "").trim() && n.kind !== "chart" && n.kind !== "image";
+    return !!(n.text ?? "").trim() && n.kind !== "chart" && n.kind !== "image" && n.kind !== "line" && n.kind !== "ink";
 }
 export function exportMermaid(nodes: Array<{
     id: string;

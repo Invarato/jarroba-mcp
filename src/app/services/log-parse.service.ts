@@ -1,4 +1,5 @@
 import { Injectable } from "@angular/core";
+import { Envoltorio, desenvolver, detectarEnvoltorio } from "./log-envoltorios";
 export type LogLevel = "trace" | "debug" | "info" | "warn" | "error" | "fatal";
 export const LEVEL_ORDER: LogLevel[] = ["trace", "debug", "info", "warn", "error", "fatal"];
 export type LogFormat = "json" | "logfmt" | "syslog5424" | "syslog3164" | "clf" | "combined" | "plain";
@@ -20,6 +21,8 @@ export interface ParseInfo {
     tsDateless: boolean;
     confidence: number;
     anchored: number;
+    envoltorio?: Envoltorio;
+    unidos?: number;
 }
 export interface ParseResult {
     events: LogEvent[];
@@ -35,6 +38,7 @@ export interface ParseOpts {
     offsetMs?: number;
     sourceZone?: string;
     eventStart?: RegExp;
+    desenvolver?: boolean;
 }
 const DEFAULT_MAX_EVENTS = 200000;
 const DEFAULT_MAX_EVENT_LINES = 500;
@@ -550,12 +554,16 @@ export class LogParseService {
     parse(text: string, opts: ParseOpts = {}): ParseResult {
         return this.parseLines(this.splitLines(text), opts);
     }
-    parseLines(lines: string[], opts: ParseOpts = {}): ParseResult {
+    parseLines(origen: string[], opts: ParseOpts = {}): ParseResult {
         const maxEvents = opts.maxEvents ?? DEFAULT_MAX_EVENTS;
         const maxEventLines = opts.maxEventLines ?? DEFAULT_MAX_EVENT_LINES;
-        const info = opts.format
+        const env = opts.desenvolver === false ? null : detectarEnvoltorio(origen);
+        const d = env ? desenvolver(origen, env) : null;
+        const lines = d ? d.lineas : origen;
+        const detectado = opts.format
             ? { ...this.detect(lines, opts.eventStart), format: opts.format }
             : this.detect(lines, opts.eventStart);
+        const info: ParseInfo = d ? { ...detectado, envoltorio: d.envoltorio, unidos: d.unidos } : detectado;
         const events: LogEvent[] = [];
         let cur: {
             start: number;
@@ -566,6 +574,8 @@ export class LogParseService {
             if (!cur)
                 return;
             const ev = this.buildEvent(cur.buf, cur.start + 1, info, opts);
+            if (d)
+                this.aplicarEnvoltorio(ev, d, cur.start, cur.start + cur.buf.length - 1, opts);
             events.push(ev);
             cur = null;
         };
@@ -590,7 +600,28 @@ export class LogParseService {
             flush();
         else if (cur)
             cur = null;
-        return { events, info, lines: lines.length, truncated };
+        return { events, info, lines: origen.length, truncated };
+    }
+    private aplicarEnvoltorio(ev: LogEvent, d: ReturnType<typeof desenvolver>, desde: number, hasta: number, opts: ParseOpts): void {
+        ev.line = d.ini[desde] + 1;
+        ev.span = d.fin[hasta] - d.ini[desde] + 1;
+        const m = d.meta[desde];
+        if (!m)
+            return;
+        if (ev.ts == null && m.ts != null) {
+            ev.ts = m.ts + (opts.offsetMs ?? 0);
+            ev.tsText = m.tsText ?? "";
+            if (!isUsableInstant(ev.ts))
+                ev.ts = null;
+        }
+        if (ev.level == null && m.level) {
+            ev.level = m.level;
+            ev.levelText = m.levelText ?? "";
+        }
+        if (m.fields)
+            for (const [k, v] of Object.entries(m.fields))
+                if (!(k in ev.fields))
+                    ev.fields[k] = v;
     }
     startsEvent(line: string, info: ParseInfo, opts: ParseOpts = {}): boolean {
         if (line.trim() === "")

@@ -1,4 +1,4 @@
-export type ShapeKind = "rect" | "round" | "ellipse" | "diamond" | "parallelogram" | "cylinder" | "hexagon" | "note" | "text" | "container" | "triangle" | "star" | "cloud" | "document" | "card" | "callout" | "actor" | "cross" | "process" | "icon" | "image" | "chart";
+export type ShapeKind = "rect" | "round" | "ellipse" | "diamond" | "parallelogram" | "cylinder" | "hexagon" | "note" | "text" | "container" | "triangle" | "star" | "cloud" | "document" | "card" | "callout" | "actor" | "cross" | "process" | "icon" | "image" | "chart" | "line" | "ink";
 export const ICON_NAMES = [
     "person",
     "person_add",
@@ -338,6 +338,8 @@ export const SHAPE_SIZES: Record<ShapeKind, {
     icon: { w: 90, h: 90 },
     image: { w: 160, h: 120 },
     chart: { w: 260, h: 180 },
+    line: { w: 160, h: 8 },
+    ink: { w: 160, h: 60 },
 };
 export type SkinId = "flat" | "soft" | "glass" | "neon" | "shadow" | "ornate" | "sketch";
 export type BorderStyle = "solid" | "dashed" | "dashfine" | "dashlong" | "dotted" | "dashdot" | "dashdotdot" | "double" | "frame" | "none";

@@ -46,7 +46,6 @@ export interface AnalisisMakeLog {
     }[];
     tiempos: {
         hayFechas: boolean;
-        nota: string;
     };
 }
 const RE_ENTRANDO = /^make(?:\[\d+\])?:\s+Entering directory\s+['"`](.+)['"`]/;
@@ -192,11 +191,6 @@ export function analizarLogDeMake(logTexto: string, opts: OpcionesAnalisis): Ana
         pareceParalelo: pareceParalelo || subMakes.length > 1,
         diff,
         patrones,
-        tiempos: hayFechas
-            ? { hayFechas: true, nota: "El log trae fechas: se puede ordenar en el tiempo." }
-            : {
-                hayFechas: false,
-                nota: "Este log no trae fechas, as\u00ED que NO se puede decir cu\u00E1nto tard\u00F3 nada. make no las emite: para tenerlas, canaliza la salida por `ts` (moreutils) o usa `--output-sync` con marcas.",
-            },
+        tiempos: { hayFechas },
     };
 }

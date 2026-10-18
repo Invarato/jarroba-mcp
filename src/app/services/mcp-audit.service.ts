@@ -1,31 +1,13 @@
 import { estimarTokensClaude } from "../shared/factor-claude";
 import { TokenCounterService, type Encoding } from "./token-counter.service";
 import { LIMITES_REGISTRO_MCP } from "../shared/mcp-registry-limits";
-import { auditarCatalogoMcp } from "./mcp-tool-poisoning.service";
+import { auditarCatalogoMcp, sombras } from "./mcp-tool-poisoning.service";
 export type Gravedad = "critico" | "alto" | "aviso" | "info";
-export type ReglaId = "esquema-invalido" | "description-vacia" | "sin-annotations" | "annotations-incompletas" | "annotation-sospechosa" | "nombre-formato-dudoso" | "registro-campo-largo" | "registro-campo-corto" | "registro-name-formato" | "recuento-desincronizado" | "sin-instructions" | "instructions-larga" | "version-desincronizada" | "tool-cara" | "posible-envenenamiento";
-export const TITULOS_REGLA: Record<ReglaId, string> = {
-    "esquema-invalido": "JSON no v\u00E1lido",
-    "description-vacia": "Sin descripci\u00F3n",
-    "sin-annotations": "Sin annotations",
-    "annotations-incompletas": "Annotations incompletas",
-    "annotation-sospechosa": "Nombre y annotation no cuadran",
-    "nombre-formato-dudoso": "Formato de nombre inusual",
-    "registro-campo-largo": "Campo demasiado largo para el registro",
-    "registro-campo-corto": "Campo demasiado corto para el registro",
-    "registro-name-formato": "Formato de campo inv\u00E1lido para el registro",
-    "recuento-desincronizado": "La descripci\u00F3n cita un recuento desfasado",
-    "sin-instructions": "Sin `instructions`",
-    "instructions-larga": "`instructions` puede quedar recortada",
-    "version-desincronizada": "Versi\u00F3n desincronizada",
-    "tool-cara": "Tool desproporcionadamente cara",
-    "posible-envenenamiento": "Posible tool poisoning",
-};
+export type ReglaId = "esquema-invalido" | "description-vacia" | "sin-annotations" | "annotations-incompletas" | "annotation-sospechosa" | "nombre-formato-dudoso" | "registro-campo-largo" | "registro-campo-corto" | "registro-name-formato" | "recuento-desincronizado" | "sin-instructions" | "instructions-larga" | "version-desincronizada" | "tool-cara" | "posible-envenenamiento" | "envenenamiento-esquema" | "sombra-entre-tools";
 export interface Hallazgo {
     regla: ReglaId;
     gravedad: Gravedad;
     tool?: string;
-    fragmento: string;
     datos?: Record<string, string | number>;
 }
 export interface ToolEntry {
@@ -80,29 +62,25 @@ function parseOpcional(texto: string | undefined): Record<string, unknown> | nul
 function auditarTool(t: ToolEntry): Hallazgo[] {
     const h: Hallazgo[] = [];
     if (!t.description || !t.description.trim()) {
-        h.push({ regla: "description-vacia", gravedad: "alto", tool: t.name, fragmento: "sin `description`, o vac\u00EDa" });
+        h.push({ regla: "description-vacia", gravedad: "alto", tool: t.name });
     }
     if (!t.annotations) {
-        h.push({ regla: "sin-annotations", gravedad: "aviso", tool: t.name, fragmento: "sin `annotations`: el spec dice que el cliente debe asumir lo PESIMISTA "
-                + "(puede escribir, puede ser destructiva) hasta que se declare lo contrario" });
+        h.push({ regla: "sin-annotations", gravedad: "aviso", tool: t.name });
     }
     else {
         const campos = ["readOnlyHint", "destructiveHint", "idempotentHint", "openWorldHint"];
         const faltan = campos.filter((c) => !(c in t.annotations!));
         if (faltan.length) {
-            h.push({ regla: "annotations-incompletas", gravedad: "info", tool: t.name, fragmento: `faltan: ${faltan.join(", ")}`, datos: { faltan: faltan.length } });
+            h.push({ regla: "annotations-incompletas", gravedad: "info", tool: t.name, datos: { faltan: faltan.length, campos: faltan.join(", ") } });
         }
         const destructiva = t.annotations["destructiveHint"] === true;
         const soloLectura = t.annotations["readOnlyHint"] === true;
         if (VERBOS_QUE_ESCRIBEN.test(t.name.replace(/_/g, " ")) && (soloLectura || !destructiva)) {
-            h.push({ regla: "annotation-sospechosa", gravedad: "aviso", tool: t.name, fragmento: `el nombre sugiere que escribe o borra, pero `
-                    + (soloLectura ? "`readOnlyHint: true`" : "`destructiveHint` no es `true`")
-                    + " \u2014 rev\u00EDsalo a mano; puede ser un nombre confuso, o una annotation optimista" });
+            h.push({ regla: "annotation-sospechosa", gravedad: "aviso", tool: t.name, datos: { soloLectura: soloLectura ? 1 : 0 } });
         }
     }
     if (!/^[a-z][a-z0-9_]*$/.test(t.name)) {
-        h.push({ regla: "nombre-formato-dudoso", gravedad: "info", tool: t.name, fragmento: "no es `snake_case` en min\u00FAsculas: no lo proh\u00EDbe el spec, pero es la convenci\u00F3n que "
-                + "siguen los cat\u00E1logos grandes (la nuestra, la de GitHub) y lo que un modelo espera ver" });
+        h.push({ regla: "nombre-formato-dudoso", gravedad: "info", tool: t.name });
     }
     return h;
 }
@@ -114,14 +92,13 @@ function auditarServerJson(s: Record<string, unknown>): Hallazgo[] {
             continue;
         const str = String(v);
         if ("maxLength" in limite && str.length > limite.maxLength) {
-            h.push({ regla: "registro-campo-largo", gravedad: "alto", fragmento: `${campo}: ${str.length} caracteres, el máximo del registro es ${limite.maxLength} `
-                    + "\u2014 el registro devuelve un 422 con esto, DESPU\u00C9S de autenticarte", datos: { campo, longitud: str.length, maximo: limite.maxLength } });
+            h.push({ regla: "registro-campo-largo", gravedad: "alto", datos: { campo, longitud: str.length, maximo: limite.maxLength } });
         }
         if ("minLength" in limite && str.length < limite.minLength) {
-            h.push({ regla: "registro-campo-corto", gravedad: "alto", fragmento: `${campo}: ${str.length} caracteres, el mínimo del registro es ${limite.minLength}`, datos: { campo, longitud: str.length, minimo: limite.minLength } });
+            h.push({ regla: "registro-campo-corto", gravedad: "alto", datos: { campo, longitud: str.length, minimo: limite.minLength } });
         }
         if ("pattern" in limite && limite.pattern && !limite.pattern.test(str)) {
-            h.push({ regla: "registro-name-formato", gravedad: "critico", fragmento: `${campo}: "${recorta(str, 60)}" no casa con el patrón que exige el registro (${limite.pattern})`, datos: { campo } });
+            h.push({ regla: "registro-name-formato", gravedad: "critico", datos: { campo, valor: recorta(str, 60), patron: String(limite.pattern) } });
         }
     }
     return h;
@@ -158,57 +135,58 @@ export async function auditarCatalogo(input: {
         const mediana = porTool[Math.floor(porTool.length / 2)].tokens;
         for (const p of porTool) {
             if (mediana > 0 && p.tokens > mediana * 3 && p.tokens > 200) {
-                hallazgos.push({ regla: "tool-cara", gravedad: "aviso", tool: p.nombre, fragmento: `${p.tokens} tokens, ${Math.round(p.tokens / mediana)}× la mediana del catálogo (${mediana})`, datos: { tokens: p.tokens, mediana } });
+                hallazgos.push({ regla: "tool-cara", gravedad: "aviso", tool: p.nombre, datos: { tokens: p.tokens, mediana, veces: Math.round(p.tokens / mediana) } });
             }
         }
     }
     for (const v of auditarCatalogoMcp(tools)) {
-        const gravedad: Gravedad = v.diagnostico.explotable ? "critico" : v.diagnostico.patas >= 2 ? "alto" : "aviso";
-        const reglas = v.hallazgos.map((h) => h.regla).join(", ");
+        let gravedad: Gravedad = v.diagnostico.explotable ? "critico" : v.diagnostico.patas >= 2 ? "alto" : "aviso";
+        if (v.codificado && gravedad === "aviso")
+            gravedad = "alto";
         hallazgos.push({
-            regla: "posible-envenenamiento",
+            regla: v.enEsquema.length ? "envenenamiento-esquema" : "posible-envenenamiento",
             gravedad,
             tool: v.tool,
-            fragmento: v.diagnostico.explotable
-                ? `${v.diagnostico.patas}/3 señales — coincide con el patrón publicado (Invariant Labs): la `
-                    + `description pide leer algo sensible Y mandarlo, en el mismo texto (${reglas})`
-                : `${v.diagnostico.patas}/3 señales de la trifecta (${reglas}); falta: ${v.diagnostico.faltan.join(", ") || "\u2014"}`,
-            datos: { patas: v.diagnostico.patas, explotable: v.diagnostico.explotable ? 1 : 0 },
+            datos: { patas: v.diagnostico.patas, explotable: v.diagnostico.explotable ? 1 : 0, codificado: v.codificado ? 1 : 0, reglas: [...new Set(v.hallazgos.map((h) => h.regla))].join(", "), faltan: v.diagnostico.faltan.join(", "), enEsquema: v.enEsquema.join(", ") },
+        });
+    }
+    for (const s of sombras(tools)) {
+        hallazgos.push({
+            regla: "sombra-entre-tools",
+            gravedad: "alto",
+            tool: s.tool,
+            datos: { nombrada: s.nombrada, texto: recorta(s.fragmento, 120) },
         });
     }
     if (input.instructions !== undefined) {
         const ins = input.instructions.trim();
         if (!ins) {
-            hallazgos.push({ regla: "sin-instructions", gravedad: "aviso", fragmento: "vac\u00EDo. Bajo Tool Search (por defecto en Claude Code desde enero de 2026) es lo "
-                    + "\u00FAnico que queda cargado antes de que el modelo busque nada: sin \u00E9l, decidir si merece la "
-                    + "pena buscar aqu\u00ED depende solo de adivinar por el nombre del servidor" });
+            hallazgos.push({ regla: "sin-instructions", gravedad: "aviso" });
         }
         else {
             const bytes = new TextEncoder().encode(ins).length;
             if (bytes >= TOPE_INSTRUCTIONS_BYTES) {
-                hallazgos.push({ regla: "instructions-larga", gravedad: "aviso", fragmento: `${bytes} bytes — la comunidad documenta que algunos clientes recortan este campo `
-                        + `sin avisar por encima de ~${TOPE_INSTRUCTIONS_BYTES}`, datos: { bytes } });
+                hallazgos.push({ regla: "instructions-larga", gravedad: "aviso", datos: { bytes, tope: TOPE_INSTRUCTIONS_BYTES } });
             }
         }
     }
     const server = parseOpcional(input.serverJson);
     const pkg = parseOpcional(input.packageJson);
     if (server === null)
-        hallazgos.push({ regla: "esquema-invalido", gravedad: "info", fragmento: "el server.json pegado no es JSON v\u00E1lido; se ignora" });
+        hallazgos.push({ regla: "esquema-invalido", gravedad: "info", datos: { fichero: "server.json" } });
     if (pkg === null)
-        hallazgos.push({ regla: "esquema-invalido", gravedad: "info", fragmento: "el package.json pegado no es JSON v\u00E1lido; se ignora" });
+        hallazgos.push({ regla: "esquema-invalido", gravedad: "info", datos: { fichero: "package.json" } });
     if (server && typeof server === "object") {
         hallazgos.push(...auditarServerJson(server));
         const desc = String(server["description"] ?? "");
         const citado = desc.match(/\b(\d{1,4})\s+(?:deterministic\s+)?tools?\b/i)?.[1];
         if (citado && Number(citado) !== tools.length) {
-            hallazgos.push({ regla: "recuento-desincronizado", gravedad: "alto", fragmento: `la description cita "${citado} tools" y el \`tools/list\` pegado trae ${tools.length}`, datos: { citado: Number(citado), real: tools.length } });
+            hallazgos.push({ regla: "recuento-desincronizado", gravedad: "alto", datos: { citado: Number(citado), real: tools.length } });
         }
     }
     if (server && pkg && typeof server === "object" && typeof pkg === "object") {
         if (server["version"] !== pkg["version"]) {
-            hallazgos.push({ regla: "version-desincronizada", gravedad: "critico", fragmento: `server.json dice "${server["version"]}" y package.json dice "${pkg["version"]}" — `
-                    + "el registro oficial verifica la versi\u00F3n contra npm y esto da un 400 despu\u00E9s de autenticarte" });
+            hallazgos.push({ regla: "version-desincronizada", gravedad: "critico", datos: { server: String(server["version"] ?? ""), paquete: String(pkg["version"] ?? "") } });
         }
     }
     const porGravedad: Record<Gravedad, number> = { critico: 0, alto: 0, aviso: 0, info: 0 };

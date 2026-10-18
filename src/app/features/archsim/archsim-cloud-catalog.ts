@@ -19,13 +19,14 @@ export interface CloudTech {
 }
 const PRICED = "2026-08";
 export const AVG_RESP_BYTES = 60000;
+export const FX_FROM = { capture: "2026-10-15.json", date: "2026-10-14", usdPerEur: 1.1195 } as const;
 export const FX: Record<Currency, {
     rate: number;
     symbol: string;
     pricedAt: string;
 }> = {
     USD: { rate: 1, symbol: "$", pricedAt: PRICED },
-    EUR: { rate: 0.92, symbol: "\u20AC", pricedAt: PRICED },
+    EUR: { rate: Math.round(10000 / FX_FROM.usdPerEur) / 10000, symbol: "\u20AC", pricedAt: FX_FROM.date },
 };
 export const PROVIDER_PRICING: Record<CloudProvider, string> = {
     aws: "https://aws.amazon.com/pricing/",

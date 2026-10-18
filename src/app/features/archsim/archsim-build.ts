@@ -20,8 +20,12 @@ export interface TplNode {
     replicas?: number;
     readRatio?: number;
     coldStartMs?: number;
+    retries?: number;
+    breaker?: boolean;
+    failRate?: number;
+    down?: boolean;
 }
-export const BEHAVIOR_FIELDS = ["partitions", "fanout", "hitRatio", "burst", "replicas", "readRatio", "coldStartMs"] as const;
+export const BEHAVIOR_FIELDS = ["partitions", "fanout", "hitRatio", "burst", "replicas", "readRatio", "coldStartMs", "retries", "breaker", "failRate", "down"] as const;
 export interface Tpl {
     id: string;
     title: string;

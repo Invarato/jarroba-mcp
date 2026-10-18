@@ -34,6 +34,15 @@ export interface Carga {
     refs: Referencia[];
     spec: Record<string, any>;
     anotaciones: Record<string, string>;
+    replicas?: number;
+}
+export interface Pdb {
+    id: string;
+    ns: string;
+    nombre: string;
+    selector: Selector | null;
+    minAvailable?: number | string;
+    maxUnavailable?: number | string;
 }
 export type Peer = {
     tipo: "pods";
@@ -69,7 +78,7 @@ export interface Servicio {
     tipo: string;
     targetPorts: (number | string)[];
 }
-export type ReglaK8s = "yaml-invalido" | "politica-sin-pods" | "peer-sin-pods" | "peers-separados" | "servicio-sin-pods" | "servicio-puerto-inexistente" | "referencia-inexistente" | "inalcanzable" | "namespace-sin-politicas" | "red-del-nodo" | "pss-rechazado" | "pss-privilegiado" | "pss-aviso" | "sa-peligrosa" | "sa-token-innecesario";
+export type ReglaK8s = "yaml-invalido" | "politica-sin-pods" | "peer-sin-pods" | "peers-separados" | "servicio-sin-pods" | "servicio-puerto-inexistente" | "referencia-inexistente" | "inalcanzable" | "namespace-sin-politicas" | "red-del-nodo" | "pss-rechazado" | "pss-privilegiado" | "pss-aviso" | "sa-peligrosa" | "sa-token-innecesario" | "sin-recursos" | "sin-readiness" | "sondas-iguales" | "imagen-sin-version" | "sin-pdb" | "pdb-bloquea" | "una-replica" | "sin-antiafinidad";
 export interface HallazgoK8s {
     regla: ReglaK8s;
     gravedad: "alto" | "aviso" | "info";
@@ -84,6 +93,7 @@ export interface Modelo {
     definidos: Set<string>;
     errores: string[];
     redDelNodo: string[];
+    pdbs: Pdb[];
 }
 export const EXTERNO = "(externo)";
 const PROTOS: Proto[] = ["TCP", "UDP", "SCTP"];
@@ -188,7 +198,11 @@ function reglas(x: unknown, campoPeers: "from" | "to"): Regla[] {
     });
 }
 export function leer(texto: string): Modelo {
-    const m: Modelo = { cargas: [], politicas: [], servicios: [], namespaces: new Map(), definidos: new Set(), errores: [], redDelNodo: [] };
+    const m: Modelo = { cargas: [], politicas: [], servicios: [], namespaces: new Map(), definidos: new Set(), errores: [], redDelNodo: [], pdbs: [] };
+    const hpas: {
+        objetivo: string;
+        min: number;
+    }[] = [];
     const pendientes: any[] = [];
     for (const trozo of texto.split(/^---[ \t]*$/m)) {
         if (!trozo.trim())
@@ -220,7 +234,7 @@ export function leer(texto: string): Modelo {
         }
         if (!m.namespaces.has(ns))
             m.namespaces.set(ns, {});
-        if (["ConfigMap", "Secret", "ServiceAccount"].includes(kind)) {
+        if (["ConfigMap", "Secret", "ServiceAccount", "LimitRange"].includes(kind)) {
             m.definidos.add(`${kind} ${ns}/${nombre}`);
             continue;
         }
@@ -234,6 +248,16 @@ export function leer(texto: string): Modelo {
             const conIngress = tipos.length ? tipos.includes("Ingress") : true;
             const conEgress = tipos.length ? tipos.includes("Egress") : "egress" in spec;
             m.politicas.push({ id: `${ns}/${nombre}`, ns, nombre, selector: selector(spec["podSelector"]), ingress: conIngress ? reglas(spec["ingress"], "from") : null, egress: conEgress ? reglas(spec["egress"], "to") : null });
+            continue;
+        }
+        if (kind === "PodDisruptionBudget") {
+            const v = (x: unknown) => (typeof x === "number" || typeof x === "string" ? x : undefined);
+            m.pdbs.push({ id: `${ns}/${nombre}`, ns, nombre, selector: spec["selector"] ? selector(spec["selector"]) : null, minAvailable: v(spec["minAvailable"]), maxUnavailable: v(spec["maxUnavailable"]) });
+            continue;
+        }
+        if (kind === "HorizontalPodAutoscaler") {
+            const ref = obj(spec["scaleTargetRef"]);
+            hpas.push({ objetivo: `${ref["kind"]} ${ns}/${ref["name"]}`, min: typeof spec["minReplicas"] === "number" ? spec["minReplicas"] : 1 });
             continue;
         }
         const plantilla = kind === "Pod" ? d : PLANTILLA[kind]?.(spec);
@@ -267,7 +291,13 @@ export function leer(texto: string): Modelo {
                 continue;
             }
         }
-        m.cargas.push({ id: `${ns}/${nombre}`, ns, nombre, tipo: kind, labels, puertos, refs: refsDe(ps), spec: ps, anotaciones: etiquetas(kind === "Pod" ? meta["annotations"] : pm["annotations"]) });
+        const replicas = kind === "Deployment" || kind === "StatefulSet" ? (typeof spec["replicas"] === "number" ? spec["replicas"] : 1) : undefined;
+        m.cargas.push({ id: `${ns}/${nombre}`, ns, nombre, tipo: kind, labels, puertos, refs: refsDe(ps), spec: ps, anotaciones: etiquetas(kind === "Pod" ? meta["annotations"] : pm["annotations"]), ...(replicas !== undefined ? { replicas } : {}) });
+    }
+    for (const c of m.cargas) {
+        const h = hpas.find(x => x.objetivo === `${c.tipo} ${c.id}`);
+        if (h && c.replicas !== undefined)
+            c.replicas = h.min;
     }
     for (const [n, l] of m.namespaces)
         m.namespaces.set(n, { ...l, "kubernetes.io/metadata.name": n });

@@ -160,6 +160,10 @@ export interface RespuestaPractica {
 export type RespuestaConsulta = {
     found: true;
     results: RespuestaPractica[];
+    alsoConsider?: {
+        id: string;
+        practice: string;
+    }[];
 } | {
     found: false;
     note: string;
@@ -191,7 +195,10 @@ export function consultar(reg: Registro, topic: string, since: string | undefine
         return { found: false, note: `No entry matched "${topic}" well enough. That means it has not been reviewed here, not that it is fine or wrong.` +
                 (nearest.length ? ` The closest entries are in "nearest": if one of them is your topic, call practice_check again with its id as the topic; if none is, say so instead of assuming.` : ""), ...(nearest.length ? { nearest } : {}) };
     }
-    return { found: true, results: lista.slice(0, max).map(p => ({
+    const dados = new Set(lista.slice(0, max).map(p => p.id));
+    const tambien = (since ? [] : buscar(reg.practicas, topic, null, "una")).filter(p => !dados.has(p.id)).slice(0, 5)
+        .map(p => ({ id: p.id, practice: p.titulo.en }));
+    return { found: true, ...(tambien.length ? { alsoConsider: tambien } : {}), results: lista.slice(0, max).map(p => ({
             id: p.id,
             practice: p.titulo.en,
             url: enlacePractica(p.id),

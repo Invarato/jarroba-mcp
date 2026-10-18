@@ -1,9 +1,10 @@
 import * as jsYaml from "js-yaml";
 import { PIPE_A_SHELL, HOST_SOSPECHOSO } from "./agente-audit.service";
 import { DETECTORS } from "../shared/redact/detectors";
+import { imagenSinVersion } from "./k8s-fiabilidad";
 export type Gravedad = "critico" | "alto" | "aviso" | "info";
 export type Confianza = "estructural" | "indicio";
-export type ReglaAccion = "inyeccion-comando" | "inyeccion-script" | "pwn-request" | "accion-sin-pin" | "secreto-literal" | "permisos-totales" | "pipe-a-shell" | "host-sospechoso" | "yaml-invalido" | "checkout-credenciales" | "workflow-run-inseguro" | "github-env-inseguro" | "secretos-heredados" | "secretos-volcados" | "sin-permisos";
+export type ReglaAccion = "inyeccion-comando" | "inyeccion-script" | "pwn-request" | "accion-sin-pin" | "secreto-literal" | "permisos-totales" | "pipe-a-shell" | "host-sospechoso" | "yaml-invalido" | "checkout-credenciales" | "workflow-run-inseguro" | "github-env-inseguro" | "secretos-heredados" | "secretos-volcados" | "sin-permisos" | "condicion-bot" | "comandos-inseguros" | "imagen-sin-pin" | "condicion-siempre-cierta" | "contains-cadena" | "cache-en-publicacion" | "ofuscacion" | "publicacion-con-token" | "dependabot-ejecucion" | "dependabot-sin-cooldown";
 export interface HallazgoAccion {
     regla: ReglaAccion;
     gravedad: Gravedad;
@@ -63,17 +64,23 @@ interface Step {
     run?: unknown;
     with?: unknown;
     env?: unknown;
+    if?: unknown;
 }
 interface Job {
     permissions?: unknown;
     steps?: unknown;
     uses?: unknown;
     secrets?: unknown;
+    env?: unknown;
+    if?: unknown;
+    container?: unknown;
+    services?: unknown;
 }
 interface Workflow {
     on?: unknown;
     permissions?: unknown;
     jobs?: unknown;
+    env?: unknown;
 }
 const listaSteps = (x: unknown): Step[] => (Array.isArray(x) ? x.filter((v): v is Step => esObj(v)) : []);
 type Emitir = (h: Omit<HallazgoAccion, "fichero">) => void;
@@ -100,6 +107,109 @@ function revisarEnvOWith(mapa: unknown, contenido: string, cursor: Map<string, n
         }
     }
 }
+const CON_CACHE: {
+    accion: string;
+    siempre?: true;
+    input?: string;
+    porDefecto?: boolean;
+    invertido?: true;
+}[] = [
+    { accion: "actions/cache", siempre: true },
+    { accion: "actions/setup-java", input: "cache" },
+    { accion: "actions/setup-go", input: "cache", porDefecto: true },
+    { accion: "actions/setup-node", input: "cache" },
+    { accion: "actions/setup-python", input: "cache" },
+    { accion: "actions/setup-dotnet", input: "cache" },
+    { accion: "astral-sh/setup-uv", input: "enable-cache" },
+    { accion: "Swatinem/rust-cache", siempre: true },
+    { accion: "ruby/setup-ruby", input: "bundler-cache" },
+    { accion: "mlugg/setup-zig", input: "use-cache", porDefecto: true },
+    { accion: "oven-sh/setup-bun", input: "no-cache", invertido: true },
+    { accion: "pnpm/setup", input: "cache" },
+    { accion: "DeterminateSystems/magic-nix-cache-action", siempre: true },
+    { accion: "actions-rust-lang/setup-rust-toolchain", input: "cache", porDefecto: true },
+    { accion: "Mozilla-Actions/sccache-action", siempre: true },
+    { accion: "nix-community/cache-nix-action", siempre: true },
+    { accion: "jdx/mise-action", input: "cache", porDefecto: true },
+    { accion: "awalsh128/cache-apt-pkgs-action", siempre: true },
+];
+const PUBLICAN = [
+    "pypa/gh-action-pypi-publish",
+    "rubygems/release-gem",
+    "jreleaser/release-action",
+    "goreleaser/goreleaser-action",
+    "softprops/action-gh-release",
+    "release-drafter/release-drafter",
+    "googleapis/release-please-action",
+    "docker/build-push-action",
+    "redhat-actions/push-to-registry",
+    "aws-actions/amazon-ecs-deploy-task-definition",
+    "aws-actions/aws-cloudformation-github-deploy",
+    "Azure/aci-deploy",
+    "Azure/container-apps-deploy-action",
+    "Azure/functions-action",
+    "Azure/sql-action",
+    "cloudflare/wrangler-action",
+    "google-github-actions/deploy-appengine",
+    "google-github-actions/deploy-cloudrun",
+    "google-github-actions/deploy-cloud-functions",
+];
+const accionDe = (usa: string) => usa.split("@")[0].toLowerCase();
+const esAccion = (usa: string, nombre: string) => accionDe(usa) === nombre.toLowerCase() || accionDe(usa).startsWith(nombre.toLowerCase() + "/");
+const verdadero = (v: unknown) => v === true || (typeof v === "string" && /^(true|yes|on|1)$/i.test(v.trim()));
+function usaCache(s: Step): boolean {
+    const usa = cadena(s.uses);
+    const c = CON_CACHE.find(x => esAccion(usa, x.accion));
+    if (!c)
+        return false;
+    if (c.siempre)
+        return true;
+    const w = esObj(s.with) ? (s.with as Record<string, unknown>) : {};
+    const v = w[c.input!];
+    if (v === undefined)
+        return !!c.porDefecto;
+    if (/\$\{\{/.test(String(v)))
+        return true;
+    const on = typeof v === "boolean" || /^(true|false)$/i.test(String(v).trim()) ? verdadero(v) : String(v).trim() !== "";
+    return c.invertido ? !on : on;
+}
+function esDisparoDeRelease(on: unknown, triggers: Set<string>): boolean {
+    if (triggers.has("release"))
+        return true;
+    const push = esObj(on) ? (on as Record<string, unknown>)["push"] : undefined;
+    if (!esObj(push))
+        return false;
+    const p = push as Record<string, unknown>;
+    if (p["tags"] !== undefined)
+        return true;
+    const ramas = Array.isArray(p["branches"]) ? p["branches"].map(String) : [];
+    return ramas.some(r => /^release/i.test(r));
+}
+const PUBLICA_CMD = /(?:^|[\s;&|(])(?:cargo\s+publish|twine\s+upload|uv\s+publish|uvx?\s+(?:run\s+)?twine\s+upload|poetry\s+publish|hatch\s+publish|pdm\s+publish|gem\s+push|npm\s+publish|pnpm\s+publish|yarn\s+(?:npm\s+)?publish|bun\s+publish)\b(?![^\n]*--dry-run)/;
+export function condicionSiempreCierta(cond: unknown): boolean {
+    if (typeof cond !== "string" || !cond.includes("${{"))
+        return false;
+    return cond.replace(/\$\{\{[\s\S]*?\}\}/g, "") !== "";
+}
+const CONTAINS_CADENA = /contains\(\s*'[^']*'\s*,\s*(?!')[^)]+\)/i;
+const CONDICION_BOT = /github\.(?:actor|triggering_actor)\s*==\s*'[^']*\[bot\]'|'[^']*\[bot\]'\s*==\s*github\.(?:actor|triggering_actor)|contains\(\s*github\.(?:actor|triggering_actor)\s*,\s*'\[bot\]'\s*\)/i;
+function auditarDependabot(ruta: string, contenido: string, doc: Record<string, unknown>): HallazgoAccion[] {
+    const hallazgos: HallazgoAccion[] = [];
+    const cursor = new Map<string, number>();
+    const updates = Array.isArray(doc["updates"]) ? doc["updates"].filter(esObj) : [];
+    for (const u of updates) {
+        const eco = cadena(u["package-ecosystem"]) || "?";
+        if (cadena(u["insecure-external-code-execution"]).toLowerCase() === "allow") {
+            hallazgos.push({ regla: "dependabot-ejecucion", gravedad: "alto", confianza: "estructural", fichero: ruta, linea: lineaDe(contenido, "insecure-external-code-execution", cursor), fragmento: "insecure-external-code-execution: allow", datos: { ecosistema: eco } });
+        }
+        const cd = esObj(u["cooldown"]) ? (u["cooldown"] as Record<string, unknown>) : null;
+        const dias = cd ? Number(cd["default-days"] ?? 0) : 0;
+        if (!cd || !(dias >= 7)) {
+            hallazgos.push({ regla: "dependabot-sin-cooldown", gravedad: "aviso", confianza: "estructural", fichero: ruta, linea: lineaDe(contenido, eco, cursor), fragmento: cd ? `cooldown: default-days: ${cd["default-days"] ?? "\u2014"}` : `package-ecosystem: ${eco}`, datos: { ecosistema: eco } });
+        }
+    }
+    return hallazgos;
+}
 function auditarWorkflow(ruta: string, contenido: string): HallazgoAccion[] {
     const hallazgos: HallazgoAccion[] = [];
     const emitir: Emitir = h => hallazgos.push({ ...h, fichero: ruta });
@@ -114,6 +224,8 @@ function auditarWorkflow(ruta: string, contenido: string): HallazgoAccion[] {
     }
     if (!esObj(doc))
         return hallazgos;
+    if (esRutaDeDependabot(ruta) || (Array.isArray(doc["updates"]) && doc["jobs"] === undefined))
+        return auditarDependabot(ruta, contenido, doc);
     const wf = doc as Workflow;
     const triggers = triggersDe(wf.on);
     const conPullRequestTarget = triggers.has("pull_request_target");
@@ -130,6 +242,30 @@ function auditarWorkflow(ruta: string, contenido: string): HallazgoAccion[] {
     for (const m of contenido.matchAll(/toJSON\(\s*secrets\s*\)/gi)) {
         emitir({ regla: "secretos-volcados", gravedad: "alto", confianza: "estructural", linea: lineaDe(contenido, m[0], cursorZ), fragmento: m[0] });
     }
+    for (const m of contenido.matchAll(/fromJSON\(\s*toJSON\(|format\(\s*'[^']*'(?:\s*,\s*'[^']*')+\s*\)/gi)) {
+        emitir({ regla: "ofuscacion", gravedad: "aviso", confianza: "indicio", linea: lineaDe(contenido, m[0], cursorZ), fragmento: recorta(m[0]) });
+    }
+    const inseguro = (env: unknown, job?: string) => {
+        if (esObj(env) && verdadero((env as Record<string, unknown>)["ACTIONS_ALLOW_UNSECURE_COMMANDS"])) {
+            emitir({ regla: "comandos-inseguros", gravedad: "alto", confianza: "estructural", linea: lineaDe(contenido, "ACTIONS_ALLOW_UNSECURE_COMMANDS", cursorZ), fragmento: "ACTIONS_ALLOW_UNSECURE_COMMANDS: true", job });
+        }
+    };
+    inseguro(wf.env);
+    const deRelease = esDisparoDeRelease(wf.on, triggers);
+    const revisarIf = (cond: unknown, job: string) => {
+        if (typeof cond !== "string")
+            return;
+        if (condicionSiempreCierta(cond)) {
+            emitir({ regla: "condicion-siempre-cierta", gravedad: "alto", confianza: "estructural", linea: lineaDe(contenido, cond.trim().split("\n")[0], cursorZ), fragmento: recorta(JSON.stringify(cond)), job });
+        }
+        const c = CONTAINS_CADENA.exec(cond);
+        if (c)
+            emitir({ regla: "contains-cadena", gravedad: "aviso", confianza: "estructural", linea: lineaDe(contenido, c[0], cursorZ), fragmento: recorta(c[0]), job });
+        const b = CONDICION_BOT.exec(cond);
+        if (b) {
+            emitir({ regla: "condicion-bot", gravedad: disparadorPeligroso ? "alto" : "aviso", confianza: "estructural", linea: lineaDe(contenido, b[0], cursorZ), fragmento: recorta(b[0]), job, ...(disparadorPeligroso ? { datos: { disparador: disparadorPeligroso } } : {}) });
+        }
+    };
     for (const [nombreJob, jobRaw] of Object.entries(jobs)) {
         if (!esObj(jobRaw))
             continue;
@@ -138,6 +274,26 @@ function auditarWorkflow(ruta: string, contenido: string): HallazgoAccion[] {
         if (cadena(job.uses) && cadena(job.secrets) === "inherit") {
             emitir({ regla: "secretos-heredados", gravedad: "aviso", confianza: "estructural", linea: lineaDe(contenido, "secrets: inherit", cursorZ), fragmento: "secrets: inherit", job: nombreJob });
         }
+        inseguro(job.env, nombreJob);
+        revisarIf(job.if, nombreJob);
+        const imagenes: string[] = [];
+        const imagenDe = (x: unknown) => (typeof x === "string" ? x : esObj(x) ? cadena((x as Record<string, unknown>)["image"]) : "");
+        if (job.container !== undefined)
+            imagenes.push(imagenDe(job.container));
+        if (esObj(job.services))
+            for (const sv of Object.values(job.services))
+                imagenes.push(imagenDe(sv));
+        for (const img of imagenes) {
+            if (img && !/\$\{\{/.test(img) && imagenSinVersion(img)) {
+                emitir({ regla: "imagen-sin-pin", gravedad: "aviso", confianza: "estructural", linea: lineaDe(contenido, img, cursorZ), fragmento: img, job: nombreJob });
+            }
+        }
+        const publica = deRelease || steps.some(s => PUBLICAN.some(a => esAccion(cadena(s.uses), a)));
+        if (publica)
+            for (const s of steps.filter(usaCache)) {
+                const usa = cadena(s.uses);
+                emitir({ regla: "cache-en-publicacion", gravedad: "alto", confianza: "indicio", linea: lineaDe(contenido, usa, cursorZ), fragmento: usa, job: nombreJob });
+            }
         const subeArtefactos = steps.some(s => /^actions\/upload-artifact(@|$)/.test(cadena(s.uses)));
         let traeCodigoDelRun = false;
         for (const s of steps) {
@@ -170,6 +326,18 @@ function auditarWorkflow(ruta: string, contenido: string): HallazgoAccion[] {
             if (m && !/^[0-9a-f]{40}$/i.test(m[2]) && !usa.startsWith("./") && !usa.startsWith("docker://")) {
                 emitir({ regla: "accion-sin-pin", gravedad: "aviso", confianza: "estructural", linea: lineaDe(contenido, usa, cursor), fragmento: usa, job: nombreJob, datos: { accion: m[1], ref: m[2] } });
             }
+            inseguro(s.env, nombreJob);
+            revisarIf(s.if, nombreJob);
+            const rutaUses = usa.split("@")[0];
+            if (usa && !usa.startsWith("docker://") && /\/\/|(^|\/)\.\.?(\/|$)/.test(rutaUses.replace(/^\.\//, ""))) {
+                emitir({ regla: "ofuscacion", gravedad: "aviso", confianza: "estructural", linea: lineaDe(contenido, usa, cursorZ), fragmento: usa, job: nombreJob });
+            }
+            const conToken = /\$\{\{\s*secrets\./.test(JSON.stringify([s.env ?? {}, s.with ?? {}, job.env ?? {}, wf.env ?? {}]));
+            const w = esObj(s.with) ? (s.with as Record<string, unknown>) : {};
+            if ((esAccion(usa, "pypa/gh-action-pypi-publish") && w["password"] !== undefined) || (PUBLICA_CMD.test(cadena(s.run)) && conToken)) {
+                const frag = usa || (PUBLICA_CMD.exec(cadena(s.run))?.[0].trim() ?? "");
+                emitir({ regla: "publicacion-con-token", gravedad: "info", confianza: "indicio", linea: lineaDe(contenido, frag, cursorZ), fragmento: recorta(frag), job: nombreJob });
+            }
             revisarEnvOWith(s.env, contenido, cursor, emitir, nombreJob);
             revisarEnvOWith(s.with, contenido, cursor, emitir, nombreJob);
             const run = cadena(s.run);
@@ -197,6 +365,9 @@ function auditarWorkflow(ruta: string, contenido: string): HallazgoAccion[] {
     return hallazgos;
 }
 const ORDEN: Record<Gravedad, number> = { critico: 0, alto: 1, aviso: 2, info: 3 };
+export function esRutaDeDependabot(ruta: string): boolean {
+    return /(^|\/)\.github\/dependabot\.ya?ml$/.test(ruta.replace(/\\/g, "/"));
+}
 export function esRutaDeWorkflow(ruta: string): boolean {
     return /(^|\/)\.github\/workflows\/[^/]+\.ya?ml$/.test(ruta.replace(/\\/g, "/"));
 }

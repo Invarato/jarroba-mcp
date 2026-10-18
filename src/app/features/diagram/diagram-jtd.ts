@@ -4,6 +4,8 @@ import { ChartSpec, ChartType, CHART_TYPES, sampleChart } from "./diagram-charts
 import { ImportNode, ImportEdge, ImportResult, layeredLayout, IMPORT_NODE_EXTRA, IMPORT_EDGE_EXTRA } from "./diagram-mermaid";
 import { THEMES, DiagramTheme } from "./diagram-themes";
 import type { DiagramTimeline, TimelineStep } from "./diagram-timeline";
+import { safeUrl } from "./diagram-link";
+import { boxOf, toAbs, PenData } from "./diagram-pen";
 export type JtdError = "empty" | "unparsable" | "notjtd" | "invalid";
 export const JTD_SHAPES: ShapeKind[] = [
     "rect",
@@ -25,6 +27,8 @@ export const JTD_SHAPES: ShapeKind[] = [
     "actor",
     "cross",
     "process",
+    "line",
+    "ink",
 ];
 export const JTD_CHART_TYPES: ChartType[] = CHART_TYPES;
 export interface JtdNode {
@@ -65,6 +69,16 @@ export interface JtdNode {
     fold?: number;
     wave?: number;
     runs?: TextRun[];
+    path?: number[][];
+    curve?: boolean;
+    arrow?: "none" | "start" | "end" | "both";
+    head?: "line" | "triangle" | "diamond" | "circle";
+    width?: number;
+    dash?: string;
+    pressure?: number[];
+    highlighter?: boolean;
+    annotation?: boolean;
+    link?: string;
 }
 const COLOR_TOKENS: Record<string, (t: DiagramTheme) => string | undefined> = {
     surface: t => t.nodeFill,
@@ -151,6 +165,7 @@ function posterSize(p: unknown): {
 }
 export interface JtdFrame {
     name?: string;
+    notes?: string;
     hold?: number;
     transition?: JtdPage["transition"];
     camera?: {
@@ -276,11 +291,50 @@ export function importJtd(text: string): {
         const s = SHAPE_SIZES[kind] ?? SHAPE_SIZES.rect;
         if (n.x != null || n.y != null)
             explicit.add(id);
-        const extra = pickExtra(n as unknown as Record<string, unknown>, IMPORT_NODE_EXTRA);
+        let extra = pickExtra(n as unknown as Record<string, unknown>, IMPORT_NODE_EXTRA);
+        if (n.annotation === true)
+            extra = { ...(extra ?? {}), annot: true };
+        if (extra && "link" in extra) {
+            const u = safeUrl(String(extra["link"]));
+            if (u)
+                extra["link"] = u;
+            else
+                delete extra["link"];
+        }
         if (extra && typeof extra["textColor"] === "string")
             extra["textColor"] = resolveColor(extra["textColor"] as string, theme, "text");
         const stroke = n.stroke ?? (kind === "icon" && typeof extra?.["textColor"] === "string" ? extra["textColor"] as string : undefined);
         const nodeText = n.text ?? (Array.isArray(n.runs) ? n.runs.map(r => r?.t ?? "").join("") : "");
+        if (kind === "line" || kind === "ink") {
+            const ox = n.x ?? 0, oy = n.y ?? 0;
+            let abs = (Array.isArray(n.path) ? n.path : []).filter(p => Array.isArray(p) && isFinite(p[0]) && isFinite(p[1])).flatMap(p => [Number(p[0]), Number(p[1])]);
+            if (abs.length < (kind === "line" ? 4 : 2))
+                abs = [ox, oy + s.h / 2, ox + (n.w ?? s.w), oy + s.h / 2];
+            const b = boxOf(abs, 4);
+            const pen: PenData = { pts: b.pts };
+            if (kind === "line") {
+                if (n.curve)
+                    pen.curve = true;
+                if (n.arrow && ["none", "start", "end", "both"].includes(n.arrow))
+                    pen.arrows = n.arrow;
+                if (n.head && ["line", "triangle", "diamond", "circle"].includes(n.head))
+                    pen.head = n.head;
+            }
+            else {
+                if (Array.isArray(n.pressure) && n.pressure.length === abs.length / 2)
+                    pen.pr = n.pressure.map(v => Math.max(0, Math.min(1, Number(v) || 0)));
+                if (n.highlighter)
+                    pen.hl = true;
+            }
+            const ex: Record<string, unknown> = { ...(extra ?? {}), pen };
+            if (typeof n.width === "number" && n.width > 0)
+                ex["borderWidth"] = n.width;
+            if (typeof n.dash === "string")
+                ex["borderStyle"] = n.dash;
+            explicit.add(id);
+            nodes.push({ id, kind, x: b.x - b.w / 2, y: b.y - b.h / 2, w: b.w, h: b.h, text: "", stroke: resolveColor(n.stroke, theme), extra: ex });
+            continue;
+        }
         nodes.push({ id, kind, x: n.x ?? 0, y: n.y ?? 0, w: n.w ?? s.w, h: n.h ?? s.h, text: nodeText, fill: resolveColor(n.fill, theme), stroke: resolveColor(stroke, theme), icon: n.icon, extra });
     }
     for (const c of doc.charts ?? []) {
@@ -298,7 +352,7 @@ export function importJtd(text: string): {
             explicit.add(id);
         nodes.push({ id, kind: "chart", x: c.x ?? 0, y: c.y ?? 0, w: c.w ?? Math.round(cs.w * 1.4), h: c.h ?? Math.round(cs.h * 1.3), text: "", chart: spec as ChartSpec });
     }
-    const nodeIds = new Set(nodes.map(n => n.id));
+    const nodeIds = new Set(nodes.filter(n => n.kind !== "line" && n.kind !== "ink").map(n => n.id));
     const pinnedPort = new Set<string>();
     for (const e of doc.edges ?? []) {
         if (!e || !nodeIds.has(String(e.from)) || !nodeIds.has(String(e.to)))
@@ -312,13 +366,14 @@ export function importJtd(text: string): {
     if (!nodes.length)
         return { error: "invalid" };
     const layout = doc.layout ?? "flow-down";
+    const lay = nodes.filter(n => n.kind !== "line" && n.kind !== "ink");
     if (layout === "grid")
-        gridLayout(nodes);
+        gridLayout(lay);
     else if (layout === "radial")
-        radialLayout(nodes);
+        radialLayout(lay);
     else if (layout !== "free" && explicit.size < nodes.length) {
         const dir = layout === "flow-right" ? "LR" : "TD";
-        layeredLayout(nodes, edges.map(e => ({ fromId: e.fromId, toId: e.toId })), dir);
+        layeredLayout(lay, edges.map(e => ({ fromId: e.fromId, toId: e.toId })), dir);
         const [fromP, toP] = dir === "LR" ? ["e", "w"] : ["s", "n"];
         for (const e of edges) {
             if (pinnedPort.has(e.id))
@@ -381,6 +436,7 @@ function pageTransition(t: JtdPage["transition"]): SceneTransition | null {
 }
 export interface ImportedFrame {
     name?: string;
+    notes?: string;
     holdMs?: number;
     transition: SceneTransition | null;
     camera: Cam | null;
@@ -419,11 +475,11 @@ export function importJtdPages(text: string): {
             for (const [i, fr] of frames.entries()) {
                 if (!fr || typeof fr !== "object")
                     continue;
-                const { hold, transition: ft, camera, name: fn, ...fc } = fr;
+                const { hold, transition: ft, camera, name: fn, notes: fnotes, ...fc } = fr;
                 const r = importJtd(JSON.stringify({ ...globals, ...content, ...fc, jtd: globals.jtd }));
                 if (!r.result)
                     return { error: r.error };
-                out.push({ name: typeof fn === "string" && fn.trim() ? fn.trim() : undefined, holdMs: typeof hold === "number" && isFinite(hold) && hold > 0 ? hold : undefined, transition: i === 0 ? null : pageTransition(ft), camera: camRect(camera), result: r.result });
+                out.push({ name: typeof fn === "string" && fn.trim() ? fn.trim() : undefined, ...(typeof fnotes === "string" && fnotes.trim() ? { notes: fnotes.slice(0, 20000) } : {}), holdMs: typeof hold === "number" && isFinite(hold) && hold > 0 ? hold : undefined, transition: i === 0 ? null : pageTransition(ft), camera: camRect(camera), result: r.result });
             }
             if (!out.length)
                 return { error: "empty" };
@@ -472,6 +528,9 @@ function radialLayout(nodes: ImportNode[]): void {
     rest.forEach((n, i) => { const a = -Math.PI / 2 + (i / rest.length) * Math.PI * 2; n.x = cx + R * Math.cos(a); n.y = cy + R * Math.sin(a); });
 }
 export interface JtdExportNode {
+    pen?: PenData;
+    annot?: boolean;
+    link?: string;
     id: string;
     kind: string;
     text?: string;
@@ -563,10 +622,47 @@ export function exportJtd(nodes: JtdExportNode[], edges: JtdExportEdge[], meta?:
             charts.push({ ...n.chart, type: n.chart.type, id: n.id, x, y, w: n.w, h: n.h });
             continue;
         }
+        if ((n.kind === "line" || n.kind === "ink") && n.pen) {
+            const abs = toAbs(n.pen.pts, n.x - ox, n.y - oy), path: number[][] = [];
+            for (let i = 0; i + 1 < abs.length; i += 2)
+                path.push([Math.round(abs[i] * 10) / 10, Math.round(abs[i + 1] * 10) / 10]);
+            const jn: JtdNode = { id: n.id, shape: n.kind, path };
+            if (n.stroke)
+                jn.stroke = n.stroke;
+            if (n.borderWidth != null)
+                jn.width = n.borderWidth;
+            if (n.kind === "line") {
+                if (n.pen.curve)
+                    jn.curve = true;
+                if (n.pen.arrows && n.pen.arrows !== "none")
+                    jn.arrow = n.pen.arrows;
+                if (n.pen.head && n.pen.head !== "line")
+                    jn.head = n.pen.head;
+                if (n.borderStyle && n.borderStyle !== "solid")
+                    jn.dash = n.borderStyle;
+            }
+            else {
+                if (n.pen.pr?.length)
+                    jn.pressure = n.pen.pr;
+                if (n.pen.hl)
+                    jn.highlighter = true;
+            }
+            if (n.opacity != null && n.opacity !== 1)
+                jn.opacity = n.opacity;
+            if (n.annot)
+                jn.annotation = true;
+            jtdNodes.push(jn);
+            continue;
+        }
         const jn: JtdNode = { id: n.id, shape: n.kind as ShapeKind, x, y, w: n.w, h: n.h };
         if (n.text)
             jn.text = n.text;
         copyDefined(jn, n, NODE_STYLE_KEYS);
+        if (n.annot)
+            jn.annotation = true;
+        const web = safeUrl(n.link);
+        if (web && n.link === web)
+            jn.link = web;
         jtdNodes.push(jn);
     }
     const tlEdges = new Set((meta?.timeline?.steps ?? []).flatMap(st => [...(st.flow ?? []).map(f => f.edge), ...(st.focus ?? []), ...(st.show ?? [])]));
@@ -615,6 +711,7 @@ export function exportJtd(nodes: JtdExportNode[], edges: JtdExportEdge[], meta?:
 }
 export function exportJtdFrames(frames: {
     name?: string;
+    notes?: string;
     holdMs?: number;
     transition?: SceneTransition | null;
     camera?: Cam | null;
@@ -630,7 +727,7 @@ export function exportJtdFrames(frames: {
 }[]): JtdFrame[] {
     return frames.map((f, k) => {
         const { jtd: _v, theme: _t, background: _b, ...one } = exportJtd(f.nodes, f.edges, { poster: f.poster, timeline: f.timeline, absolute: true });
-        const fr: JtdFrame = { ...(f.name ? { name: f.name } : {}), ...one };
+        const fr: JtdFrame = { ...(f.name ? { name: f.name } : {}), ...(f.notes ? { notes: f.notes } : {}), ...one };
         if (f.holdMs && f.holdMs !== DEFAULT_HOLD_MS)
             fr.hold = f.holdMs;
         if (k > 0 && f.transition && f.transition.kind !== "none")

@@ -392,7 +392,7 @@ const REGLAS_TEXTO: {
     { regla: "texto-exfil-imagen", gravedad: "alto", re: /!\[[^\]]*\]\(\s*https?:\/\/[^)\s]*\?[^)\s]*(\{\{|\$\{|<|%7B|\b(env|key|token|secret|data|password|q)=)/i },
 ];
 const ESCRIBE_MEMORIA = /\b(write|append|modify|overwrite|update|escribe|añade|modifica|sobrescribe|actualiza)\b[^.\n]{0,50}\b(CLAUDE\.md|AGENTS\.md|SOUL\.md|MEMORY\.md|GEMINI\.md|\.cursorrules|\.cursor\/rules|settings\.json|mcp\.json)|echo\b[^\n]*>>\s*\S*(CLAUDE|AGENTS|SOUL|MEMORY|GEMINI)\.md/i;
-export const VERBO_ENVIO = /\b(send(s|ing)?|sent|upload(s|ing|ed)?|post(s|ing|ed)?|pass(es|ing|ed)?|include(s|d)?|including|exfiltrat\w*|attach(es|ing|ed)?|forward(s|ing|ed)?|env[ií]a|sube|manda|adjunta|incluye|reenv[ií]a|curl|wget)\b/i;
+export const VERBO_ENVIO = /\b(send(s|ing)?|sent|upload(s|ing|ed)?|post(s|ing|ed)?|pass(es|ing|ed)?|include(s|d)?|including|append(s|ing|ed)?|a[ñn]ade|exfiltrat\w*|attach(es|ing|ed)?|forward(s|ing|ed)?|env[ií]a|sube|manda|adjunta|incluye|reenv[ií]a|curl|wget)\b/i;
 function revisarTexto(contenido: string, tipo: TipoFichero, emitir: Emitir): void {
     const lineas = contenido.split("\n");
     const oculto = analizarTexto(contenido);

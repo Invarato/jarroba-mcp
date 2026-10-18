@@ -18,11 +18,14 @@ export interface Decision {
         regla: ReglaIgnore;
     } | null;
 }
+export type CausaDivergencia = "excepcion-bloqueada-en-git" | "regla-sin-barras" | "fuera-en-git" | "fuera-en-docker";
+export type DatosIgnore = Record<string, string | number>;
 export interface Divergencia {
     ruta: string;
     ignoradoGit: boolean;
     ignoradoDocker: boolean;
-    explicacion: string;
+    causa: CausaDivergencia;
+    datos: DatosIgnore;
 }
 function recortarFinal(s: string): string {
     let fin = s.length;
@@ -179,38 +182,34 @@ export function comparar(texto: string, rutas: readonly string[], directorios: R
         const d = decidir(rd, ruta, esDir, "docker");
         if (g.ignorado === d.ignorado)
             continue;
-        let explicacion: string;
+        let causa: CausaDivergencia;
+        let datos: DatosIgnore;
         if (g.ignorado && !d.ignorado && g.bloqueadoPor && d.regla?.negada) {
-            explicacion = "Es la excepci\u00F3n `" + d.regla.crudo.trim() + "` (l\u00EDnea " + d.regla.linea + "): Docker la aplica y git NO, "
-                + "porque para git la carpeta `" + g.bloqueadoPor.ancestro + "` ya est\u00E1 excluida (l\u00EDnea " + g.bloqueadoPor.regla.linea + ") "
-                + "y no entra en carpetas excluidas. Para que git tambi\u00E9n lo rescate, excluye el contenido "
-                + "(`" + g.bloqueadoPor.ancestro + "/*`) en vez de la carpeta.";
+            causa = "excepcion-bloqueada-en-git";
+            datos = { excepcion: d.regla.crudo.trim(), linea: d.regla.linea, ancestro: g.bloqueadoPor.ancestro, lineaAncestro: g.bloqueadoPor.regla.linea };
         }
         else if (g.ignorado && !d.ignorado && g.regla && !g.regla.anclada) {
-            explicacion = "La regla de la l\u00EDnea " + g.regla.linea + " (`" + g.regla.crudo.trim() + "`) no lleva barras: git la aplica a cualquier "
-                + "profundidad, pero Docker solo la aplica en la ra\u00EDz. En el contexto de build esto ENTRA. "
-                + "Se arregla escribiendo `**/" + g.regla.patron + "`.";
+            causa = "regla-sin-barras";
+            datos = { linea: g.regla.linea, regla: g.regla.crudo.trim(), patron: g.regla.patron };
         }
         else if (g.ignorado && !d.ignorado) {
-            explicacion = "Git lo deja fuera y Docker lo mete: revisa la regla de la l\u00EDnea " + (g.regla?.linea ?? 0) + ".";
+            causa = "fuera-en-git";
+            datos = { linea: g.regla?.linea ?? 0 };
         }
         else {
-            const r = d.regla;
-            explicacion = "Docker lo deja fuera y git lo mete"
-                + (r ? " (regla de la l\u00EDnea " + r.linea + ": `" + r.crudo.trim() + "`)" : "")
-                + ". Suele pasar cuando en git la ruta se salva por un `!` que Docker no aplica igual.";
+            causa = "fuera-en-docker";
+            datos = d.regla ? { linea: d.regla.linea, regla: d.regla.crudo.trim() } : {};
         }
-        out.push({ ruta, ignoradoGit: g.ignorado, ignoradoDocker: d.ignorado, explicacion });
+        out.push({ ruta, ignoradoGit: g.ignorado, ignoradoDocker: d.ignorado, causa, datos });
     }
     return out;
 }
+export type ReglaAvisoIgnore = "reinclusion-bloqueada" | "regla-anulada" | "docker-solo-raiz" | "regla-sin-efecto";
 export interface AvisoIgnore {
-    regla: string;
+    regla: ReglaAvisoIgnore;
     gravedad: "error" | "aviso" | "info";
     linea: number;
-    que: string;
-    como: string;
-    arreglo: string;
+    datos: DatosIgnore;
 }
 export function revisarIgnore(texto: string, modo: ModoIgnore, rutas: readonly string[] = [], directorios: ReadonlySet<string> = new Set()): AvisoIgnore[] {
     const reglas = leerReglas(texto, modo);
@@ -226,9 +225,7 @@ export function revisarIgnore(texto: string, modo: ModoIgnore, rutas: readonly s
                     regla: "reinclusion-bloqueada",
                     gravedad: "error",
                     linea: r.linea,
-                    que: "Esta excepci\u00F3n no hace nada: `" + r.crudo.trim() + "`.",
-                    como: "El directorio `" + ej.ancestro + "` ya est\u00E1 excluido por la l\u00EDnea " + ej.regla.linea + ". Git NO entra en un directorio excluido \u2014lo dice su documentaci\u00F3n: no los lista por rendimiento\u2014, as\u00ED que las reglas sobre lo que hay dentro no tienen efecto, se escriban donde se escriban. Es la causa n\u00FAmero uno de \u00ABmi `!` no funciona\u00BB.",
-                    arreglo: "Excluye el CONTENIDO en vez del directorio (`" + ej.ancestro + "/*` en lugar de `" + ej.ancestro + "`) y entonces la excepci\u00F3n s\u00ED entra.",
+                    datos: { excepcion: r.crudo.trim(), ancestro: ej.ancestro, lineaAncestro: ej.regla.linea },
                 });
             }
         }
@@ -241,9 +238,7 @@ export function revisarIgnore(texto: string, modo: ModoIgnore, rutas: readonly s
                     regla: "regla-anulada",
                     gravedad: "aviso",
                     linea: r.linea,
-                    que: "La l\u00EDnea " + r.linea + " (`" + r.crudo.trim() + "`) queda anulada por la " + s.linea + " (`" + s.crudo.trim() + "`).",
-                    como: "En los dos formatos manda la \u00DALTIMA regla que casa, as\u00ED que la de arriba no llega a decidir nunca.",
-                    arreglo: "Borra una de las dos, o c\u00E1mbialas de orden si lo que quer\u00EDas era lo contrario.",
+                    datos: { regla: r.crudo.trim(), lineaQueAnula: s.linea, anula: s.crudo.trim() },
                 });
                 break;
             }
@@ -253,9 +248,7 @@ export function revisarIgnore(texto: string, modo: ModoIgnore, rutas: readonly s
                 regla: "docker-solo-raiz",
                 gravedad: "aviso",
                 linea: r.linea,
-                que: "`" + r.patron + "` solo casa en la RA\u00CDZ del contexto, no a cualquier profundidad.",
-                como: "Es la diferencia grande con `.gitignore`, y el error n\u00FAmero uno al copiar uno en el otro: en git un patr\u00F3n sin barras se ancla con un `**/` impl\u00EDcito, y en Docker no. Un `" + r.patron + "` anidado ENTRA en el contexto de build, engord\u00E1ndolo y a veces filtrando lo que cre\u00EDas dejar fuera.",
-                arreglo: "Escribe `**/" + r.patron + "` si lo quieres a cualquier profundidad.",
+                datos: { patron: r.patron },
             });
         }
         if (rutas.length > 0 && !rutas.some(p => casa(r, p, directorios.has(p)))) {
@@ -263,9 +256,7 @@ export function revisarIgnore(texto: string, modo: ModoIgnore, rutas: readonly s
                 regla: "regla-sin-efecto",
                 gravedad: "info",
                 linea: r.linea,
-                que: "`" + r.crudo.trim() + "` no casa con ning\u00FAn fichero del proyecto.",
-                como: "No rompe nada, pero o sobra o tiene una errata \u2014 y una regla que nadie comprueba se queda ah\u00ED para siempre dando falsa sensaci\u00F3n de estar cubierto.",
-                arreglo: "Compru\u00E9bala contra el \u00E1rbol de la izquierda; si es para ficheros que a\u00FAn no existen, ignora este aviso.",
+                datos: { regla: r.crudo.trim() },
             });
         }
     }

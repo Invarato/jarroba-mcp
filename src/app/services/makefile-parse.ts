@@ -177,7 +177,7 @@ function asignar(e: EstadoLectura, nombre: string, op: Operador, crudo: string, 
                 gravedad: "aviso",
                 regla: "shell-no-ejecutable",
                 linea,
-                mensaje: "`" + nombre + " != " + cmd + "` ejecuta un comando: en el navegador no se puede, se queda vac\u00EDo.",
+                datos: { comando: cmd, variable: nombre },
             });
         }
         e.vars.set(nombre, { nombre, sabor: "simple", valor: stub ?? "", crudo: "$(shell " + crudo + ")", linea, origen });
@@ -207,7 +207,7 @@ function evaluarCondicional(e: EstadoLectura, directiva: string, resto: string, 
             b = expandir(c[4], ctx).trim();
         }
         else {
-            e.diags.push({ gravedad: "error", regla: "condicional-mal-formada", linea, mensaje: "`" + directiva + "` mal formado: se espera `" + directiva + " (a,b)` o `" + directiva + " \"a\" \"b\"`." });
+            e.diags.push({ gravedad: "error", regla: "condicional-mal-formada", linea, datos: { directiva } });
             return false;
         }
     }
@@ -282,7 +282,7 @@ function leerTexto(e: EstadoLectura, texto: string): void {
                     gravedad: "error",
                     regla: "receta-sin-regla",
                     linea: numLinea,
-                    mensaje: "L\u00EDnea con tabulador fuera de cualquier regla: make la tratar\u00EDa como comando sin saber de qu\u00E9 objetivo.",
+                    datos: {},
                 });
             }
             continue;
@@ -306,7 +306,7 @@ function leerTexto(e: EstadoLectura, texto: string): void {
         if (/^else\b/.test(limpia)) {
             const top = pila[pila.length - 1];
             if (!top) {
-                e.diags.push({ gravedad: "error", regla: "else-suelto", linea: numLinea, mensaje: "`else` sin un `if` abierto." });
+                e.diags.push({ gravedad: "error", regla: "else-suelto", linea: numLinea, datos: {} });
                 continue;
             }
             const resto = limpia.replace(/^else\s*/, "");
@@ -324,7 +324,7 @@ function leerTexto(e: EstadoLectura, texto: string): void {
         }
         if (/^endif\b/.test(limpia)) {
             if (pila.pop() === undefined)
-                e.diags.push({ gravedad: "error", regla: "endif-suelto", linea: numLinea, mensaje: "`endif` sin un `if` abierto." });
+                e.diags.push({ gravedad: "error", regla: "endif-suelto", linea: numLinea, datos: {} });
             continue;
         }
         if (!activo())
@@ -336,7 +336,7 @@ function leerTexto(e: EstadoLectura, texto: string): void {
             for (; j < lineas.length && !/^endef\b/.test(lineas[j].trim()); j++)
                 cuerpo.push(lineas[j]);
             if (j >= lineas.length)
-                e.diags.push({ gravedad: "error", regla: "define-sin-endef", linea: numLinea, mensaje: "`define " + def[1] + "` no se cierra con `endef`." });
+                e.diags.push({ gravedad: "error", regla: "define-sin-endef", linea: numLinea, datos: { nombre: def[1] } });
             asignar(e, def[1], (def[2] as Operador) || "=", cuerpo.join("\n"), numLinea, "fichero");
             i = j;
             e.reglaAbierta = null;
@@ -350,13 +350,13 @@ function leerTexto(e: EstadoLectura, texto: string): void {
                 const contenido = e.opts.contenidoDe?.(ruta) ?? null;
                 if (contenido === null) {
                     if (!opcional) {
-                        e.diags.push({ gravedad: "error", regla: "include-no-encontrado", linea: numLinea, mensaje: "`include " + ruta + "`: ese fichero no est\u00E1 en el proyecto, y con `include` (sin `-`) make aborta." });
+                        e.diags.push({ gravedad: "error", regla: "include-no-encontrado", linea: numLinea, datos: { ruta } });
                     }
                     e.noFiable.valor = true;
                     continue;
                 }
                 if (e.profundidadInclude >= MAX_INCLUDES) {
-                    e.diags.push({ gravedad: "error", regla: "include-circular", linea: numLinea, mensaje: "Demasiados `include` anidados: hay ficheros que se incluyen entre s\u00ED." });
+                    e.diags.push({ gravedad: "error", regla: "include-circular", linea: numLinea, datos: {} });
                     break;
                 }
                 e.profundidadInclude++;
@@ -388,7 +388,7 @@ function leerTexto(e: EstadoLectura, texto: string): void {
         if (asig && (dosPuntos < 0 || asig.pos <= dosPuntos)) {
             const nombre = cuerpoLinea.slice(0, asig.pos).trim();
             if (!/^[^\s:=#]+$/.test(nombre)) {
-                e.diags.push({ gravedad: "error", regla: "nombre-variable-invalido", linea: numLinea, mensaje: "Nombre de variable no v\u00E1lido: `" + nombre + "`." });
+                e.diags.push({ gravedad: "error", regla: "nombre-variable-invalido", linea: numLinea, datos: { nombre } });
                 continue;
             }
             asignar(e, nombre, asig.op, cuerpoLinea.slice(asig.pos + asig.op.length).trim(), numLinea, "fichero");
@@ -404,14 +404,14 @@ function leerTexto(e: EstadoLectura, texto: string): void {
                 gravedad: "error",
                 regla: "receta-con-espacios",
                 linea: numLinea,
-                mensaje: "Esta l\u00EDnea est\u00E1 indentada con ESPACIOS. Las recetas necesitan un tabulador: make responde `*** missing separator. Stop.` y no dice m\u00E1s.",
+                datos: {},
             });
             continue;
         }
-        e.diags.push({ gravedad: "error", regla: "linea-no-entendida", linea: numLinea, mensaje: "make no sabr\u00EDa qu\u00E9 hacer con esta l\u00EDnea: no es una asignaci\u00F3n, ni una regla, ni una directiva." });
+        e.diags.push({ gravedad: "error", regla: "linea-no-entendida", linea: numLinea, datos: {} });
     }
     if (pila.length > 0) {
-        e.diags.push({ gravedad: "error", regla: "if-sin-cerrar", linea: lineas.length, mensaje: "Queda(n) " + pila.length + " condicional(es) sin su `endif`." });
+        e.diags.push({ gravedad: "error", regla: "if-sin-cerrar", linea: lineas.length, datos: { n: pila.length } });
     }
 }
 function posicionDosPuntosRegla(s: string): number {
@@ -447,7 +447,7 @@ function leerRegla(e: EstadoLectura, linea: string, dosPuntos: number, numLinea:
     }
     const objetivos = palabras(expandir(izq, ctx));
     if (objetivos.length === 0) {
-        e.diags.push({ gravedad: "error", regla: "regla-sin-objetivo", linea: numLinea, mensaje: "Regla sin objetivo a la izquierda de los dos puntos (\u00BFuna variable que se expandi\u00F3 a vac\u00EDo?)." });
+        e.diags.push({ gravedad: "error", regla: "regla-sin-objetivo", linea: numLinea, datos: {} });
         return;
     }
     const varObj = /^\s*(?:override\s+|export\s+)*([^\s:=]+)\s*(:?:?=|\+=|\?=)\s*([\s\S]*)$/.exec(der);
@@ -474,7 +474,7 @@ function leerRegla(e: EstadoLectura, linea: string, dosPuntos: number, numLinea:
     if (patronObjetivo) {
         for (const t of objetivos) {
             if (casarPatron(patronObjetivo, t) === null) {
-                e.diags.push({ gravedad: "error", regla: "estatica-no-casa", linea: numLinea, mensaje: "El objetivo `" + t + "` no casa con el patr\u00F3n `" + patronObjetivo + "` de su regla est\u00E1tica." });
+                e.diags.push({ gravedad: "error", regla: "estatica-no-casa", linea: numLinea, datos: { objetivo: t, patron: patronObjetivo } });
             }
         }
     }

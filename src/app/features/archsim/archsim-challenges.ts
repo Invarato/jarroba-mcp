@@ -201,11 +201,11 @@ export const CHALLENGES: Challenge[] = [
         level: 2,
         start: () => build([
             { ref: "c", kind: "client", label: "Usuarios", col: 0, capacity: 300 },
-            { ref: "s", kind: "service", label: "Pagos", col: 1, capacity: 250, latency: 20, retries: 3 },
-            { ref: "d", kind: "db", label: "BD", col: 2, capacity: 1000, latency: 10 },
+            { ref: "s", kind: "service", label: "Pagos", col: 1, capacity: 2000, latency: 20, retries: 3 },
+            { ref: "d", kind: "db", label: "BD", col: 2, capacity: 250, latency: 10 },
         ], [["c", "s"], ["s", "d"]]),
         sim: { seconds: 20 },
-        goals: [{ metric: "avail", target: 0.8 }],
+        goals: [{ metric: "p95", target: 900 }, { metric: "avail", target: 0.8 }],
         reference: s => { byLabel(s, "Pagos").breaker = true; return s; },
     },
     {
@@ -236,11 +236,11 @@ export const CHALLENGES: Challenge[] = [
         start: () => build([
             { ref: "c", kind: "client", label: "Usuarios", col: 0, capacity: 10 },
             { ref: "a", kind: "ai_agent", label: "Agente", col: 1 },
-            { ref: "r", kind: "ai_router", label: "Router LLM", col: 2, ai: { model: "gpt-4o", fallback_model: "" } },
+            { ref: "r", kind: "ai_router", label: "Router LLM", col: 2, ai: { model: "gpt-6-1-sol", fallback_model: "" } },
         ], [["c", "a"], ["a", "r"]]),
         sim: { seconds: 20, scenario: { downKinds: ["ai_router"] } },
         goals: [{ metric: "avail", target: 0.9 }],
-        reference: s => { byLabel(s, "Router LLM").ai = { ...byLabel(s, "Router LLM").ai, fallback_model: "gpt-4o-mini" }; return s; },
+        reference: s => { byLabel(s, "Router LLM").ai = { ...byLabel(s, "Router LLM").ai, fallback_model: "gpt-6-luna" }; return s; },
     },
     {
         id: "presupuesto",

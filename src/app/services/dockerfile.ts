@@ -1,8 +1,10 @@
+export type ReglaDiagDf = "linea-no-entendida" | "instruccion-desconocida" | "antes-del-from" | "sin-from";
+export type DatosDf = Record<string, string | number>;
 export interface DiagDf {
     gravedad: "error" | "aviso" | "info";
-    regla: string;
+    regla: ReglaDiagDf;
     linea: number;
-    mensaje: string;
+    datos: DatosDf;
 }
 export interface Instruccion {
     linea: number;
@@ -90,12 +92,12 @@ export function leerDockerfile(texto: string): DockerfileLeido {
         cruda = partes.join(" ").replace(/\s+/g, " ").trim();
         const m = /^([A-Za-z]+)\s*([\s\S]*)$/.exec(cruda);
         if (!m) {
-            diags.push({ gravedad: "error", regla: "linea-no-entendida", linea: numLinea, mensaje: "Docker no sabr\u00EDa qu\u00E9 hacer con esta l\u00EDnea." });
+            diags.push({ gravedad: "error", regla: "linea-no-entendida", linea: numLinea, datos: {} });
             continue;
         }
         const clave = m[1].toUpperCase();
         if (!CLAVES.has(clave)) {
-            diags.push({ gravedad: "error", regla: "instruccion-desconocida", linea: numLinea, mensaje: "`" + m[1] + "` no es una instrucci\u00F3n de Dockerfile." });
+            diags.push({ gravedad: "error", regla: "instruccion-desconocida", linea: numLinea, datos: { instruccion: m[1] } });
             continue;
         }
         const { banderas, resto } = extraerBanderas(m[2]);
@@ -108,7 +110,7 @@ export function leerDockerfile(texto: string): DockerfileLeido {
             etapas.push({ indice: etapaActual, nombre, base, desdeEtapa: desdeEtapa >= 0 ? desdeEtapa : null, instrucciones: [] });
         }
         else if (etapaActual < 0 && clave !== "ARG") {
-            diags.push({ gravedad: "error", regla: "antes-del-from", linea: numLinea, mensaje: "`" + clave + "` aparece antes del primer `FROM`: Docker solo admite `ARG` ah\u00ED." });
+            diags.push({ gravedad: "error", regla: "antes-del-from", linea: numLinea, datos: { instruccion: clave } });
             continue;
         }
         const ins: Instruccion = { linea: numLinea, clave, argumentos: resto, banderas, crudo: cruda, etapa: Math.max(etapaActual, 0) };
@@ -117,7 +119,7 @@ export function leerDockerfile(texto: string): DockerfileLeido {
             etapas[etapaActual].instrucciones.push(ins);
     }
     if (etapas.length === 0 && instrucciones.length > 0) {
-        diags.push({ gravedad: "error", regla: "sin-from", linea: 1, mensaje: "El Dockerfile no tiene ning\u00FAn `FROM`: no hay imagen de la que partir." });
+        diags.push({ gravedad: "error", regla: "sin-from", linea: 1, datos: {} });
     }
     return { instrucciones, etapas, diags };
 }
@@ -246,13 +248,12 @@ export function simularCache(df: DockerfileLeido, contexto: readonly FicheroCont
         runsRehechos: rehechas.filter(c => c.instruccion.clave === "RUN").map(c => c.instruccion),
     };
 }
+export type ReglaAvisoDf = ReglaDiagDf | "copia-amplia-antes-de-instalar" | "copia-sin-origen" | "apt-update-separado" | "base-sin-fijar";
 export interface AvisoDf {
-    regla: string;
+    regla: ReglaAvisoDf;
     gravedad: "error" | "aviso" | "info";
     linea: number;
-    que: string;
-    como: string;
-    arreglo: string;
+    datos: DatosDf;
 }
 const INSTALADORES: {
     re: RegExp;
@@ -279,7 +280,7 @@ export function revisarDockerfile(df: DockerfileLeido, contexto: readonly string
     const out: AvisoDf[] = [];
     for (const d of df.diags) {
         if (d.gravedad === "error") {
-            out.push({ regla: d.regla, gravedad: "error", linea: d.linea, que: d.mensaje, como: "El build falla al leer el fichero.", arreglo: "Corrige la l\u00EDnea se\u00F1alada." });
+            out.push({ regla: d.regla, gravedad: "error", linea: d.linea, datos: d.datos });
         }
     }
     for (const etapa of df.etapas) {
@@ -302,9 +303,7 @@ export function revisarDockerfile(df: DockerfileLeido, contexto: readonly string
                         regla: "copia-amplia-antes-de-instalar",
                         gravedad: "aviso",
                         linea: a.linea,
-                        que: "Se copia todo el proyecto (l\u00EDnea " + a.linea + ") ANTES de instalar dependencias (l\u00EDnea " + ins[j].linea + ").",
-                        como: "Docker invalida una capa y con ella TODAS las siguientes. Como este `COPY` cambia cada vez que tocas una l\u00EDnea de c\u00F3digo, la instalaci\u00F3n de dependencias se repite entera en cada build, aunque las dependencias no hayan cambiado. Es la causa m\u00E1s com\u00FAn de \u00ABmi build de Docker tarda much\u00EDsimo\u00BB.",
-                        arreglo: "Copia primero solo el manifiesto (`COPY " + inst.manifiesto + " ./`), luego el `RUN` que instala, y DESPU\u00C9S el `COPY` del resto. As\u00ED la instalaci\u00F3n solo se rehace cuando cambia el manifiesto.",
+                        datos: { lineaInstala: ins[j].linea, manifiesto: inst.manifiesto },
                     });
                     break;
                 }
@@ -316,9 +315,7 @@ export function revisarDockerfile(df: DockerfileLeido, contexto: readonly string
                         regla: "copia-sin-origen",
                         gravedad: "error",
                         linea: a.linea,
-                        que: "`" + a.crudo + "` no trae ning\u00FAn fichero del contexto.",
-                        como: "Docker aborta con \u00ABno source files were specified\u00BB o \u00ABfile not found\u00BB. Suele pasar cuando el fichero existe en tu disco pero el `.dockerignore` lo deja fuera del contexto \u2014 y entonces el error no cuadra con lo que ves en la carpeta.",
-                        arreglo: "Comprueba la ruta y mira la pesta\u00F1a de ignorados: puede que una regla lo est\u00E9 excluyendo del contexto.",
+                        datos: { instruccion: a.crudo },
                     });
                 }
             }
@@ -337,9 +334,7 @@ export function revisarDockerfile(df: DockerfileLeido, contexto: readonly string
                 regla: "apt-update-separado",
                 gravedad: "aviso",
                 linea: ins[i].linea,
-                que: "`apt-get update` (l\u00EDnea " + ins[i].linea + ") va en un `RUN` distinto del `apt-get install` (l\u00EDnea " + luego.linea + ").",
-                como: "Docker cachea el `update` por su TEXTO, que no cambia nunca. Al a\u00F1adir un paquete al `install`, esa capa se rehace pero el `update` sale de la cach\u00E9: se instalan versiones seg\u00FAn un \u00EDndice de paquetes de hace meses. Es un fallo silencioso y dif\u00EDcil de reproducir, porque depende de qu\u00E9 haya cacheado la m\u00E1quina.",
-                arreglo: "Junta los dos en un solo `RUN` con `&&`.",
+                datos: { lineaInstall: luego.linea },
             });
             break;
         }
@@ -351,9 +346,7 @@ export function revisarDockerfile(df: DockerfileLeido, contexto: readonly string
                     regla: "base-sin-fijar",
                     gravedad: "info",
                     linea: from.linea,
-                    que: "`" + base + "` no fija una versi\u00F3n concreta.",
-                    como: "La cach\u00E9 local sigue dando por buena la imagen vieja mientras el registro ya sirve otra: tu m\u00E1quina y el CI construyen cosas distintas a partir del mismo Dockerfile, y no hay nada en el fichero que lo delate.",
-                    arreglo: "Fija la etiqueta (`" + base + ":1.2.3`) o, mejor, el digest (`" + base + "@sha256:\u2026`).",
+                    datos: { base },
                 });
             }
         }

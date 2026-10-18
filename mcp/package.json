@@ -1,8 +1,8 @@
 {
   "name": "@jarroba/mcp",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "type": "module",
-  "description": "MCP server (stdio, local) exposing 134 deterministic tools from Jarroba Tools, reusing the same code as the web app: read a CI log that does not fit in your context, audit tests, simulate make, run SQL against an ephemeral PostgreSQL, SPARQL, JTD diagrams rendered without a browser, arithmetic with UNITS and dimensional checking, equations and calculation sheets, identity/RBAC reasoning across Azure/AWS/GCP/Kubernetes, simulate an architecture (load, queues, bottleneck, cost), audit another MCP server's catalogue, plus the usual CIDR/hash/JWT/token/regex a model gets wrong. Nothing leaves your machine. Smaller focused packages: @jarroba/mcp-logs, @jarroba/mcp-tests, @jarroba/mcp-calc.",
+  "description": "MCP server (stdio, local) exposing 137 deterministic tools from Jarroba Tools, reusing the same code as the web app: read a CI log that does not fit in your context, audit tests, simulate make, run SQL against an ephemeral PostgreSQL, SPARQL, JTD diagrams rendered without a browser, arithmetic with UNITS and dimensional checking, equations and calculation sheets, identity/RBAC reasoning across Azure/AWS/GCP/Kubernetes, simulate an architecture (load, queues, bottleneck, cost), audit another MCP server's catalogue, plus the usual CIDR/hash/JWT/token/regex a model gets wrong. Nothing leaves your machine. Smaller focused packages: @jarroba/mcp-logs, @jarroba/mcp-tests, @jarroba/mcp-calc.",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -28,7 +28,7 @@
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.4",
-    "@modelcontextprotocol/sdk": "^1.12.0",
+    "@modelcontextprotocol/sdk": "^1.32.1",
     "gpt-tokenizer": "^2.8.0",
     "mathjs": "^15.2.0",
     "oxigraph": "^0.5.9",

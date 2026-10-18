@@ -1,10 +1,16 @@
 import { DefVar, TablaVars, expandir } from "./makefile-expand";
 import { MakefileLeido, ReglaMk, LineaReceta } from "./makefile-parse";
 export type Rol = "fichero" | "accion" | "dudoso";
+export type DatosRol = Record<string, string | number>;
+export type MotivoSenal = "patron" | "phony" | "ruta" | "extension" | "automaticas" | "escribe" | "crea" | "en-disco" | "verbo" | "agrupa";
 export interface Senal {
     hacia: Rol;
-    texto: string;
+    motivo: MotivoSenal;
     decisiva: boolean;
+}
+export interface Perdida {
+    tipo: "patrones" | "fuentes" | "solo-orden" | "recursivo" | "nada";
+    n: number;
 }
 export interface ObjetivoClasificado {
     nombre: string;
@@ -23,7 +29,7 @@ export interface Diagnostico {
     acciones: number;
     dudosos: number;
     veredicto: Veredicto;
-    sePierde: string[];
+    sePierde: Perdida[];
     noFiable: boolean;
 }
 const EXT_ARTEFACTO = /\.(o|a|so|dylib|dll|exe|out|bin|elf|hex|tar|gz|tgz|bz2|xz|zip|jar|war|whl|deb|rpm|img|iso|pdf|html|css|js|mjs|cjs|map|min|lock|d|mo|po|pot|class|pyc|wasm)$/i;
@@ -105,17 +111,17 @@ const VERBOS = new Set([
     "todo",
 ]);
 const AUTO_DE_FICHERO = /\$[@<^]|\$\{[@<^]\}|\$\([@<^]\)/;
-function recetaCreaElObjetivo(nombre: string, receta: readonly LineaReceta[], expandirLinea: (t: string) => string): string | null {
+function recetaCreaElObjetivo(nombre: string, receta: readonly LineaReceta[], expandirLinea: (t: string) => string): MotivoSenal | null {
     const escapado = nombre.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     for (const l of receta) {
         if (AUTO_DE_FICHERO.test(l.texto))
-            return "$@ / $< / $^: la receta trabaja con el objetivo como fichero";
+            return "automaticas";
         const texto = expandirLinea(l.texto);
         if (new RegExp(`(^|\\s)(-o|--output|>|>>)\\s*${escapado}(\\s|$)`).test(texto)) {
-            return `la receta escribe en \`${nombre}\``;
+            return "escribe";
         }
         if (new RegExp(`(^|\\s)(mkdir|touch|tee|install)\\b[^;&|]*\\s${escapado}(\\s|/|$)`).test(texto)) {
-            return `la receta crea \`${nombre}\``;
+            return "crea";
         }
     }
     return null;
@@ -162,19 +168,19 @@ export function diagnosticar(mk: MakefileLeido, opts: OpcionesRol = {}): Diagnos
     for (const [nombre, { regla, reqs }] of porObjetivo) {
         const senales: Senal[] = [];
         let rol: Rol | null = null;
-        const decide = (r: Rol, texto: string) => {
-            senales.push({ hacia: r, texto, decisiva: rol === null });
+        const decide = (r: Rol, motivo: MotivoSenal) => {
+            senales.push({ hacia: r, motivo, decisiva: rol === null });
             if (rol === null)
                 rol = r;
         };
         if (regla.patron)
-            decide("fichero", "es una regla de patr\u00F3n: existe para producir ficheros");
+            decide("fichero", "patron");
         if (mk.phony.has(nombre))
-            decide("accion", "declarado en `.PHONY` por el propio autor");
+            decide("accion", "phony");
         if (nombre.includes("/"))
-            decide("fichero", "el nombre lleva una ruta");
+            decide("fichero", "ruta");
         if (EXT_ARTEFACTO.test(nombre))
-            decide("fichero", "el nombre tiene extensi\u00F3n de artefacto");
+            decide("fichero", "extension");
         const expandirLinea = (t: string) => {
             try {
                 return expandir(t, { vars: mk.vars, ficheros: opts.ficheros });
@@ -187,12 +193,12 @@ export function diagnosticar(mk: MakefileLeido, opts: OpcionesRol = {}): Diagnos
         if (crea)
             decide("fichero", crea);
         if (enDisco.has(nombre))
-            decide("fichero", "ya existe un fichero con ese nombre en el proyecto");
+            decide("fichero", "en-disco");
         if (nombre.split(/[-_.]/).some(t => VERBOS.has(t.toLowerCase()))) {
-            decide("accion", "el nombre es un verbo, no un producto");
+            decide("accion", "verbo");
         }
         if (rol === null && regla.receta.length === 0 && reqs.length > 0) {
-            decide("accion", "no tiene receta: solo agrupa otros objetivos");
+            decide("accion", "agrupa");
         }
         objetivos.push({
             nombre,
@@ -220,40 +226,48 @@ export function diagnosticar(mk: MakefileLeido, opts: OpcionesRol = {}): Diagnos
     }
     return { objetivos, ficheros, acciones, dudosos, veredicto, sePierde: quePierdes(mk, objetivos), noFiable: mk.noFiable };
 }
-function quePierdes(mk: MakefileLeido, objetivos: readonly ObjetivoClasificado[]): string[] {
-    const out: string[] = [];
+function quePierdes(mk: MakefileLeido, objetivos: readonly ObjetivoClasificado[]): Perdida[] {
+    const out: Perdida[] = [];
     const patrones = objetivos.filter(o => o.patron).length;
     const conFuentes = objetivos.filter(o => o.rol === "fichero" && o.fuentes.length > 0).length;
     if (patrones > 0) {
-        out.push(`${patrones} regla${patrones > 1 ? "s" : ""} de patrón (\`%.o: %.c\`): ni just ni npm tienen nada equivalente.`);
+        out.push({ tipo: "patrones", n: patrones });
     }
     if (conFuentes > 0) {
-        out.push(`${conFuentes} objetivo${conFuentes > 1 ? "s" : ""} de fichero con fuentes: hoy se saltan si nada cambió.`);
+        out.push({ tipo: "fuentes", n: conFuentes });
     }
     const soloOrden = mk.reglas.filter(r => r.soloOrden.length > 0).length;
     if (soloOrden > 0) {
-        out.push(`${soloOrden} requisito${soloOrden > 1 ? "s" : ""} de solo orden (con \`|\`): tienen que existir pero no fuerzan reconstrucción.`);
+        out.push({ tipo: "solo-orden", n: soloOrden });
     }
     if (mk.reglas.some(r => r.receta.some(l => /\$\(MAKE\)|\bmake\b/.test(l.texto)))) {
-        out.push("Hay make recursivo (`$(MAKE) -C \u2026`): la conversi\u00F3n no baja a los subdirectorios.");
+        out.push({ tipo: "recursivo", n: 1 });
     }
     if (out.length === 0) {
-        out.push("Nada medible: este fichero no usa fechas, ni grafo, ni patrones. Es la definici\u00F3n de lanzador.");
+        out.push({ tipo: "nada", n: 0 });
     }
     return out;
 }
 export type Destino = "just" | "task" | "npm";
+export type MotivoOmitido = "patron" | "fichero" | "nombre-just" | "automatica" | "dependencia";
 export interface Omitido {
     nombre: string;
-    porque: string;
+    motivo: MotivoOmitido;
+    datos: DatosRol;
 }
+export type TipoAvisoConv = "variable-renombrada" | "llaves" | "shell-npm" | "npm-sin-variables" | "renombrado-just" | "ciclo-npm" | "npm-callado" | "just-cd" | "task-deps" | "npm-and";
+export interface AvisoConv {
+    tipo: TipoAvisoConv;
+    datos: DatosRol;
+}
+const av = (tipo: TipoAvisoConv, datos: DatosRol = {}): string => JSON.stringify({ tipo, datos });
 export interface Conversion {
     destino: Destino;
     nombreFichero: string;
     texto: string;
     convertidos: string[];
     omitidos: Omitido[];
-    avisos: string[];
+    avisos: AvisoConv[];
 }
 const CICLO_NPM = new Set([
     "preinstall",
@@ -286,7 +300,7 @@ function refVar(nombre: string, ctx: CtxTraduce): string {
     ctx.usadas.add(nombre);
     const limpio = nombre.replace(/[^A-Za-z0-9_]/g, "_");
     if (limpio !== nombre)
-        ctx.avisos.add(`La variable \`${nombre}\` se ha renombrado a \`${limpio}\`: el destino no admite ese carácter.`);
+        ctx.avisos.add(av("variable-renombrada", { nombre, limpio }));
     return ctx.destino === "task" ? `{{.${limpio}}}` : `{{${limpio}}}`;
 }
 function traducirLinea(texto: string, ctx: CtxTraduce): string | null {
@@ -295,7 +309,7 @@ function traducirLinea(texto: string, ctx: CtxTraduce): string | null {
         const c = texto[i];
         if (c === "{" && texto[i + 1] === "{" && ctx.destino !== "npm") {
             out += ctx.destino === "just" ? "{{{{" : "{{\"{{\"}}";
-            ctx.avisos.add("Hab\u00EDa `{{\u2026}}` en una receta (un `--format` de docker o kubectl, casi seguro). Se ha escapado: en just y en task esas llaves son interpolaci\u00F3n.");
+            ctx.avisos.add(av("llaves"));
             i++;
             continue;
         }
@@ -375,10 +389,10 @@ function valorLiteral(nombre: string, ctx: CtxTraduce): string {
         return "";
     const cmd = comandoShell(def);
     if (cmd) {
-        ctx.avisos.add(`\`${nombre}\` venía de un \`$(shell …)\`: se ha traducido a la sustitución de comandos del shell, que en un script de npm hace lo mismo.`);
+        ctx.avisos.add(av("shell-npm", { nombre }));
         return `$(${cmd})`;
     }
-    ctx.avisos.add(`Los scripts de npm no tienen variables: los valores (\`${nombre}\`…) se han escrito ya resueltos, así que no se pueden cambiar desde la línea de órdenes.`);
+    ctx.avisos.add(av("npm-sin-variables", { nombre }));
     return def.sabor === "simple" ? def.valor : expandir(def.valor, { vars: ctx.vars });
 }
 export function convertir(mk: MakefileLeido, diag: Diagnostico, destino: Destino): Conversion {
@@ -395,38 +409,38 @@ export function convertir(mk: MakefileLeido, diag: Diagnostico, destino: Destino
     const listos: Listo[] = [];
     for (const o of diag.objetivos) {
         if (o.patron) {
-            omitidos.push({ nombre: o.nombre, porque: "es una regla de patr\u00F3n: el destino no tiene ese concepto" });
+            omitidos.push({ nombre: o.nombre, motivo: "patron", datos: {} });
             continue;
         }
         if (o.rol === "fichero" && destino !== "task") {
-            omitidos.push({ nombre: o.nombre, porque: "es un objetivo de fichero: sin fechas se reconstruir\u00EDa siempre, y eso es justo lo que hoy te ahorra make" });
+            omitidos.push({ nombre: o.nombre, motivo: "fichero", datos: {} });
             continue;
         }
         let alias = o.nombre;
         if (destino === "just" && !NOMBRE_JUST.test(alias)) {
             alias = alias.replace(/[^a-zA-Z0-9_-]/g, "-");
             if (!NOMBRE_JUST.test(alias)) {
-                omitidos.push({ nombre: o.nombre, porque: "el nombre no vale como receta de just" });
+                omitidos.push({ nombre: o.nombre, motivo: "nombre-just", datos: {} });
                 continue;
             }
-            avisos.add(`\`${o.nombre}\` se ha renombrado a \`${alias}\`: just no admite ese nombre.`);
+            avisos.add(av("renombrado-just", { nombre: o.nombre, alias }));
         }
         if (destino === "npm" && CICLO_NPM.has(alias)) {
-            avisos.add(`\`${alias}\` es un nombre del ciclo de vida de npm: npm lo ejecutará él solo (\`npm ${alias}\`, y algunos hasta en cada \`npm install\`). Renómbralo si no quieres eso.`);
+            avisos.add(av("ciclo-npm", { alias }));
         }
         const ctx: CtxTraduce = { destino, objetivo: o.nombre, fuentes: o.fuentes, vars: mk.vars, usadas, avisos };
         const lineas: string[] = [];
-        let roto: string | null = null;
+        let roto: number | null = null;
         for (const l of o.receta) {
             const t = traducirLinea(l.texto, ctx);
             if (t === null) {
-                roto = `la receta usa una variable automática o una función de make sin equivalente (línea ${l.linea})`;
+                roto = l.linea;
                 break;
             }
             lineas.push(prefijos(t, l, destino, avisos));
         }
-        if (roto) {
-            omitidos.push({ nombre: o.nombre, porque: roto });
+        if (roto !== null) {
+            omitidos.push({ nombre: o.nombre, motivo: "automatica", datos: { linea: roto } });
             continue;
         }
         listos.push({ nombre: o.nombre, alias, obj: o, lineas });
@@ -439,7 +453,7 @@ export function convertir(mk: MakefileLeido, diag: Diagnostico, destino: Destino
             const caido = listos[i].obj.dependencias.find(d => !vivos.has(d));
             if (caido === undefined)
                 continue;
-            omitidos.push({ nombre: listos[i].nombre, porque: `depende de \`${caido}\`, que tampoco se ha podido convertir: traducirlo dejaría una receta que no hace nada y no falla` });
+            omitidos.push({ nombre: listos[i].nombre, motivo: "dependencia", datos: { caido } });
             listos.splice(i, 1);
             cambio = true;
         }
@@ -456,7 +470,7 @@ export function convertir(mk: MakefileLeido, diag: Diagnostico, destino: Destino
         texto,
         convertidos,
         omitidos,
-        avisos: [...avisos],
+        avisos: [...avisos].map(a => JSON.parse(a) as AvisoConv),
     };
 }
 function prefijos(texto: string, l: LineaReceta, destino: Destino, avisos: Set<string>): string {
@@ -464,7 +478,7 @@ function prefijos(texto: string, l: LineaReceta, destino: Destino, avisos: Set<s
         return (l.ignoraError ? "-" : "") + (l.silenciosa ? "@" : "") + texto;
     if (destino === "npm") {
         if (l.silenciosa)
-            avisos.add("Los scripts de npm imprimen siempre lo que ejecutan: el `@` de las recetas calladas no tiene equivalente.");
+            avisos.add(av("npm-callado"));
         return l.ignoraError ? `{ ${texto} ; } || true` : texto;
     }
     return texto;
@@ -486,7 +500,7 @@ function escribirJust(mk: MakefileLeido, listos: {
     obj: ObjetivoClasificado;
     lineas: string[];
 }[], alias: Map<string, string>, usadas: Set<string>, avisos: Set<string>): string {
-    const out: string[] = ["# Generado desde un Makefile por Jarroba Tools \u00B7 /project", ""];
+    const out: string[] = ["# Generated from a Makefile with Jarroba Tools \u00B7 /project", ""];
     for (const nombre of usadas) {
         const def = mk.vars.get(nombre);
         if (!def)
@@ -511,7 +525,7 @@ function escribirJust(mk: MakefileLeido, listos: {
         out.push("");
     }
     if (listos.some(l => l.lineas.length > 1)) {
-        avisos.add("Como en make, cada l\u00EDnea de una receta de just corre en SU shell: un `cd` no llega a la l\u00EDnea siguiente. Si lo necesitas, pon la receta con shebang (`#!/usr/bin/env bash`).");
+        avisos.add(av("just-cd"));
     }
     return out.join("\n").replace(/\n+$/, "\n");
 }
@@ -524,7 +538,7 @@ function escribirTask(mk: MakefileLeido, listos: {
     obj: ObjetivoClasificado;
     lineas: string[];
 }[], alias: Map<string, string>, usadas: Set<string>, avisos: Set<string>): string {
-    const out: string[] = ["version: '3'", "", "# Generado desde un Makefile por Jarroba Tools \u00B7 /project"];
+    const out: string[] = ["version: '3'", "", "# Generated from a Makefile with Jarroba Tools \u00B7 /project"];
     if (usadas.size > 0) {
         out.push("", "vars:");
         for (const nombre of usadas) {
@@ -566,7 +580,7 @@ function escribirTask(mk: MakefileLeido, listos: {
             out.push("      - \"true\"");
     }
     if (listos.some(l => l.obj.dependencias.length > 0)) {
-        avisos.add("Las dependencias se han puesto como `- task:` dentro de `cmds`, no en `deps`: `deps` corre en PARALELO y los requisitos de make, sin `-j`, van en orden.");
+        avisos.add(av("task-deps"));
     }
     return out.join("\n") + "\n";
 }
@@ -583,7 +597,7 @@ function escribirNpm(listos: {
         pares.push(`    ${JSON.stringify(l.alias)}: ${JSON.stringify(cuerpo || "true")}`);
     }
     if (listos.some(l => l.lineas.length > 1)) {
-        avisos.add("Las l\u00EDneas de cada receta se han unido con `&&`, as\u00ED que aqu\u00ED S\u00CD comparten shell: un `cd` ahora s\u00ED llega a la siguiente. Es distinto de make, y a veces es lo que quer\u00EDas.");
+        avisos.add(av("npm-and"));
     }
     return ["  \"scripts\": {", pares.join(",\n"), "  }"].join("\n") + "\n";
 }

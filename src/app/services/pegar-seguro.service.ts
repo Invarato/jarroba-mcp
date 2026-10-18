@@ -1,5 +1,6 @@
 import { EntityCategory, DETECTORS } from "../shared/redact/detectors";
 import { anonymize, AnonymizeConfig } from "../shared/redact/anonymize";
+import { DETECTORES_PROVEEDORES } from "../shared/redact/detectors-proveedores";
 export type Origen = "har" | "texto";
 export type ParteHar = "cabecera-peticion" | "cabecera-respuesta" | "cookie-peticion" | "cookie-respuesta" | "query" | "cuerpo-peticion" | "cuerpo-respuesta";
 export interface UbicacionHar {
@@ -27,7 +28,11 @@ export interface AnalisisPegado {
 const MAX_CAMPO = 20000;
 const MAX_ENTRADAS = 500;
 const CLAVES_SENSIBLES_POR_DEFECTO = ["password", "passwd", "api-key", "apikey", "secret", "token", "auth", "credential", "private-key"];
-const CFG: AnonymizeConfig = { defaultOperator: "redact", sensitiveKeys: CLAVES_SENSIBLES_POR_DEFECTO };
+const CFG: AnonymizeConfig = {
+    defaultOperator: "redact",
+    sensitiveKeys: CLAVES_SENSIBLES_POR_DEFECTO,
+    detectors: [...DETECTORS.filter(d => !d.defaultOff), ...DETECTORES_PROVEEDORES],
+};
 function vistaPrevia(valor: string): string {
     if (valor.length <= 10)
         return "\u2022".repeat(valor.length);

@@ -1,6 +1,9 @@
-import { ShapeKind, PathPt, buildPathData, buildCompoundPathData, SHAPE_SIZES, cylinderPaths, cylinderRy, shapeRadii, roundRectPath, CornerPreset, ShapeParams, trianglePts, starPts, notePts, noteFold, documentPath, calloutGeom, hexagonPts, cardPts, crossPts, processBar } from "./diagram-shapes";
+import { arrowHead, PenData, polyPath, lineHeads, inkOutline } from "./diagram-pen";
+import { dashArrayFor, ShapeKind, PathPt, buildPathData, buildCompoundPathData, SHAPE_SIZES, cylinderPaths, cylinderRy, shapeRadii, roundRectPath, CornerPreset, ShapeParams, trianglePts, starPts, notePts, noteFold, documentPath, calloutGeom, hexagonPts, cardPts, crossPts, processBar } from "./diagram-shapes";
 import { ChartSpec, chartSvg, effectiveChartSpec } from "./diagram-charts";
 export interface SvgNode extends ShapeParams {
+    pen?: PenData;
+    link?: string;
     kind: ShapeKind;
     x: number;
     y: number;
@@ -46,17 +49,24 @@ export interface SvgEdge {
         y: number;
     };
 }
-function aimBase(ex: number, ey: number, bx: number, by: number, center?: {
+export const ARROW_GRAZE = 0.15;
+export function aimBase(ex: number, ey: number, bx: number, by: number, center?: {
     x: number;
     y: number;
 }): [
     number,
     number
 ] {
-    if (!center)
+    let tx = ex - bx, ty = ey - by;
+    const tl = Math.hypot(tx, ty);
+    if (!center || tl < 0.5)
         return [bx, by];
+    tx /= tl;
+    ty /= tl;
     const dx = center.x - ex, dy = center.y - ey, d = Math.hypot(dx, dy);
-    return d > 1 ? [ex - (dx / d) * 12, ey - (dy / d) * 12] : [bx, by];
+    if (d < 1 || tx * dx / d + ty * dy / d > ARROW_GRAZE)
+        return [ex - tx * 12, ey - ty * 12];
+    return [ex - (dx / d) * 12, ey - (dy / d) * 12];
 }
 const FILL = "#e3f2fd", STROKE = "#1565c0", EDGE = "#607d8b", ARROW = "#455a64", TEXT = "#263238";
 const esc = (s: string) => s.replace(/[<>&"]/g, c => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", "\"": "&quot;" }[c]!));
@@ -135,6 +145,8 @@ export function buildSvg(nodes: SvgNode[], edges: SvgEdge[], background?: string
             m = `<g transform="rotate(${n.rotation} ${n.x} ${n.y})">${m}</g>`;
         if (n.opacity != null && n.opacity < 1)
             m = `<g opacity="${n.opacity}">${m}</g>`;
+        if (n.link && /^(https?:|mailto:)/i.test(n.link))
+            m = `<a href="${esc(n.link)}" target="_blank" rel="noopener noreferrer">${m}</a>`;
         parts.push(m);
     }
     const a11yAttrs = a11y ? " role=\"img\" aria-labelledby=\"d-title d-desc\"" : "";
@@ -149,6 +161,8 @@ function shapeSvg(n: SvgNode, withText = true): string {
     const fill = n.fill ?? FILL, stroke = n.stroke ?? STROKE;
     const attrs = `fill="${fill}" stroke="${stroke}" stroke-width="2"`;
     const txt = withText ? textSvg(n) : "";
+    if ((n.kind === "line" || n.kind === "ink") && n.pen)
+        return penSvg(n, n.pen, stroke);
     if (n.kind === "chart" && n.chart)
         return `<g transform="translate(${x} ${y})">${chartSvg(effectiveChartSpec(n.chart, { fill: n.fill, stroke: n.stroke, borderStyle: n.borderStyle, borderWidth: n.borderWidth, borderPattern: n.borderPattern }), w, h)}</g>`;
     if (n.paths && n.paths.length)
@@ -253,17 +267,16 @@ function textSvg(n: SvgNode): string {
     return `<text text-anchor="middle" font-size="14" fill="${TEXT}">${tspans}</text>`;
 }
 function arrowhead(bx: number, by: number, ex: number, ey: number, color = ARROW, head: "line" | "triangle" | "diamond" | "circle" = "line"): string {
-    const a = Math.atan2(ey - by, ex - bx), sz = 10;
-    const at = (d: number, perp: number) => `${(ex + d * Math.cos(a) - perp * Math.sin(a)).toFixed(1)},${(ey + d * Math.sin(a) - perp * Math.cos(a)).toFixed(1)}`;
-    if (head === "circle")
-        return `<circle cx="${ex}" cy="${ey}" r="${sz * 0.45}" fill="${color}"/>`;
-    if (head === "triangle")
-        return `<polygon points="${ex},${ey} ${at(-sz, sz * 0.55)} ${at(-sz, -sz * 0.55)}" fill="${color}"/>`;
-    if (head === "diamond")
-        return `<polygon points="${ex},${ey} ${at(-sz * 0.6, sz * 0.5)} ${at(-sz * 1.2, 0)} ${at(-sz * 0.6, -sz * 0.5)}" fill="${color}"/>`;
-    const p1x = ex - sz * Math.cos(a - 0.5), p1y = ey - sz * Math.sin(a - 0.5);
-    const p2x = ex - sz * Math.cos(a + 0.5), p2y = ey - sz * Math.sin(a + 0.5);
-    return `<polyline points="${p1x},${p1y} ${ex},${ey} ${p2x},${p2y}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`;
+    return headSvg(arrowHead(bx, by, ex, ey, head, 2, 10), color, 2.5);
+}
+export function headSvg(h: ReturnType<typeof arrowHead>, color: string, strokeW: number): string {
+    const pts = (p: number[]) => { const o: string[] = []; for (let i = 0; i + 1 < p.length; i += 2)
+        o.push(`${p[i].toFixed(1)},${p[i + 1].toFixed(1)}`); return o.join(" "); };
+    if (h.kind === "circle")
+        return `<circle cx="${h.pts[0].toFixed(1)}" cy="${h.pts[1].toFixed(1)}" r="${(h.r ?? 4).toFixed(1)}" fill="${color}"/>`;
+    if (h.kind === "fill")
+        return `<polygon points="${pts(h.pts)}" fill="${color}"/>`;
+    return `<polyline points="${pts(h.pts)}" fill="none" stroke="${color}" stroke-width="${strokeW}" stroke-linejoin="round" stroke-linecap="round"/>`;
 }
 function midpoint(pts: number[]): {
     x: number;
@@ -290,4 +303,16 @@ function midpoint(pts: number[]): {
 function labelChip(x: number, y: number, label: string): string {
     const w = label.length * 7 + 8, h = 16;
     return `<rect x="${x - w / 2}" y="${y - h / 2}" width="${w}" height="${h}" rx="3" fill="#fff"/><text x="${x}" y="${y + 4}" text-anchor="middle" font-size="12" fill="${TEXT}">${esc(label)}</text>`;
+}
+function penSvg(n: SvgNode, p: PenData, color: string): string {
+    const wd = n.borderWidth ?? (n.kind === "ink" ? 3 : 2.5), tr = `transform="translate(${n.x} ${n.y})"`;
+    if (n.kind === "line") {
+        const dash = dashArrayFor(n.borderStyle, n.borderPattern);
+        const heads = lineHeads(p.pts, p, wd).map(h => headSvg(h, color, wd + 0.5)).join("");
+        return `<g ${tr}><path d="${polyPath(p.pts, !!p.curve)}" fill="none" stroke="${color}" stroke-width="${wd}" stroke-linecap="round" stroke-linejoin="round"${dash.length ? ` stroke-dasharray="${dash.join(" ")}"` : ""}/>${heads}</g>`;
+    }
+    const o = inkOutline(p.pts, p.pr, wd), pts: string[] = [];
+    for (let i = 0; i + 1 < o.length; i += 2)
+        pts.push(`${o[i]},${o[i + 1]}`);
+    return `<polygon ${tr} points="${pts.join(" ")}" fill="${color}"${p.hl ? " fill-opacity=\"0.38\"" : ""}/>`;
 }

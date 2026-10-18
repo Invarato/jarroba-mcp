@@ -1,5 +1,5 @@
 export type Gravedad = "critico" | "alto" | "aviso" | "info";
-export type ReglaCorreo = "spf-fallo" | "spf-blando" | "spf-permerror" | "spf-temperror" | "dkim-fallo" | "dkim-sin-from" | "dkim-algoritmo-debil" | "dkim-cuerpo-truncado" | "dmarc-fallo" | "reply-to-distinto" | "return-path-distinto" | "spf-multiple" | "spf-todo-permite" | "spf-todo-neutral" | "spf-sin-all" | "spf-demasiadas-consultas" | "spf-ptr-obsoleto" | "dmarc-formato-invalido" | "dmarc-sin-p" | "dmarc-p-none" | "dmarc-sin-rua" | "dmarc-pct-obsoleto" | "dmarc-etiqueta-obsoleta" | "dmarc-modo-pruebas" | "dmarc-sp-debil" | "dmarc-np-debil" | "dkim-clave-invalida" | "dkim-clave-debil" | "dkim-clave-revocada" | "dkim-modo-pruebas";
+export type ReglaCorreo = "spf-fallo" | "spf-blando" | "spf-permerror" | "spf-temperror" | "dkim-fallo" | "dkim-sin-from" | "dkim-algoritmo-debil" | "dkim-cuerpo-truncado" | "dmarc-fallo" | "reply-to-distinto" | "return-path-distinto" | "spf-multiple" | "spf-todo-permite" | "spf-todo-neutral" | "spf-sin-all" | "spf-demasiadas-consultas" | "spf-ptr-obsoleto" | "dmarc-formato-invalido" | "dmarc-sin-p" | "dmarc-p-none" | "dmarc-sin-rua" | "dmarc-pct-obsoleto" | "dmarc-etiqueta-obsoleta" | "dmarc-modo-pruebas" | "dmarc-sp-debil" | "dmarc-np-debil" | "dkim-clave-invalida" | "dkim-clave-debil" | "dkim-clave-revocada" | "dkim-modo-pruebas" | "dns-error" | "dns-sin-spf" | "dns-sin-dmarc" | "dns-sin-dkim" | "dns-sin-mta-sts" | "dns-sin-tls-rpt" | "spf-consultas-recursivas" | "spf-vacias" | "spf-include-roto" | "spf-bucle";
 export interface HallazgoCorreo {
     regla: ReglaCorreo;
     gravedad: Gravedad;
@@ -288,17 +288,17 @@ async function auditarDkim(texto: string, emitir: (h: HallazgoCorreo) => void): 
     }
     catch { }
 }
-export async function analizarCorreo(entrada: string): Promise<AnalisisCorreo | null> {
+export async function analizarCorreo(entrada: string, extra: readonly HallazgoCorreo[] = []): Promise<AnalisisCorreo | null> {
     const texto = typeof entrada === "string" ? entrada : "";
-    if (!texto.trim())
+    if (!texto.trim() && !extra.length)
         return null;
     const lineas = desplegarCabeceras(texto);
     const hayCabeceras = pareceCabeceras(lineas);
     const registrosSpfDmarc = extraerRegistrosSpfDmarc(lineas);
     const registroDkimTexto = extraerRegistroDkim(texto);
-    if (!hayCabeceras && !registrosSpfDmarc.length && !registroDkimTexto)
+    if (!hayCabeceras && !registrosSpfDmarc.length && !registroDkimTexto && !extra.length)
         return null;
-    const hallazgos: HallazgoCorreo[] = [];
+    const hallazgos: HallazgoCorreo[] = [...extra];
     const emitir = (h: HallazgoCorreo) => hallazgos.push(h);
     const cabeceras = hayCabeceras ? leerCabeceras(lineas) : null;
     if (cabeceras)

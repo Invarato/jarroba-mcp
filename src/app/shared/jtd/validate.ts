@@ -18,6 +18,8 @@ export const JTD_SHAPE_NAMES = [
     "actor",
     "cross",
     "process",
+    "line",
+    "ink",
 ];
 export const JTD_CHART_TYPE_NAMES = [
     "bar",
@@ -168,6 +170,15 @@ export function validateJtd(input: string | unknown): JtdValidation {
         ids.add(id);
         if (n["shape"] != null && !n["icon"] && !JTD_SHAPE_NAMES.includes(String(n["shape"])))
             warnings.push(`nodes[${i}] shape "${n["shape"]}" no válida (se usará rect). Válidas: ${JTD_SHAPE_NAMES.join(", ")}.`);
+        if (n["shape"] === "line" || n["shape"] === "ink") {
+            const p = n["path"], min = n["shape"] === "line" ? 2 : 1;
+            if (p == null)
+                warnings.push(`nodes[${i}] (${n["shape"]}): sin "path" ([[x,y],…]) se dibuja una recta por defecto.`);
+            else if (!Array.isArray(p) || p.length < min || !p.every(q => Array.isArray(q) && q.length >= 2 && q.every(v => typeof v === "number" && isFinite(v))))
+                errors.push(`nodes[${i}] (${n["shape"]}): "path" debe ser una lista de al menos ${min} puntos [x,y] numéricos.`);
+            if (n["pressure"] != null && (!Array.isArray(n["pressure"]) || (Array.isArray(p) && (n["pressure"] as unknown[]).length !== p.length)))
+                warnings.push(`nodes[${i}].pressure: una presión (0..1) por punto de "path"; se ignora.`);
+        }
     });
     chartsArr.forEach((c, i) => {
         if (!c || c["type"] == null) {

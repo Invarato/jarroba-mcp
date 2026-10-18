@@ -1,18 +1,18 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.Invarato/jarroba-tools",
-  "description": "134 deterministic tools for your AI: logs, tests, SQL, diagrams, SPARQL. Local, no network.",
+  "description": "137 deterministic tools for your AI: logs, tests, SQL, diagrams, SPARQL. Local, no network.",
   "repository": {
     "url": "https://github.com/Invarato/jarroba-mcp",
     "source": "github",
     "subfolder": "mcp"
   },
-  "version": "0.1.9",
+  "version": "0.1.10",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "@jarroba/mcp",
-      "version": "0.1.9",
+      "version": "0.1.10",
       "transport": {
         "type": "stdio"
       },
