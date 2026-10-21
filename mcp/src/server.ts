@@ -2960,7 +2960,8 @@ server.tool("test_debt", "A project's DISABLED-test debt, WITH ITS AGE. Walks th
     maxFiles: z.number().int().min(1).max(5000).default(1500).describe("Cap on how many test files to read."),
 }, async (a) => {
     const { readdir, readFile, stat } = await import("node:fs/promises");
-    const { join, relative } = await import("node:path");
+    const { join, relative, sep } = await import("node:path");
+    const rel = (desde: string, a: string) => relative(desde, a).split(sep).join("/");
     const ficheros: string[] = [];
     const recorrer = async (dir: string): Promise<void> => {
         if (ficheros.length >= a.maxFiles)
@@ -2981,7 +2982,7 @@ server.tool("test_debt", "A project's DISABLED-test debt, WITH ITS AGE. Walks th
                     continue;
                 await recorrer(p);
             }
-            else if (T.proy.esFicheroDeTest(relative(a.folder, p))) {
+            else if (T.proy.esFicheroDeTest(rel(a.folder, p))) {
                 ficheros.push(p);
             }
         }
@@ -3001,8 +3002,8 @@ server.tool("test_debt", "A project's DISABLED-test debt, WITH ITS AGE. Walks th
     let casos = 0;
     let conFecha = 0;
     for (const f of ficheros) {
-        const rel = relative(a.folder, f);
-        const lenguaje = T.proy.lenguajeDe(rel);
+        const relF = rel(a.folder, f);
+        const lenguaje = T.proy.lenguajeDe(relF);
         if (!lenguaje)
             continue;
         let suite;
@@ -3016,13 +3017,13 @@ server.tool("test_debt", "A project's DISABLED-test debt, WITH ITS AGE. Walks th
         const apagados = suite.casos.filter(c => c.inactivo);
         if (!apagados.length)
             continue;
-        const fechas = await fechasPorLinea(a.folder, rel);
+        const fechas = await fechasPorLinea(a.folder, relF);
         for (const c of apagados) {
             const ms = fechas.get(c.linea);
             if (ms)
                 conFecha++;
             deuda.push({
-                file: rel,
+                file: relF,
                 case: c.nombre,
                 line: c.linea,
                 marker: c.marcadorInactivo ?? c.inactivo,

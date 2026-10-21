@@ -7,6 +7,12 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { recuento, DOMINIOS } from "../src/catalogo.ts";
+const npm = (args, opciones) => execFileSync("npm", args, { ...opciones, shell: process.platform === "win32" });
+function binInstalado(caja, nombre) {
+    const dir = join(caja, "node_modules", ...nombre.split("/"));
+    const bin = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).bin;
+    return join(dir, typeof bin === "string" ? bin : Object.values(bin)[0]);
+}
 const raiz = join(dirname(fileURLToPath(import.meta.url)), "..");
 const caja = mkdtempSync(join(tmpdir(), "jarroba-mcp-paquete-"));
 let fallos = 0;
@@ -17,14 +23,14 @@ const check = (nombre, cond, visto) => {
 };
 try {
     console.log(`· empaquetando e instalando en ${caja}`);
-    execFileSync("npm", ["run", "build"], { cwd: raiz, stdio: "pipe" });
-    execFileSync("npm", ["pack", "--pack-destination", caja], { cwd: raiz, stdio: "pipe" });
+    npm(["run", "build"], { cwd: raiz, stdio: "pipe" });
+    npm(["pack", "--pack-destination", caja], { cwd: raiz, stdio: "pipe" });
     const tgz = readdirSync(caja).find((f) => f.endsWith(".tgz"));
     writeFileSync(join(caja, "package.json"), JSON.stringify({ name: "caja", version: "1.0.0", private: true }));
-    execFileSync("npm", ["install", `./${tgz}`], { cwd: caja, stdio: "pipe" });
+    npm(["install", `./${tgz}`], { cwd: caja, stdio: "pipe" });
     const transporte = new StdioClientTransport({
         command: "node",
-        args: [join(caja, "node_modules", ".bin", "jarroba-mcp")],
+        args: [binInstalado(caja, "@jarroba/mcp")],
         cwd: caja,
     });
     const cliente = new Client({ name: "paquete", version: "0.0.0" });
@@ -116,8 +122,11 @@ try {
     const vivo = await llamar("hash_text", { text: "sigue vivo" });
     check("la sesi\u00F3n sigue viva tras los fallos anteriores (nada mat\u00F3 el proceso)", !vivo.isError && typeof vivo.o?.sha256 === "string", vivo.texto.slice(0, 120));
     await cliente.close();
-    const huerfano = await probarHuerfano("node", [join(caja, "node_modules", ".bin", "jarroba-mcp")]);
-    check("el paquete instalado SALE al perder la sesi\u00F3n (la 0.1.5 se quedaba al 100 % de CPU)", !huerfano.vivo, huerfano);
+    const huerfano = await probarHuerfano("node", [binInstalado(caja, "@jarroba/mcp")]);
+    if (huerfano.noAplica)
+        console.log(`  · huérfano: omitido, ${huerfano.noAplica} (en el CI corre en Linux)`);
+    else
+        check("el paquete instalado SALE al perder la sesi\u00F3n (la 0.1.5 se quedaba al 100 % de CPU)", !huerfano.vivo, huerfano);
     for (const caso of [
         { dir: "packages/logs", tgz: "jarroba-mcp-logs", bin: "jarroba-mcp-logs", tools: DOMINIOS.logs.tools.length, prueba: ["log_analyze", { text: "2024-01-15T10:30:00Z ERROR boom" }], noDebe: "db_schema_review" },
         { dir: "packages/tests", tgz: "jarroba-mcp-tests", bin: "jarroba-mcp-tests", tools: DOMINIOS.tests.tools.length, prueba: ["test_audit", { text: "it('x', () => { expect(1).toBe(1); });", language: "typescript" }], noDebe: "log_analyze" },
@@ -125,11 +134,11 @@ try {
     ]) {
         const cajaD = mkdtempSync(join(tmpdir(), `jarroba-${caso.tgz}-`));
         try {
-            execFileSync("npm", ["pack", "--pack-destination", cajaD], { cwd: join(raiz, caso.dir), stdio: "pipe" });
+            npm(["pack", "--pack-destination", cajaD], { cwd: join(raiz, caso.dir), stdio: "pipe" });
             const t = readdirSync(cajaD).find((f) => f.endsWith(".tgz"));
             writeFileSync(join(cajaD, "package.json"), JSON.stringify({ name: "caja", version: "1.0.0", private: true }));
-            execFileSync("npm", ["install", `./${t}`], { cwd: cajaD, stdio: "pipe" });
-            const tr = new StdioClientTransport({ command: "node", args: [join(cajaD, "node_modules", ".bin", caso.bin)], cwd: cajaD });
+            npm(["install", `./${t}`], { cwd: cajaD, stdio: "pipe" });
+            const tr = new StdioClientTransport({ command: "node", args: [binInstalado(cajaD, `@jarroba/${caso.tgz.replace(/^jarroba-/, "")}`)], cwd: cajaD });
             const cl = new Client({ name: "paquete", version: "0.0.0" });
             await cl.connect(tr);
             const vD = JSON.parse(readFileSync(join(raiz, caso.dir, "package.json"), "utf8")).version;

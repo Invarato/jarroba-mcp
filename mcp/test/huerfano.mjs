@@ -3,6 +3,8 @@ import { openSync, closeSync, constants, mkdtempSync, readFileSync, rmSync } fro
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 export async function probarHuerfano(comando, args, { env = process.env, tool = "no_existe", arranqueMs = 2500 } = {}) {
+    if (process.platform !== "linux")
+        return { vivo: false, cpu: 0, noAplica: `needs mkfifo and /proc (${process.platform})` };
     const dir = mkdtempSync(join(tmpdir(), "huerfano-"));
     const fifo = join(dir, "salida");
     execFileSync("mkfifo", [fifo]);

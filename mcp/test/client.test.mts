@@ -1419,9 +1419,13 @@ action view appliesTo { principal: [User], resource: [Doc, Folder] };`;
 }
 const { probarHuerfano, CONTROL_ROTO } = await import("./huerfano.mjs");
 const control = await probarHuerfano("node", CONTROL_ROTO);
-check("hu\u00E9rfano: el CONTROL (manejador viejo) se queda en bucle \u2014 si no, la prueba no dispara el EPIPE", control.vivo && control.cpu > 50, control);
-const huerfano = await probarHuerfano("node", ["--import", "tsx", join(here, "..", "src", "server.ts")], { arranqueMs: 9000 });
-check("hu\u00E9rfano: el servidor SALE al perder la salida, en vez de quemar un n\u00FAcleo", !huerfano.vivo, huerfano);
+if (control.noAplica)
+    console.log(`  · huérfano: omitido, ${control.noAplica} (en el CI corre en Linux)`);
+else {
+    check("hu\u00E9rfano: el CONTROL (manejador viejo) se queda en bucle \u2014 si no, la prueba no dispara el EPIPE", control.vivo && control.cpu > 50, control);
+    const huerfano = await probarHuerfano("node", ["--import", "tsx", join(here, "..", "src", "server.ts")], { arranqueMs: 9000 });
+    check("hu\u00E9rfano: el servidor SALE al perder la salida, en vez de quemar un n\u00FAcleo", !huerfano.vivo, huerfano);
+}
 await client.close();
 console.log(fail === 0 ? "\nTODO OK" : `\n${fail} FALLOS`);
 process.exit(fail === 0 ? 0 : 1);
