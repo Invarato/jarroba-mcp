@@ -1,0 +1,21 @@
+# Dependency ecosystems of this repository, declared for Dependabot.
+# This repository is a mirror regenerated at every release, so update pull requests here would be overwritten:
+# open-pull-requests-limit is 0. Vulnerability ALERTS stay on (Settings → Advanced Security), and fixes are made
+# in the source repository and arrive with the next release.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 0
+  - package-ecosystem: npm
+    directory: /mcp
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 0
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 0

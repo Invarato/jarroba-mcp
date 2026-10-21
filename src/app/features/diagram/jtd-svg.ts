@@ -28,6 +28,13 @@ export function renderJtdSvg(text: string): {
         opacity: n.extra?.["opacity"] as number | undefined,
         corners: n.extra?.["corners"] as CornerPreset | undefined,
         titleH: n.extra?.["titleH"] as number | undefined,
+        bold: n.extra?.["bold"] as boolean | undefined,
+        italic: n.extra?.["italic"] as boolean | undefined,
+        fontSize: n.extra?.["fontSize"] as number | undefined,
+        textColor: n.extra?.["textColor"] as string | undefined,
+        font: n.extra?.["font"] as string | undefined,
+        align: n.extra?.["align"] as string | undefined,
+        valign: n.extra?.["valign"] as string | undefined,
         ...Object.fromEntries(SHAPE_PARAM_KEYS.filter(k => n.extra?.[k] != null).map(k => [k, n.extra![k]])) as ShapeParams,
     }));
     const RECT = new Set(["rect", "round", "card", "container", "process", "note", "chart", "text", "document", "cylinder", "callout", "image", "icon"]);

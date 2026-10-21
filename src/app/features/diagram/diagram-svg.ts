@@ -4,6 +4,13 @@ import { ChartSpec, chartSvg, effectiveChartSpec } from "./diagram-charts";
 export interface SvgNode extends ShapeParams {
     pen?: PenData;
     link?: string;
+    bold?: boolean;
+    italic?: boolean;
+    fontSize?: number;
+    textColor?: string;
+    font?: string;
+    align?: string;
+    valign?: string;
     kind: ShapeKind;
     x: number;
     y: number;
@@ -116,6 +123,7 @@ export function buildSvg(nodes: SvgNode[], edges: SvgEdge[], background?: string
     const parts: string[] = [];
     if (background)
         parts.push(`<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${background}"/>`);
+    const labels: string[] = [];
     for (const e of edges) {
         if (e.pts.length < 4)
             continue;
@@ -136,9 +144,10 @@ export function buildSvg(nodes: SvgNode[], edges: SvgEdge[], background?: string
         }
         if (e.label) {
             const m = midpoint(e.pts);
-            parts.push(labelChip(m.x, m.y, e.label));
+            labels.push(labelChip(m.x, m.y, e.label));
         }
     }
+    parts.push(...labels);
     for (const n of nodes) {
         let m = shapeSvg(n);
         if (n.rotation)
@@ -159,7 +168,9 @@ export function nodeMiniSvg(n: SvgNode): string {
 function shapeSvg(n: SvgNode, withText = true): string {
     const { x, y, w, h } = n, hw = w / 2, hh = h / 2;
     const fill = n.fill ?? FILL, stroke = n.stroke ?? STROKE;
-    const attrs = `fill="${fill}" stroke="${stroke}" stroke-width="2"`;
+    const none = n.borderStyle === "none", sw = none ? 0 : (n.borderWidth ?? 2);
+    const bdash = none ? [] : dashArrayFor(n.borderStyle, n.borderPattern);
+    const attrs = `fill="${fill}" stroke="${none ? "none" : stroke}" stroke-width="${sw}"${bdash.length ? ` stroke-dasharray="${bdash.join(" ")}"` : ""}`;
     const txt = withText ? textSvg(n) : "";
     if ((n.kind === "line" || n.kind === "ink") && n.pen)
         return penSvg(n, n.pen, stroke);
@@ -195,12 +206,12 @@ function shapeSvg(n: SvgNode, withText = true): string {
             break;
         case "cylinder": {
             const cp = cylinderPaths(w, h, n.depth, x, y);
-            shape = `<path d="${cp.body}" ${attrs}/><path d="${cp.lip}" fill="none" stroke="${stroke}" stroke-width="2"/>`;
+            shape = `<path d="${cp.body}" ${attrs}/><path d="${cp.lip}" fill="none" stroke="${none ? "none" : stroke}" stroke-width="${sw}"/>`;
             break;
         }
         case "note": {
             const f = noteFold(w, h, n.fold);
-            shape = `<polygon points="${pointsAttr(notePts(w, h, n.fold).map((v, i) => v + (i % 2 ? y : x)))}" ${attrs}/>` + `<polyline points="${pointsAttr([x + hw - f, y - hh, x + hw - f, y - hh + f, x + hw, y - hh + f])}" fill="none" stroke="${stroke}" stroke-width="2"/>`;
+            shape = `<polygon points="${pointsAttr(notePts(w, h, n.fold).map((v, i) => v + (i % 2 ? y : x)))}" ${attrs}/>` + `<polyline points="${pointsAttr([x + hw - f, y - hh, x + hw - f, y - hh + f, x + hw, y - hh + f])}" fill="none" stroke="${none ? "none" : stroke}" stroke-width="${sw}"/>`;
             break;
         }
         case "triangle":
@@ -220,7 +231,7 @@ function shapeSvg(n: SvgNode, withText = true): string {
             break;
         case "process": {
             const bar = processBar(w, n.bar);
-            shape = `<rect x="${x - hw}" y="${y - hh}" width="${w}" height="${h}" ${attrs}/><line x1="${x - hw + bar}" y1="${y - hh}" x2="${x - hw + bar}" y2="${y + hh}" stroke="${stroke}" stroke-width="2"/><line x1="${x + hw - bar}" y1="${y - hh}" x2="${x + hw - bar}" y2="${y + hh}" stroke="${stroke}" stroke-width="2"/>`;
+            shape = `<rect x="${x - hw}" y="${y - hh}" width="${w}" height="${h}" ${attrs}/><line x1="${x - hw + bar}" y1="${y - hh}" x2="${x - hw + bar}" y2="${y + hh}" stroke="${none ? "none" : stroke}" stroke-width="${sw}"/><line x1="${x + hw - bar}" y1="${y - hh}" x2="${x + hw - bar}" y2="${y + hh}" stroke="${none ? "none" : stroke}" stroke-width="${sw}"/>`;
             break;
         }
         case "callout":
@@ -261,10 +272,15 @@ function textSvg(n: SvgNode): string {
     if (!n.text)
         return "";
     const lines = n.text.split("\n");
-    const lh = 16, cy = n.y + (n.kind === "cylinder" ? cylinderRy(n.h, n.depth) : 0);
-    const startY = cy - ((lines.length - 1) * lh) / 2;
-    const tspans = lines.map((l, i) => `<tspan x="${n.x}" y="${startY + i * lh + 5}">${esc(l)}</tspan>`).join("");
-    return `<text text-anchor="middle" font-size="14" fill="${TEXT}">${tspans}</text>`;
+    const fs = n.fontSize ?? 14, lh = Math.round(fs * 1.15);
+    const cy = n.y + (n.kind === "cylinder" ? cylinderRy(n.h, n.depth) : 0);
+    const block = (lines.length - 1) * lh, pad = 8;
+    const startY = n.valign === "top" ? n.y - n.h / 2 + pad + fs * 0.8 : n.valign === "bottom" ? n.y + n.h / 2 - pad - block - fs * 0.2 : cy - block / 2 + fs * 0.35;
+    const anchor = n.align === "left" ? "start" : n.align === "right" ? "end" : "middle";
+    const tx = n.align === "left" ? n.x - n.w / 2 + pad : n.align === "right" ? n.x + n.w / 2 - pad : n.x;
+    const tspans = lines.map((l, i) => `<tspan x="${tx}" y="${(startY + i * lh).toFixed(1)}">${esc(l)}</tspan>`).join("");
+    const style = (n.bold ? " font-weight=\"bold\"" : "") + (n.italic ? " font-style=\"italic\"" : "") + (n.font ? ` font-family="${esc(n.font)}"` : "");
+    return `<text text-anchor="${anchor}" font-size="${fs}"${style} fill="${n.textColor ?? TEXT}">${tspans}</text>`;
 }
 function arrowhead(bx: number, by: number, ex: number, ey: number, color = ARROW, head: "line" | "triangle" | "diamond" | "circle" = "line"): string {
     return headSvg(arrowHead(bx, by, ex, ey, head, 2, 10), color, 2.5);

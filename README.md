@@ -24,6 +24,6 @@ npm run build && npm test && npm run test:paquete
 
 Security: see [SECURITY.md](SECURITY.md) — report vulnerabilities privately, not in a public issue.
 
-Changes per version: [CHANGELOG.md](CHANGELOG.md).
+Changes per version: [CHANGELOG.md](CHANGELOG.md). How to report bugs and propose tools: [CONTRIBUTING.md](CONTRIBUTING.md).
 
 License: MIT (see [LICENSE](LICENSE)). Third-party notices ship in each package's `dist/`.
