@@ -1,6 +1,9 @@
 name: scorecard
 # OpenSSF Scorecard: checks this repository's supply-chain practices (pinned actions, token permissions,
-# branch protection, signed releases…) and publishes the score. Free for public repositories.
+# branch protection, signed releases…) and publishes the score and badge. Free for public repositories.
+# The results are NOT uploaded as code-scanning alerts: every low check of a one-person project (no reviewers,
+# under 90 days, intended .wasm files…) became a permanent "High" alert that buried the real ones. The details
+# are at https://scorecard.dev/viewer/?uri=github.com/Invarato/jarroba-mcp
 on:
   push:
     branches: [main]
@@ -13,7 +16,6 @@ jobs:
   analysis:
     runs-on: ubuntu-24.04
     permissions:
-      security-events: write
       id-token: write
       contents: read
       actions: read
@@ -26,6 +28,3 @@ jobs:
           results_file: results.sarif
           results_format: sarif
           publish_results: true
-      - uses: github/codeql-action/upload-sarif@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
-        with:
-          sarif_file: results.sarif
