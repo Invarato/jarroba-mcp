@@ -1,6 +1,6 @@
 {
   "name": "@jarroba/mcp-logs",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "type": "module",
   "description": "MCP server (stdio, local) that lets an AI read a log file it could never fit in its context: a 200 MB CI log. Detects the format, counts EVENTS (a 40-line stack trace is one), resolves root causes, groups lines into templates, answers when it started, and orders rotated logs by time. 12 tools, ~4.8k tokens of context.",
   "keywords": [

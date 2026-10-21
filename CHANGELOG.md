@@ -3,6 +3,17 @@
 All four packages (`@jarroba/mcp`, `@jarroba/mcp-logs`, `@jarroba/mcp-tests`, `@jarroba/mcp-calc`) share one
 version number. Each release is built and published from this repository's CI, with npm provenance.
 
+## 0.1.11 — 2026-10-21
+
+- Tested on Linux, Windows and macOS with Node 22 and 24, plus a conformance check with the official MCP Inspector.
+  The packages now declare `engines: node >=22`.
+- `test_debt` on Windows: paths are reported with `/`, and test files in every language are recognised (it found
+  only 3 of 5 languages there).
+- `diagram_render` can write an `.svg` as well as a `.png`.
+- GitHub Releases now carry the four packages exactly as npm serves them, with a Sigstore attestation:
+  `gh attestation verify jarroba-mcp-0.1.11.tgz -R Invarato/jarroba-mcp`.
+- Repository: `CONTRIBUTING.md`, issue templates, OpenSSF Scorecard and the OpenSSF Best Practices badge.
+
 ## 0.1.10 — 2026-10-18
 
 - New tools: `sns_filter` (does an AWS SNS filter policy let a message through), `log_distinguish`, `csv_diff`.
