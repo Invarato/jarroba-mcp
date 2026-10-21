@@ -1,0 +1,35 @@
+name: Bug
+description: A tool gives a wrong result, fails, or the server does not start.
+labels: [bug]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Package and version
+      description: e.g. @jarroba/mcp 0.1.10 (the server reports it in serverInfo).
+    validations:
+      required: true
+  - type: input
+    id: tool
+    attributes:
+      label: Tool
+      description: e.g. calc_eval. Leave empty if the server itself fails.
+  - type: textarea
+    id: input
+    attributes:
+      label: Input
+      description: The arguments you passed (a minimal tools/call request is ideal). Remove anything private.
+      render: json
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: What happened, and what you expected
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: Environment
+      description: OS, Node version and MCP client (e.g. Windows 11, Node 24, Claude Code).

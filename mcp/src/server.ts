@@ -795,7 +795,7 @@ server.tool("diagram_svg", "Render a JTD to SVG with no browser and no dev serve
     const { svg, error } = renderJtdSvg(jtd);
     return svg ? ok({ svg, warnings: v.warnings }) : err(error ?? "Could not render to SVG.");
 });
-server.tool("diagram_render", "Render a JTD to PNG with the app's REAL engine (full fidelity; only needed to check skins and effects). Requires a checkout of the repo AND a running dev server. For everything else use diagram_svg, which needs neither.", { jtd: z.string(), baseUrl: z.string().optional().describe("Dev server URL (default http://localhost:4201)"), out: z.string().optional().describe("Output PNG path (default: a temp file)") }, async ({ jtd, baseUrl, out }) => {
+server.tool("diagram_render", "Render a JTD to PNG with the app's REAL engine (full fidelity; only needed to check skins and effects). Requires a checkout of the repo AND a running dev server. For everything else use diagram_svg, which needs neither.", { jtd: z.string(), baseUrl: z.string().optional().describe("Dev server URL (default http://localhost:4201)"), out: z.string().optional().describe("Output path: .png (default, full fidelity) or .svg for a vector image (no skins, images or icon glyphs). Default: a temp PNG") }, async ({ jtd, baseUrl, out }) => {
     const v = validateJtd(jtd);
     if (!v.ok)
         return err("Invalid JTD:\n- " + v.errors.join("\n- "));

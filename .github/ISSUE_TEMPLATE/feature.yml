@@ -1,0 +1,15 @@
+name: Proposal
+description: A tool, a parameter or a check you would like to see.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What a model gets wrong today
+      description: The task, and what an assistant answers without the tool. The best tools here replace a guess with a computation.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What the tool would do

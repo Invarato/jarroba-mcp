@@ -22,7 +22,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
           registry-url: https://registry.npmjs.org
@@ -69,3 +69,24 @@ jobs:
           tar xzf $t/p.tgz -C $t mcp-publisher
           $t/mcp-publisher login github-oidc
           for d in . packages/logs packages/tests packages/calc; do (cd "$d" && $t/mcp-publisher publish); done
+
+  release:
+    # The GitHub Release of the tag, with its section of CHANGELOG.md as notes. Separate job: it is the only one
+    # that needs to write to the repository, and it runs only once the packages are live.
+    needs: publish
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Create the release from CHANGELOG.md
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          v="${TAG#v}"
+          awk -v v="$v" '$0 ~ "^## "v" " {f=1; next} /^## / {f=0} f' CHANGELOG.md > notes.md
+          [ -s notes.md ] || { echo "::error::CHANGELOG.md has no section for $v"; exit 1; }
+          gh release create "$TAG" --verify-tag --title "$TAG" --notes-file notes.md

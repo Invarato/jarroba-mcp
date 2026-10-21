@@ -70,7 +70,8 @@ export class PgEngineService {
             const contrib = (name: string) => ({ name, setup: async () => ({ bundlePath: new URL(urls[name]) }) });
             const extensions = { unaccent: contrib("unaccent"), pg_trgm: contrib("pg_trgm") };
             artefactosListos = true;
-            return { pgliteWasmModule, initdbWasmModule, fsBundle: new Blob([dataBuf]), extensions };
+            const fsBundle = { arrayBuffer: () => Promise.resolve(dataBuf) } as unknown as Blob;
+            return { pgliteWasmModule, initdbWasmModule, fsBundle, extensions };
         })().catch(err => { artefactos = null; throw err; });
         return artefactos;
     }

@@ -261,6 +261,21 @@ tools are `openWorldHint: true` (the result comes from the disk, not from the ar
 never a security mechanism: the spec itself says a client must not trust annotations from a server it
 has not decided to trust.
 
+## Articles from jarroba.com: a separate, remote server
+
+Searching and reading the articles of [jarroba.com](https://jarroba.com/) is **not** in these packages, on
+purpose: it needs the network, and everything here runs locally. The site serves it as its own **remote MCP
+server** (Streamable HTTP, JSON responses, read-only, no account):
+
+```
+https://jarroba.com/wp-json/jarroba/v1/mcp
+```
+
+Two tools: `jarroba_search` (by text, language, category or series, or the latest ones) and
+`jarroba_article` (a summary with its link and the CC BY-NC-SA 3.0 attribution). It is rate-limited per IP.
+In Claude Code: `claude mcp add --transport http jarroba https://jarroba.com/wp-json/jarroba/v1/mcp`.
+Unlike the packages above, what you search there is sent to jarroba.com.
+
 ## Development
 
 ```bash
