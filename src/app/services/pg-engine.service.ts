@@ -1,4 +1,5 @@
 import { Injectable, signal } from "@angular/core";
+import { esIncrustado } from "../shared/incrustado";
 export interface PgField {
     name: string;
     typeId: number;
@@ -82,7 +83,7 @@ export class PgEngineService {
         this.initPromise = (async () => {
             const { PGlite } = await import("@electric-sql/pglite");
             const w = await this.cargar();
-            this.pg = await PGlite.create("idb://jt-dbstudio", {
+            this.pg = await PGlite.create(esIncrustado() ? "memory://" : "idb://jt-dbstudio", {
                 pgliteWasmModule: w.pgliteWasmModule,
                 initdbWasmModule: w.initdbWasmModule,
                 fsBundle: w.fsBundle,

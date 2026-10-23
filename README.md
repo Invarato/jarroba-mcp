@@ -7,7 +7,8 @@
 
 Source of the [`@jarroba/mcp`](https://www.npmjs.com/package/@jarroba/mcp) family of MCP servers:
 deterministic tools for AI agents that run on your machine and upload nothing. The packages and their
-documentation are in [`mcp/`](mcp/README.md).
+documentation are in [`mcp/`](mcp/README.md). Minimal examples of an MCP server with the SDK v2, in TypeScript and
+Python, are in [`mcp/examples/`](mcp/examples/sdk2-two-eras/).
 
 The tools reuse the engines of [jarroba.com/tools](https://jarroba.com/tools/): they live under
 `src/app/`, with the same layout as in the web app, so that the code here is the code that runs there.

@@ -38,3 +38,13 @@ jobs:
         if: matrix.os == 'ubuntu-24.04' && matrix.node == 24
         working-directory: mcp
         run: node scripts/conformidad.mjs
+      - name: SDK v2 example — both protocol eras (2025 and 2026-07-28), TypeScript, Python and this server
+        if: matrix.os == 'ubuntu-24.04' && matrix.node == 24
+        working-directory: mcp/examples/sdk2-two-eras/typescript
+        run: |
+          npm ci --no-audit --no-fund
+          npm test
+          node check-eras.mjs node ../../../dist/server.mjs
+          python3 -m venv ../python/.venv
+          ../python/.venv/bin/pip install --quiet --require-hashes -r ../python/requirements.txt
+          node check-eras.mjs ../python/.venv/bin/python ../python/server.py
