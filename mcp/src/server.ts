@@ -1,7 +1,6 @@
 #!/usr/bin/env -S npx tsx
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
+import { McpServer, type RegisteredTool } from "@modelcontextprotocol/server";
+import { serveStdio } from "@modelcontextprotocol/server/stdio";
 import { z } from "zod";
 import { getMath } from "../../src/app/shared/mathjs-lazy";
 import { importArchsim, dslErrorEn } from "../../src/app/features/archsim/archsim-dsl";
@@ -409,20 +408,19 @@ function instructionsDe(pedidos: Dominio[] | null): string {
         + "tool's own annotations say honestly whether it only reads, writes, or can be destructive.";
 }
 declare const __VERSION_PAQUETE__: string | undefined;
-const server = new McpServer({ name: "jarroba-tools", version: typeof __VERSION_PAQUETE__ === "string" ? __VERSION_PAQUETE__ : "0.0.0-dev" }, { instructions: instructionsDe(dominiosPedidos()) });
+type ConTool = McpServer & {
+    tool<S extends z.ZodRawShape>(nombre: string, descripcion: string, forma: S, cb: (args: z.output<z.ZodObject<S>>) => unknown): RegisteredTool;
+};
+const server = new McpServer({ name: "jarroba-tools", version: typeof __VERSION_PAQUETE__ === "string" ? __VERSION_PAQUETE__ : "0.0.0-dev" }, { instructions: instructionsDe(dominiosPedidos()) }) as ConTool;
+server.tool = (nombre, descripcion, forma, cb) => server.registerTool(nombre, { description: descripcion, inputSchema: z.object(forma) }, cb as never);
 const ESCAPE_MODES: [
     EscapeMode,
     ...EscapeMode[]
 ] = ["javascript", "json", "sql", "regex", "html", "url", "css"];
-const REGISTRADAS = new Map<string, {
-    update: (u: {
-        annotations?: Record<string, unknown>;
-    }) => void;
-    remove: () => void;
-}>();
-for (const metodo of ["tool", "registerTool"] as const) {
-    const original = (server as any)[metodo].bind(server);
-    (server as any)[metodo] = (nombre: string, ...resto: unknown[]) => {
+const REGISTRADAS = new Map<string, RegisteredTool>();
+{
+    const original = server.registerTool.bind(server) as (...a: unknown[]) => RegisteredTool;
+    (server as any).registerTool = (nombre: string, ...resto: unknown[]) => {
         const handle = original(nombre, ...resto);
         REGISTRADAS.set(nombre, handle);
         return handle;
@@ -951,7 +949,7 @@ server.tool("kg_metric", "Run a NAMED metric from the semantic layer against RDF
     format: RDF_FORMAT,
     semantic: SEMANTIC_SCHEMA,
     metric: z.string().describe("Name of the metric to run"),
-    args: z.record(z.string()).default({}).describe("Values for the metric's {{...}} parameters"),
+    args: z.record(z.string(), z.string()).default({}).describe("Values for the metric's {{...}} parameters"),
 }, async ({ data, format, semantic, metric, args }) => {
     try {
         const layer = semantic as SemanticLayer;
@@ -1942,14 +1940,14 @@ server.tool("rabbit_route", "Which queues a RabbitMQ exchange delivers a message
     bindings: z.array(z.object({
         queue: z.string().max(255),
         bindingKey: z.string().max(1000).optional().describe("direct/topic; ignored by fanout and headers"),
-        arguments: z.record(HEADER_VALUE).optional().describe("headers: the binding arguments, x-match included"),
+        arguments: z.record(z.string(), HEADER_VALUE).optional().describe("headers: the binding arguments, x-match included"),
     })).max(10000),
     routingKey: z.string().max(1000).optional(),
-    headers: z.record(HEADER_VALUE).optional().describe("headers exchange: the message headers"),
+    headers: z.record(z.string(), HEADER_VALUE).optional().describe("headers exchange: the message headers"),
 }, async (input) => ok(rabbitEn(rabbitRoute(input))));
 server.tool("sns_filter", "Does an AWS SNS subscription filter policy let this message through, and which key decided it: exact values, prefix, suffix, equals-ignore-case, wildcard, cidr, numeric ranges, anything-but, exists and $or, on MessageAttributes or on the JSON body (FilterPolicyScope=MessageBody). Also rejects what SNS would reject: more than 5 keys, more than 150 combinations, a policy over 256 KB. Built from the AWS documentation; there is no emulator to calibrate it against, and the answer says so.", {
-    policy: z.union([z.record(z.unknown()), z.string().max(300000)]).describe("The filter policy, as an object or JSON text"),
-    message: z.union([z.record(z.unknown()), z.string().max(300000)])
+    policy: z.union([z.record(z.string(), z.unknown()), z.string().max(300000)]).describe("The filter policy, as an object or JSON text"),
+    message: z.union([z.record(z.string(), z.unknown()), z.string().max(300000)])
         .describe("MessageAttributes scope: { name: { \"Type\": \"String\"|\"String.Array\"|\"Number\"|\"Binary\", \"Value\": \"...\" } }. MessageBody scope: the JSON body"),
     scope: z.enum(["MessageAttributes", "MessageBody"]).default("MessageAttributes"),
 }, async ({ policy, message, scope }) => {
@@ -3152,7 +3150,7 @@ server.tool("api_breaking_changes", "Compare two OpenAPI specifications and say 
 });
 server.tool("api_cors_preflight", "Will the browser send an OPTIONS preflight before this request, and WHY? Answers without touching the network. Half of \"it works in curl but not in my page\" is a preflight the server does not answer, and knowing which of the three things triggers it (the method, the Content-Type or a custom header) changes where to look. Also lists the headers the browser refuses to let a page set.", {
     method: z.string().default("GET"),
-    headers: z.record(z.string()).default({}).describe("Request headers, as an object"),
+    headers: z.record(z.string(), z.string()).default({}).describe("Request headers, as an object"),
 }, async ({ method, headers }) => {
     const cs = Object.entries(headers).map(([n, v]) => campo(n, v));
     const pf = necesitaPreflight(method, cs);
@@ -3275,7 +3273,7 @@ function accessFormatVerdict(v: {
         trace: v.traza.map((p) => ({ stage: ETAPA_EN[p.etapaId] ?? p.etapaId, explanation: accessExplainStep(p), decisive: p.final })),
     };
 }
-const accessWorldSchema = z.record(z.any()).describe("Scenario data. Shape depends on \"provider\" \u2014 azure: {ambitos, pertenencias?, roles?, asignaciones?, denegaciones?}; "
+const accessWorldSchema = z.record(z.string(), z.any()).describe("Scenario data. Shape depends on \"provider\" \u2014 azure: {ambitos, pertenencias?, roles?, asignaciones?, denegaciones?}; "
     + "aws: {ambitos, cuentasGestion?, identidades?, recursos?, scps?, boundaries?, rcps?, sesiones?}; "
     + "gcp: {ambitos, pertenencias?, roles?, bindings?, denyPolicies?}; "
     + "k8s: {ambitos, pertenencias?, roles?, bindings?}. "
@@ -3287,7 +3285,7 @@ server.tool("access_check", "Evaluate \"can this principal do this action on thi
     action: z.string().describe("e.g. \"Microsoft.Storage/storageAccounts/blobServices/containers/blobs/read\" (Azure), \"s3:GetObject\" (AWS), \"storage.objects.get\" (GCP), \"get:pods\" (Kubernetes: \"verb:resource\")"),
     scopeId: z.string(),
     plane: z.enum(["control", "data"]).optional().describe("Azure only: control-plane or data-plane action (Azure keeps them as separate grant sets; ignored for the other providers)."),
-    requestContext: z.record(z.union([z.string(), z.array(z.string())])).optional()
+    requestContext: z.record(z.string(), z.union([z.string(), z.array(z.string())])).optional()
         .describe("AWS only: the request context, so Condition blocks are evaluated instead of left indeterminate, e.g. {\"aws:SourceIp\": \"10.1.2.3\", \"aws:PrincipalTag/team\": \"data\", \"aws:MultiFactorAuthPresent\": \"true\"}"),
 }, async ({ provider, world, principalId, action, scopeId, plane, requestContext }) => {
     try {
@@ -3615,12 +3613,12 @@ const UID_CEDAR = z.string().max(500).describe("Entity UID in Cedar syntax, e.g.
 server.tool("cedar_check", "Check Cedar authorization policies (the language of AWS Verified Permissions) with the official Cedar engine, instead of reasoning about them: parse errors with their location; validation against your schema if you give one (wrong attribute, wrong entity type, impossible conditions), and of your entities against it; and, for each request, allow or deny with the policies that decided it \u2014 so you can tell a missing permit from a forbid that wins, and see a forbid that errored and so did not apply (fails open). Policies may carry @id(\"\u2026\") to name them in the answer.", {
     policies: z.string().min(1).max(500000).describe("Cedar policy set (text)"),
     schema: z.string().max(500000).optional().describe("Cedar schema, text or JSON. If given, policies are validated against it"),
-    entities: z.array(z.record(z.unknown())).max(5000).default([]).describe("Entities in Cedar JSON format: {uid:{type,id}, attrs, parents}"),
+    entities: z.array(z.record(z.string(), z.unknown())).max(5000).default([]).describe("Entities in Cedar JSON format: {uid:{type,id}, attrs, parents}"),
     requests: z.array(z.object({
         principal: UID_CEDAR,
         action: UID_CEDAR,
         resource: UID_CEDAR,
-        context: z.record(z.unknown()).default({}),
+        context: z.record(z.string(), z.unknown()).default({}),
     })).max(200).default([]).describe("Authorization requests to decide"),
 }, async ({ policies, schema, entities, requests }) => {
     const c = await cedarMod();
@@ -4049,27 +4047,45 @@ process.on("uncaughtException", (e) => {
 const padreInicial = process.ppid;
 setInterval(() => { if (process.ppid !== padreInicial)
     process.exit(0); }, 5000).unref();
+const sinRuido = (n: unknown): void => {
+    if (Array.isArray(n)) {
+        n.forEach(sinRuido);
+        return;
+    }
+    if (!n || typeof n !== "object")
+        return;
+    const o = n as Record<string, unknown>;
+    delete o["$schema"];
+    if (o["maximum"] === Number.MAX_SAFE_INTEGER)
+        delete o["maximum"];
+    if (o["minimum"] === Number.MIN_SAFE_INTEGER)
+        delete o["minimum"];
+    const pn = o["propertyNames"] as Record<string, unknown> | undefined;
+    if (pn && Object.keys(pn).length === 1 && pn["type"] === "string")
+        delete o["propertyNames"];
+    Object.values(o).forEach(sinRuido);
+};
 {
     const proto = server.server as unknown as {
-        _requestHandlers: Map<string, (req: unknown, extra: unknown) => Promise<unknown>>;
+        _requestHandlers: Map<string, (req: unknown, ctx: unknown) => Promise<unknown>>;
     };
     const original = proto._requestHandlers.get("tools/list");
     if (!original)
         throw new Error("[jarroba-mcp] el SDK ya no registra tools/list donde se esperaba: revisa este bloque");
     server.server.removeRequestHandler("tools/list");
-    server.server.setRequestHandler(ListToolsRequestSchema, async (req, extra) => {
-        const r = await original(req, extra) as {
+    server.server.setRequestHandler("tools/list", async (req, ctx) => {
+        const r = await original(req, ctx) as {
             tools: {
                 inputSchema?: Record<string, unknown>;
             }[];
         };
         for (const t of r.tools)
             if (t.inputSchema)
-                delete t.inputSchema["$schema"];
+                sinRuido(t.inputSchema);
         return r as never;
     });
 }
-await server.connect(new StdioServerTransport());
+serveStdio(() => server);
 const catalogo = recuento();
 const activos = catalogo.porDominio.filter((d) => !pedidos || pedidos.includes(d.dominio));
 const publicadas = activos.reduce((n, d) => n + d.n, 0);

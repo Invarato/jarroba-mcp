@@ -1,6 +1,6 @@
 {
   "name": "@jarroba/mcp",
-  "version": "0.1.11",
+  "version": "0.2.0",
   "type": "module",
   "description": "MCP server (stdio, local) exposing 137 deterministic tools from Jarroba Tools, reusing the same code as the web app: read a CI log that does not fit in your context, audit tests, simulate make, run SQL against an ephemeral PostgreSQL, SPARQL, JTD diagrams rendered without a browser, arithmetic with UNITS and dimensional checking, equations and calculation sheets, identity/RBAC reasoning across Azure/AWS/GCP/Kubernetes, simulate an architecture (load, queues, bottleneck, cost), audit another MCP server's catalogue, plus the usual CIDR/hash/JWT/token/regex a model gets wrong. Nothing leaves your machine. Smaller focused packages: @jarroba/mcp-logs, @jarroba/mcp-tests, @jarroba/mcp-calc.",
   "license": "MIT",
@@ -31,16 +31,17 @@
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.4",
-    "@modelcontextprotocol/sdk": "^1.32.1",
+    "@modelcontextprotocol/server": "^2.3.1",
     "gpt-tokenizer": "^2.8.0",
     "mathjs": "^15.2.0",
     "oxigraph": "^0.5.9",
     "web-tree-sitter": "^0.27.0",
-    "zod": "^3.23.0"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@cedar-policy/cedar-wasm": "4.13.0",
     "@huggingface/tokenizers": "0.2.0",
+    "@modelcontextprotocol/client": "^2.3.1",
     "ajv": "^8.20.0",
     "ajv-formats": "^3.0.1",
     "esbuild": "^0.28.1",

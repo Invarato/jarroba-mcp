@@ -3,8 +3,8 @@ import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statS
 import { tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { Client } from "@modelcontextprotocol/client";
+import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
 const MCP = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const CLI = "@anthropic-ai/mcpb@2.1.2";
 const rel = process.argv[2];

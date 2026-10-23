@@ -12,7 +12,7 @@ claude mcp add jarroba-tests -- npx -y @jarroba/mcp-tests
 { "mcpServers": { "jarroba-tests": { "command": "npx", "args": ["-y", "@jarroba/mcp-tests"] } } }
 ```
 
-4 tools · **~1.8k tokens** of context · stdio, runs on your machine · nothing is uploaded.
+4 tools · **~1.7k tokens** of context · stdio, runs on your machine · nothing is uploaded.
 
 ## Why this exists
 

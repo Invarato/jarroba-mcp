@@ -12,7 +12,7 @@ claude mcp add jarroba-calc -- npx -y @jarroba/mcp-calc
 { "mcpServers": { "jarroba-calc": { "command": "npx", "args": ["-y", "@jarroba/mcp-calc"] } } }
 ```
 
-5 tools · **~1.7k tokens** of context · stdio, runs on your machine · nothing is uploaded, no API key.
+5 tools · **~1.6k tokens** of context · stdio, runs on your machine · nothing is uploaded, no API key.
 
 ## Why this exists
 

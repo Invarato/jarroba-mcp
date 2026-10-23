@@ -3,6 +3,18 @@
 All four packages (`@jarroba/mcp`, `@jarroba/mcp-logs`, `@jarroba/mcp-tests`, `@jarroba/mcp-calc`) share one
 version number. Each release is built and published from this repository's CI, with npm provenance.
 
+## 0.2.0 — 2026-10-23
+
+- Built on the MCP TypeScript SDK **v2** (`@modelcontextprotocol/server`, with zod 4) instead of v1
+  (`@modelcontextprotocol/sdk`). The servers now speak **both** protocol eras over stdio: the 2025 `initialize`
+  handshake that today's clients use (2025-11-25 and earlier, unchanged), and the stateless **2026-07-28** revision
+  (`server/discover`). The test suite runs a client of each era against the same server.
+- Tools, names, descriptions and annotations are unchanged. Input schemas change shape as the SDK v2 generates
+  them: no `additionalProperties: false` (unknown arguments are still dropped, as before), no
+  `execution.taskSupport`, and the few `$ref`s are now written in place. Context cost goes down slightly (~1 %).
+- Lighter install: `@jarroba/mcp` goes from 109 runtime packages to 17. The v1 SDK brought an HTTP server stack
+  that a stdio server never used.
+
 ## 0.1.11 — 2026-10-21
 
 - Tested on Linux, Windows and macOS with Node 22 and 24, plus a conformance check with the official MCP Inspector.

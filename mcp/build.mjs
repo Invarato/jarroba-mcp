@@ -1,7 +1,7 @@
 import { build } from "esbuild";
 import { readFileSync, writeFileSync, mkdirSync, copyFileSync, readdirSync, rmSync, existsSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
-const EXTERNAS_TODAS = ["@modelcontextprotocol/sdk", "zod", "oxigraph", "gpt-tokenizer", "web-tree-sitter", "@electric-sql/pglite", "mathjs"];
+const EXTERNAS_TODAS = ["@modelcontextprotocol/server", "zod", "oxigraph", "gpt-tokenizer", "web-tree-sitter", "@electric-sql/pglite", "mathjs"];
 const PAQUETES = [
     {
         nombre: "@jarroba/mcp",

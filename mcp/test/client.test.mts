@@ -1,5 +1,5 @@
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { Client } from "@modelcontextprotocol/client";
+import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 const here = dirname(fileURLToPath(import.meta.url));
@@ -23,12 +23,26 @@ const call = async (name: string, args: Record<string, unknown>) => {
     }
 };
 const tools = (await client.listTools()).tools;
+check("era 2025: el cliente de siempre negocia 2025-11-25", client.getNegotiatedProtocolVersion() === "2025-11-25", client.getNegotiatedProtocolVersion());
+{
+    const moderno = new Client({ name: "test-2026", version: "0.0.0" }, { versionNegotiation: { mode: { pin: "2026-07-28" } } });
+    await moderno.connect(new StdioClientTransport({ command: "npx", args: ["tsx", join(here, "..", "src", "server.ts")] }));
+    const lista = (await moderno.listTools()).tools;
+    const h: any = await moderno.callTool({ name: "hash_text", arguments: { text: "abc" } });
+    check("era 2026: sin estado (2026-07-28), mismo cat\u00E1logo, y una tool responde igual", moderno.getProtocolEra() === "modern" && moderno.getNegotiatedProtocolVersion() === "2026-07-28"
+        && JSON.stringify(lista) === JSON.stringify(tools)
+        && JSON.parse(h.content[0].text).sha256 === "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad", { era: moderno.getProtocolEra(), v: moderno.getNegotiatedProtocolVersion(), n: lista.length });
+    await moderno.close();
+}
 const { recuento, anotacionesDe, mapaDeDominios } = await import("../src/catalogo.ts");
 check(`lista las ${recuento().total} tools del catálogo`, tools.length === recuento().total, tools.length);
 check("tools/list: ninguna tool lleva `$schema` (1 723 tokens de relleno)", tools.every((t: any) => !("$schema" in (t.inputSchema ?? {}))), tools.filter((t: any) => "$schema" in (t.inputSchema ?? {})).map((t: any) => t.name));
-check("\u2026y los esquemas siguen enteros (tipo, propiedades, required y additionalProperties)", tools.every((t: any) => t.inputSchema?.type === "object" && t.inputSchema.properties)
-    && tools.find((t: any) => t.name === "semver_satisfies")?.inputSchema?.required?.join() === "range,versions"
-    && tools.find((t: any) => t.name === "hash_text")?.inputSchema?.["additionalProperties"] === false, tools.find((t: any) => t.name === "semver_satisfies")?.inputSchema);
+check("\u2026y los esquemas siguen enteros (tipo, propiedades y required)", tools.every((t: any) => t.inputSchema?.type === "object" && t.inputSchema.properties)
+    && tools.find((t: any) => t.name === "semver_satisfies")?.inputSchema?.required?.join() === "range,versions", tools.find((t: any) => t.name === "semver_satisfies")?.inputSchema);
+const esquemas = JSON.stringify(tools.map((t: any) => t.inputSchema));
+check("tools/list: sin \u00B12^53\u22121 de zod 4 ni `propertyNames` de texto", !esquemas.includes(String(Number.MAX_SAFE_INTEGER)) && !esquemas.includes("\"propertyNames\":{\"type\":\"string\"}"));
+const cronCount: any = (tools.find((t: any) => t.name === "cron_next") as any)?.inputSchema?.properties?.count;
+check("\u2026pero un m\u00EDnimo y un m\u00E1ximo puestos a prop\u00F3sito siguen (cron_next.count 1..30)", cronCount?.minimum === 1 && cronCount?.maximum === 30, cronCount);
 const instrucciones = client.getInstructions();
 check("declara instructions", typeof instrucciones === "string" && instrucciones.length > 0, instrucciones);
 check("las instructions citan el recuento real de tools", instrucciones?.includes(String(recuento().total)) ?? false, instrucciones);

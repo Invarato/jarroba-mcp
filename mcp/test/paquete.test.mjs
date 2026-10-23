@@ -1,5 +1,5 @@
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { Client } from "@modelcontextprotocol/client";
+import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, rmSync, readdirSync, writeFileSync, readFileSync, existsSync } from "node:fs";
 import { probarHuerfano } from "./huerfano.mjs";

@@ -10,7 +10,7 @@ second implementation to drift.
 
 ## Four packages, because context is not free
 
-Loading all 137 tools costs **~50,500 tokens of context** before you type anything, in a client that
+Loading all 137 tools costs **~51,700 tokens of context** before you type anything, in a client that
 loads every tool definition up front (Cursor and most others; Claude Code with Tool Search turned off).
 That is Claude Code's own count: measured with `/context` on 0.1.7 (120 tools: 41,996 tokens) and
 extrapolated with `npm run tokens`. Claude Code's **Tool Search**, on by default, only loads a definition
@@ -23,10 +23,10 @@ So pick the one you actually want:
 
 | Package | Tools | Context | For |
 |---|---|---|---|
-| **`@jarroba/mcp-logs`** | 12 | **~4,800 tok** | Reading logs that do not fit in your context |
-| **`@jarroba/mcp-tests`** | 4 | **~1,800 tok** | Auditing tests — including your own |
-| **`@jarroba/mcp-calc`** | 5 | **~1,700 tok** | Maths with units, equations and sheets |
-| `@jarroba/mcp` | 137 | ~50,500 tok | Everything |
+| **`@jarroba/mcp-logs`** | 12 | **~5,500 tok** | Reading logs that do not fit in your context |
+| **`@jarroba/mcp-tests`** | 4 | **~1,700 tok** | Auditing tests — including your own |
+| **`@jarroba/mcp-calc`** | 5 | **~1,600 tok** | Maths with units, equations and sheets |
+| `@jarroba/mcp` | 137 | ~51,700 tok | Everything |
 
 All four come from the same source. The filter is the `JARROBA_MCP_DOMAINS` environment variable and
 each binary sets its own as a **default**, not a cage: install `mcp-logs` and add

@@ -11,7 +11,7 @@ claude mcp add jarroba-logs -- npx -y @jarroba/mcp-logs
 { "mcpServers": { "jarroba-logs": { "command": "npx", "args": ["-y", "@jarroba/mcp-logs"] } } }
 ```
 
-11 tools · **~4.8k tokens** of context · stdio, runs on your machine · nothing is uploaded.
+12 tools · **~5.5k tokens** of context · stdio, runs on your machine · nothing is uploaded.
 
 ## Why this exists
 
