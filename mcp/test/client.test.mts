@@ -2,6 +2,7 @@ import { Client } from "@modelcontextprotocol/client";
 import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
 const here = dirname(fileURLToPath(import.meta.url));
 const transport = new StdioClientTransport({ command: "npx", args: ["tsx", join(here, "..", "src", "server.ts")] });
 const client = new Client({ name: "test", version: "0.0.0" });
@@ -276,10 +277,11 @@ check("db_rls_check dice qu\u00E9 filas ve y cu\u00E1les no", (rls.o?.simulation
 const rlsSinRol = await call("db_rls_check", { sql: RLS });
 check("db_rls_check sin rol sigue revisando el estado", (rlsSinRol.o?.state ?? []).some((e: any) => e.table === "public.nota" && e.rlsEnabled === true && e.appliesToOwner === false), rlsSinRol.o?.state);
 const malo = await call("prompt_review", { prompt: "Eres un asistente \u00FAtil. Responde de forma profesional.", examples: 0 });
-const idsMalo = (malo.o?.findings ?? []).map((h: any) => h.id);
-check("prompt_review ve que falta el contrato de salida", idsMalo.includes("sin-formato"), idsMalo);
-check("prompt_review ve que falta la regla de incertidumbre", idsMalo.includes("sin-regla-incertidumbre"), idsMalo);
-check("prompt_review marca los requisitos no verificables", idsMalo.includes("vago"), idsMalo);
+const idsMalo = (malo.o?.findings ?? []).map((h: any) => h.code);
+check("prompt_review ve que falta el contrato de salida", idsMalo.includes("no-output-contract"), idsMalo);
+check("prompt_review ve que falta la regla de incertidumbre", idsMalo.includes("no-uncertainty-rule"), idsMalo);
+check("prompt_review marca los requisitos no verificables", idsMalo.includes("vague"), idsMalo);
+check("prompt_review: cada hallazgo dice qu\u00E9 arreglar, en ingl\u00E9s, con su nivel en ingl\u00E9s", (malo.o?.findings ?? []).every((h: any) => h.fix?.length > 20 && ["error", "warning", "suggestion"].includes(h.level)), malo.o?.findings);
 check("prompt_review no dice que est\u00E9 limpio", malo.o?.summary?.clean === false);
 const bueno = await call("prompt_review", {
     prompt: "Eres un revisor de c\u00F3digo Python. Revisa el diff y se\u00F1ala defectos. La tarea est\u00E1 completa cuando has cubierto todos los ficheros. Si no est\u00E1s seguro de que algo sea un defecto, dilo expl\u00EDcitamente.",
@@ -287,6 +289,43 @@ const bueno = await call("prompt_review", {
     examples: 2,
 });
 check("prompt_review da limpio un prompt que cumple", bueno.o?.summary?.clean === true, bueno.o?.findings);
+const PROMPT_EN = `You are a support assistant for an online bookshop. Answer using only the order data provided.
+If you don't know or the data is missing, say so and ask for the order number.
+Return JSON: {"answer": string, "needsHuman": boolean}. The task is done when the customer has an answer.`;
+const en = await call("prompt_review", { prompt: PROMPT_EN, examples: 2 });
+check("prompt_review: un prompt completo EN INGL\u00C9S sale limpio", en.o?.summary?.clean === true, en.o?.findings);
+const gritos = await call("prompt_review", { prompt: "You are a world-class expert in tax law. IMPORTANT: you MUST be concise. " + PROMPT_EN, examples: 2 });
+const codGritos = (gritos.o?.findings ?? []).map((h: any) => h.code);
+check("prompt_review: rol de experto y gritos, con su pr\u00E1ctica", codGritos.includes("expert-persona") && codGritos.includes("shouting")
+    && gritos.o.findings.find((h: any) => h.code === "shouting")?.details?.words === "IMPORTANT, MUST", gritos.o?.findings);
+const encargoMalo = await call("prompt_review", { prompt: "Make the hashing tool better.", kind: "task" });
+const codEncargo = (encargoMalo.o?.findings ?? []).map((h: any) => h.code);
+check("prompt_review kind=task: entregable, contexto, verificaci\u00F3n y l\u00EDmites; sin pedir ejemplos ni formato", ["task-without-deliverable", "task-without-context", "task-without-verification", "task-without-boundaries", "no-definition-of-done"].every((c) => codEncargo.includes(c))
+    && !codEncargo.includes("no-examples") && !codEncargo.includes("no-output-contract"), codEncargo);
+const encargoBueno = await call("prompt_review", { kind: "task", prompt: `Fix the rounding bug in src/app/services/vat.service.ts: 0.1 + 0.2 gives 0.30000000000000004.
+Done when npm test passes and a new spec reproduces the case. Do not touch the public interface.
+If the required rounding rule is unclear, ask first. Report a short summary of the change.` });
+check("prompt_review kind=task: un buen encargo sale limpio", encargoBueno.o?.summary?.clean === true, encargoBueno.o?.findings);
+{
+    const { practicas } = JSON.parse(readFileSync(join(here, "..", "..", "public", "practicas.json"), "utf8"));
+    const existen = new Set(practicas.map((p: any) => p.id));
+    const citadas = [...gritos.o.findings, ...encargoMalo.o.findings].map((h: any) => h.practice).filter(Boolean);
+    check("prompt_review: las pr\u00E1cticas que cita existen en el registro", citadas.length >= 3 && citadas.every((id: string) => existen.has(id)), citadas);
+    const motor = readFileSync(join(here, "..", "..", "src", "app", "services", "prompt-lint.service.ts"), "utf8");
+    const ids = [...new Set([...motor.matchAll(/\bid: ['"]([a-z-]+)['"]/g)].map((m) => m[1]))];
+    const { reglasSinTraducir } = await import("../src/prompt-en.ts");
+    check(`prompt_review: las ${ids.length} reglas del motor tienen código en inglés`, ids.length >= 16 && reglasSinTraducir(ids).length === 0, reglasSinTraducir(ids));
+}
+{
+    const lista = (await client.listPrompts()).prompts;
+    check("prompts/list ofrece write_prompt con su argumento obligatorio", lista.some((p: any) => p.name === "write_prompt" && p.arguments?.some((a: any) => a.name === "purpose" && a.required)), lista);
+    const g: any = await client.getPrompt({ name: "write_prompt", arguments: { purpose: "fix a bug in the VAT calculator", kind: "task" } });
+    const texto = g.messages?.[0]?.content?.text ?? "";
+    check("write_prompt: el m\u00E9todo pasa por prompt_review (con su kind) y practice_check, y sigue sus propias reglas", /prompt_review tool, kind "task"/.test(texto) && /practice_check/.test(texto) && /fix a bug in the VAT calculator/.test(texto)
+        && !/\b(IMPORTANT|MUST|NEVER|ALWAYS|CRITICAL)\b/.test(texto) && !/you are an expert/i.test(texto), texto.slice(0, 300));
+    const propio = await call("prompt_review", { prompt: texto, kind: "task" });
+    check("write_prompt: su propio texto pasa prompt_review sin errores ni avisos", propio.o?.summary?.errors === 0 && propio.o?.summary?.warnings === 0, propio.o?.findings);
+}
 const TXT = "Uno. Dos. Tres. Cuatro. Cinco. Seis. Siete. Ocho.\n\nPara reiniciar el router usa el codigo X42 del manual tecnico.\n\nNueve. Diez. Once. Doce. Trece. Catorce. Quince.";
 const trozos = await call("rag_prepare", { text: TXT, size: 60, overlap: 15 });
 check("rag_prepare trocea en varios", (trozos.o?.chunks ?? []).length > 2, (trozos.o?.chunks ?? []).length);
@@ -560,6 +599,27 @@ check("dockerfile_cache propone el arreglo con el manifiesto correcto", dfCon?.w
 check("dockerfile_cache explica en ingl\u00E9s", dfCon?.warnings?.some((a: any) => a.rule === "copia-amplia-antes-de-instalar" && /^The whole project is copied/.test(a.what)), dfCon?.warnings?.map((a: any) => a.what));
 const dfIgn = (await call("dockerfile_cache", { project: PRO, changed: ["src/main.c"], dockerignore: "src\n" })).o;
 check("dockerfile_cache respeta el .dockerignore: fuera del contexto no invalida", dfIgn?.layersRebuilt === 0 && dfIgn.excludedByDockerignore > 0, dfIgn);
+{
+    const { mkdtempSync, writeFileSync, mkdirSync } = await import("node:fs");
+    const { tmpdir } = await import("node:os");
+    const dir = mkdtempSync(join(tmpdir(), "jt-maven-"));
+    const padre = "<parent><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-parent</artifactId><version>3.5.6</version></parent>";
+    writeFileSync(join(dir, "pom.xml"), `<project>${padre}<groupId>g</groupId><artifactId>raiz</artifactId><version>1</version><packaging>pom</packaging><modules><module>web</module></modules></project>`);
+    mkdirSync(join(dir, "web"));
+    writeFileSync(join(dir, "web", "pom.xml"), "<project><parent><groupId>g</groupId><artifactId>raiz</artifactId><version>1</version></parent><artifactId>web</artifactId>" +
+        "<build><plugins><plugin><groupId>org.springframework.boot</groupId><artifactId>spring-boot-maven-plugin</artifactId></plugin>" +
+        "<plugin><artifactId>maven-antrun-plugin</artifactId></plugin><plugin><artifactId>maven-antrun-plugin</artifactId></plugin></plugins></build></project>");
+    const mp = (await call("maven_plan", { project: dir, command: "mvn package -DskipTests" })).o;
+    const web = mp?.reactor?.find((m: any) => m.module === "g:web");
+    check("maven_plan: reactor en orden (ra\u00EDz y luego web)", mp?.reactor?.map((m: any) => m.module).join() === "g:raiz,g:web", mp?.reactor?.map((m: any) => m.module));
+    check("maven_plan: repackage sale del parent, en ingl\u00E9s", web?.goals?.some((g: any) => g.goal === "spring-boot:repackage" && /^parent org\.springframework\.boot:spring-boot-starter-parent 3\.5\.6/.test(g.from)), web?.goals);
+    check("maven_plan: -DskipTests se dice en surefire", web?.goals?.some((g: any) => g.goal === "surefire:test" && g.runsButSkips === "-DskipTests"), web?.goals);
+    check("maven_plan: el plugin duplicado rompe el build desde 3.10", mp?.pomReview?.some((h: any) => h.severity === "breaks-build" && /declared twice/.test(h.message)), mp?.pomReview);
+    const sinPom = await call("maven_plan", {});
+    check("maven_plan sin pom: error claro", sinPom.isError && /pom/.test(sinPom.text ?? ""), sinPom);
+    const gp = (await call("gradle_plan", { output: ":core:compileJava SKIPPED\n:app:compileJava SKIPPED\n:core:jar SKIPPED" })).o;
+    check("gradle_plan: tareas, proyectos y su equivalente Maven", gp?.kind === "dry-run" && gp.projects.join() === ":core,:app" && gp.tasks[0].maven === "compile", gp);
+}
 const cr = (await call("element_config", { element: "Cr" })).o;
 check("element_config Cr es an\u00F3malo y acaba en 3d5 4s1", cr?.anomalous === true && /3d5 4s1$/.test(cr?.config ?? ""), cr?.config);
 const ne = (await call("element_config", { element: "10" })).o;
@@ -977,6 +1037,38 @@ check("una ruta que no existe da un error EN INGL\u00C9S", rutaMala.isError === 
 const carpetaMala = await call("test_debt", { folder: "/no/such/dir" });
 check("\u2026tambi\u00E9n la de una carpeta (test_debt), con el motivo del sistema", carpetaMala.isError === true && /^Could not read "\/no\/such\/dir": /.test(carpetaMala.text ?? ""), carpetaMala.text);
 check("\u2026y fuera de un contenedor no sale la pista de montar carpetas", !/container/.test(rutaMala.text ?? ""), rutaMala.text);
+{
+    const { calcularBaseReguladora } = await import("../../src/app/services/nomina/pension.ts");
+    const { baseMinimaLagunas } = await import("../../src/app/services/nomina/pension-datos.ts");
+    const { IPC_CAPTURA } = await import("../src/pension.ts");
+    const bases: Record<string, number | null> = {};
+    for (let i = 0; i < 420; i++) {
+        const t = 2026 * 12 + 2 - i;
+        bases[`${Math.floor(t / 12)}-${String((t % 12) + 1).padStart(2, "0")}`] = 1200 + (420 - i) * 5;
+    }
+    const r = await call("pension_base", { retirementMonth: "2026-06", bases, daysContributed: 35 * 365 });
+    check("pension_base 2026: los DOS sistemas (nuevo 304\u2192302/352,33 y anterior 300/350) y gana el mayor", r.o?.systems?.map((x: any) => `${x.id}:${x.months}/${x.best}/${x.divisor}`).join() === "new:304/302/352.33,previous:300/300/350"
+        && r.o.regulatoryBase === Math.max(...r.o.systems.map((x: any) => x.regulatoryBase)), r.o?.systems);
+    const ipc = JSON.parse(readFileSync(join(here, "..", "..", "public", "datos", "ipc", IPC_CAPTURA), "utf8")).indice;
+    const ultimo = Object.keys(ipc).sort().at(-1)!;
+    const todas = { ...bases, "2026-04": bases["2026-03"], "2026-05": bases["2026-03"] };
+    const directo = calcularBaseReguladora({ hechoCausante: "2026-06", bases: todas, ipc: (m: string) => ipc[m] ?? (m > ultimo ? ipc[ultimo] : null), baseMinima: baseMinimaLagunas });
+    check("pension_base da la MISMA base reguladora que el motor de /payslip", r.o?.regulatoryBase === directo.elegido.baseReguladora, [r.o?.regulatoryBase, directo.elegido.baseReguladora]);
+    check("pension_base: 422 meses en 2026 \u2192 96,96 % y pensi\u00F3n = base \u00D7 porcentaje", r.o?.monthsContributed === 422 && r.o.percentage === 96.96
+        && r.o.monthlyPension === Math.round(r.o.regulatoryBase * 96.96) / 100, [r.o?.monthsContributed, r.o?.percentage, r.o?.monthlyPension]);
+    check("pension_base: avisa de lo supuesto, en ingl\u00E9s", r.o?.warnings?.some((w: any) => w.code === "assumed-until-retirement") && !/[áéíóúñ¿]/i.test(JSON.stringify(r.o.warnings)), r.o?.warnings);
+    const conLagunas = await call("pension_base", { retirementMonth: "2026-06", bases: { ...bases, "2026-03": null, "2026-02": null }, untilRetirement: "no-contributions" });
+    check("pension_base: null es laguna (y los meses hasta la jubilaci\u00F3n sin cotizar, tambi\u00E9n), no un mes desconocido", conLagunas.o?.gaps?.total === 4 && conLagunas.o.gaps.at100 === 4 && !conLagunas.o.warnings.some((w: any) => w.code === "unknown-months"), conLagunas.o?.gaps);
+    const corto = await call("pension_base", { retirementMonth: "2026-06", bases: { "2025-01": 2000 } });
+    check("pension_base: un informe corto avisa de los meses desconocidos (cuentan como 0)", corto.o?.warnings?.some((w: any) => w.code === "unknown-months"), corto.o?.warnings);
+    const rutaManifiesto = join(here, "..", "..", "public", "datos", "manifiesto.json");
+    if (existsSync(rutaManifiesto)) {
+        const actual = JSON.parse(readFileSync(rutaManifiesto, "utf8")).entradas.find((d: any) => d.id === "ipc")?.actual;
+        check(`pension_base usa la captura del IPC vigente (${actual}); si cambia, importar la nueva en mcp/src/pension.ts`, actual === IPC_CAPTURA, { actual, IPC_CAPTURA });
+    }
+    else
+        console.log("\u00B7 pension_base: sin manifiesto de datos (espejo p\u00FAblico), no se compara la captura del IPC");
+}
 const ab2 = (await call("abtest_analyze", { variants: [{ name: "A", visitors: 1000, conversions: 100 }, { name: "B", visitors: 1000, conversions: 130 }] })).o;
 check("abtest_analyze: 10% vs 13% (n=1000) \u2192 z-test, p\u22480.0355, significativo, gana B", ab2?.test === "two-proportion-z" && Math.abs(ab2.pValue - 0.0355) < 0.001 && ab2.significant === true && ab2.winner === "B"
     && ab2.probabilityVariantBeatsControl > 0.97 && ab2.sampleRatioMismatch?.mismatch === false, ab2);

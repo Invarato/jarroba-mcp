@@ -60,7 +60,7 @@ export interface Practica {
         url: string;
     }[];
     aplica?: {
-        producto: string;
+        producto?: string;
         versiones?: string;
         github?: string;
     }[];
@@ -133,7 +133,8 @@ export interface RespuestaPractica {
     supersededBy?: string;
     lastReviewed: string;
     appliesTo?: {
-        product: string;
+        product?: string;
+        github?: string;
         versions?: string;
     }[];
     stale: boolean;
@@ -210,7 +211,7 @@ export function consultar(reg: Registro, topic: string, since: string | undefine
             ...(p.superadaPor ? { supersededBy: p.superadaPor } : {}),
             lastReviewed: p.revisado,
             stale: caducada(p, hoy),
-            ...(p.aplica?.length ? { appliesTo: p.aplica.map(a => ({ product: a.producto, ...(a.versiones ? { versions: a.versiones } : {}) })) } : {}),
+            ...(p.aplica?.length ? { appliesTo: p.aplica.map(a => ({ ...(a.producto ? { product: a.producto } : {}), ...(a.github ? { github: a.github } : {}), ...(a.versiones ? { versions: a.versiones } : {}) })) } : {}),
             ...(since ? { changesSince: cambiosDesde(p, since).map(h => ({ date: h.fecha, precision: h.precision, verdict: h.estado, note: h.nota.en, sourced: !h.sinFuente, ...(h.tipo === "anuncio" ? { announcement: true as const, ...(h.para ? { plannedFor: h.para } : {}) } : {}), ...(h.tipo === "borrador" ? { draft: true as const } : {}), ...(h.matiz ? { shift: h.matiz === "endurece" ? "stronger" as const : "weaker" as const } : {}) })) } : {}),
             sources: p.evidencia.map(e => e.tipo === "web"
                 ? { url: e.url, title: e.titulo, quote: e.cita, date: e.fecha }

@@ -293,7 +293,15 @@ export function grafoDeHallazgo(claveCelda: string, resumen: ResumenAuditoria, p
     });
     return { nodos: nodosGrafo, aristas, enCiclo: anillo ? new Set(anillo) : new Set() };
 }
+export function pareceHojaDeCalculo(datos: ArrayBuffer): boolean {
+    const b = new Uint8Array(datos, 0, Math.min(8, datos.byteLength));
+    const zip = b[0] === 80 && b[1] === 75 && (b[2] === 3 || b[2] === 5 || b[2] === 7);
+    const ole2 = b[0] === 208 && b[1] === 207 && b[2] === 17 && b[3] === 224 && b[4] === 161 && b[5] === 177 && b[6] === 26 && b[7] === 225;
+    return zip || ole2;
+}
 export function auditarArchivo(datos: ArrayBuffer): ResumenAuditoria | null {
+    if (!pareceHojaDeCalculo(datos))
+        return null;
     try {
         const wb = XLSX.read(datos, { type: "array", cellFormula: true });
         return auditarWorkbook(wb);

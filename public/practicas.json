@@ -14310,6 +14310,11 @@
      }
     }
    ],
+   "aplica": [
+    {
+     "github": "clap-rs/clap"
+    }
+   ],
    "revisado": "2026-10-08",
    "caduca": "2027-07-10",
    "consultas": [
@@ -34361,6 +34366,11 @@
      }
     }
    ],
+   "aplica": [
+    {
+     "github": "langchain-ai/langsmith-python"
+    }
+   ],
    "revisado": "2026-10-08",
    "caduca": "2027-03-28",
    "consultas": [
@@ -35230,6 +35240,9 @@
    "aplica": [
     {
      "producto": "spring-boot"
+    },
+    {
+     "github": "junit-team/junit-framework"
     }
    ],
    "revisado": "2026-10-07",
@@ -36380,6 +36393,11 @@
       "es": "Ragas 0.4.0 introduce la arquitectura basada en experimentos y las métricas collections.",
       "en": "Ragas 0.4.0 introduces the experiment-based architecture and collections metrics."
      }
+    }
+   ],
+   "aplica": [
+    {
+     "github": "explodinggradients/ragas"
     }
    ],
    "revisado": "2026-10-08",
@@ -41797,6 +41815,9 @@
    "aplica": [
     {
      "producto": "spring-boot"
+    },
+    {
+     "github": "testcontainers/testcontainers-java"
     }
    ],
    "revisado": "2026-10-13",
@@ -41995,6 +42016,11 @@
       "es": "La guía de actualización a React 19 recomienda migrar los tests a @testing-library/react.",
       "en": "The React 19 upgrade guide recommends migrating tests to @testing-library/react."
      }
+    }
+   ],
+   "aplica": [
+    {
+     "github": "testing-library/react-testing-library"
     }
    ],
    "revisado": "2026-10-07",
@@ -42223,6 +42249,14 @@
       "es": "failure se depreca y remite a anyhow y thiserror.",
       "en": "failure is deprecated and points to anyhow and thiserror."
      }
+    }
+   ],
+   "aplica": [
+    {
+     "github": "dtolnay/thiserror"
+    },
+    {
+     "github": "dtolnay/anyhow"
     }
    ],
    "revisado": "2026-10-08",
@@ -42533,6 +42567,11 @@
       "es": "async-std se discontinúa y recomienda smol.",
       "en": "async-std is discontinued and recommends smol."
      }
+    }
+   ],
+   "aplica": [
+    {
+     "github": "tokio-rs/tokio"
     }
    ],
    "revisado": "2026-10-08",
@@ -44335,6 +44374,14 @@
      "consultado": "2026-10-08",
      "primaria": true,
      "cita": "add migrate-karma-to-vitest update migration"
+    },
+    {
+     "tipo": "medida",
+     "fecha": "2026-10-20",
+     "descripcion": {
+      "es": "En un proyecto Angular 22 con 778 ficheros de tests y 13.945 tests en modo navegador, pasar de Vitest 4.1 a 5.0 no obligó a tocar ningún test: pasaron todos, en 85 s frente a 92 s con la 4.1.",
+      "en": "In an Angular 22 project with 778 test files and 13,945 browser-mode tests, upgrading from Vitest 4.1 to 5.0 required no test changes: all of them passed, in 85 s versus 92 s on 4.1."
+     }
     }
    ],
    "historia": [
@@ -44366,13 +44413,30 @@
       "es": "Angular CLI 22 elimina los builders experimentales de Jest y Web Test Runner y añade la migración de Karma a Vitest.",
       "en": "Angular CLI 22 removes the experimental Jest and Web Test Runner builders and adds the Karma-to-Vitest migration."
      }
+    },
+    {
+     "fecha": "2026-10-20",
+     "precision": "dia",
+     "registrado": "2026-10-25",
+     "estado": "vigente",
+     "certeza": "documentado",
+     "evidencia": [
+      3
+     ],
+     "nota": {
+      "es": "Sale Vitest 5 (septiembre de 2026) y no cambia el veredicto: en una suite grande de Angular la subida desde la 4.1 no exigió tocar ningún test.",
+      "en": "Vitest 5 ships (September 2026) and the verdict does not change: in a large Angular suite the upgrade from 4.1 required no test changes."
+     }
     }
    ],
-   "revisado": "2026-10-08",
+   "revisado": "2026-10-25",
    "caduca": "2027-02-18",
    "aplica": [
     {
      "producto": "angular"
+    },
+    {
+     "github": "vitest-dev/vitest"
     }
    ],
    "consultas": [
@@ -68324,6 +68388,11 @@
       "es": "Documentado así a fecha de revisión: su README lo presenta como marco multiagente que admite la API de OpenAI y más de cien modelos de otros proveedores.",
       "en": "Documented this way at review date: its README presents it as a multi-agent framework supporting OpenAI's APIs and over a hundred other providers' models."
      }
+    }
+   ],
+   "aplica": [
+    {
+     "github": "openai/openai-agents-python"
     }
    ],
    "revisado": "2026-10-07",

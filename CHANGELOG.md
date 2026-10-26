@@ -3,6 +3,25 @@
 All four packages (`@jarroba/mcp`, `@jarroba/mcp-logs`, `@jarroba/mcp-tests`, `@jarroba/mcp-calc`) share one
 version number. Each release is built and published from this repository's CI, with npm provenance.
 
+## 0.3.0 — 2026-10-26
+
+- `prompt_review` understands prompts in English (a prompt that did say what to do when the model does not know was
+  flagged as an error), reviews task briefs for agents with `kind: "task"` (deliverable, where to look, how to verify,
+  what not to touch), flags an expert persona used to buy accuracy, shouting in capitals and long prompts with no
+  structure, and every finding says what to fix and which dated practice backs it (an id for `practice_check`).
+  **Breaking:** findings now come as `{code, level, fix, details, practice}` in English instead of internal Spanish ids.
+- New MCP prompt `write_prompt`: a fixed method to write a system prompt or a task brief — ask what is missing, draft,
+  review with `prompt_review`, check the techniques with `practice_check`, deliver with what changed.
+- `diagram_render` also measures the rendered diagram (`measure`, on by default): overlapping nodes and labels cut short,
+  with the JTD ids, plus every node box in a JSON next to the image.
+- New tool `pension_base` (new domain `payroll`): the regulatory base of a Spanish retirement pension from the monthly
+  contribution bases — both systems while they coexist, gaps, CPI update — with the percentage and the monthly pension.
+- New tools `maven_plan` and `gradle_plan`: what `mvn <command>` would actually run in a project (module by module, phase
+  by phase, goal by goal, and where each goal comes from), for Maven 3 and 4, with a review of the pom; and the task
+  order and status from the output of `./gradlew <tasks> --dry-run`.
+- Examples: a minimal MCP server with the SDK v2 in TypeScript and Python, and a check that connects with a client of
+  each protocol era (`mcp/examples/sdk2-two-eras`), run by CI against both and against this server.
+
 ## 0.2.0 — 2026-10-23
 
 - Built on the MCP TypeScript SDK **v2** (`@modelcontextprotocol/server`, with zod 4) instead of v1

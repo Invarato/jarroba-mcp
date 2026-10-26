@@ -1,6 +1,6 @@
 {
   "name": "@jarroba/mcp-tests",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "type": "module",
   "description": "MCP server (stdio, local) that audits tests instead of writing them. Told to \"make the tests pass\", an agent can widen a matcher, drop an assertion or skip a case - all cheaper than fixing the bug. These tools contradict the caller: what each test ACTUALLY asserts, whether a change weakened the suite, which cases a type demands, and how long each skip has been there. 4 tools, ~1.7k tokens of context.",
   "keywords": [

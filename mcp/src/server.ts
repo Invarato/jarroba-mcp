@@ -93,6 +93,8 @@ import { snsFilter } from "../../src/app/services/brokers/sns-filter";
 import { rabbitEn, kafkaAssignEn, snsFilterEn } from "./brokers";
 import { informeCatalogoEn } from "./mcp-audit-en";
 import { secretosEn, informeApiEn } from "./api-en";
+import { hallazgoPromptEn } from "./prompt-en";
+import { pensionBase } from "./pension";
 import { CodeGenService, type CodeTarget } from "../../src/app/services/code-gen.service";
 import { CATALOG_QUERIES, assembleSchema, type SchemaModel } from "../../src/app/services/schema-catalog";
 import { candidates as fkCandidates, evidenceSql, orphanSql, addFkSql, cobertura, ordenarPorEvidencia, esRelevante, type FkEvidence, } from "../../src/app/services/fk-infer.service";
@@ -107,6 +109,10 @@ import { leerReglas, decidir, comparar as compararIgnore, revisarIgnore } from "
 import { leerDockerfile, simularCache, revisarDockerfile } from "../../src/app/services/dockerfile";
 import { analizarLogDeMake } from "../../src/app/services/make-log";
 import { avisoDfEn, diagMkEn, carreraEn, hallazgoMkEn, divergenciaEn, avisoIgnoreEn, senalEn, perdidaEn, omitidoEn, avisoConvEn } from "./proyecto-en";
+import { planMaven, type PasoPlan } from "../../src/app/services/maven-plan";
+import { revisar as revisarPom } from "../../src/app/services/maven-revision";
+import { leerPlanGradle } from "../../src/app/services/gradle-plan";
+import { AVISO_MAVEN_EN, NO_CORRE_EN, PERFIL_EN, REVISION_EN, origenEn } from "./maven-en";
 import { PIPELINE_AZURE, crearMundoAzure } from "../../src/app/services/accesos-azure";
 import { PIPELINE_AWS, crearMundoAws } from "../../src/app/services/accesos-aws";
 import { PIPELINE_GCP, crearMundoGcp } from "../../src/app/services/accesos-gcp";
@@ -130,7 +136,7 @@ import { comparacionEn, srmEn, multiEn, doraEn } from "./experimentos";
 import { FACTOR_CLAUDE_CODE, FACTOR_CLAUDE_FUENTE } from "./factor-claude";
 import { migracionEn, comprobacionEn, equivalenciaEn, impactoEn } from "./migracion";
 import { medirMigracion } from "../../src/app/services/migration-impact.service";
-import { writeFileSync, existsSync } from "node:fs";
+import { writeFileSync, existsSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -396,6 +402,7 @@ const DOMINIO_EN: Record<Dominio, string> = {
     access: "identity/RBAC reasoning across Azure, AWS, GCP and Kubernetes on one neutral model",
     archsim: "architecture simulation (load, queues and lag, bottlenecks, cost; the archsim format)",
     experiments: "A/B experiment statistics (analysis with the right test and SRM, sample size, sequential looks)",
+    payroll: "Spanish payroll and pensions (regulatory base and percentage of the retirement pension)",
     security: "security checks before acting (hidden Unicode instructions, secrets in a paste/HAR, GitHub Actions, HTTP headers, SPF/DKIM/DMARC, SAML, agent configs)",
 };
 function instructionsDe(pedidos: Dominio[] | null): string {
@@ -793,7 +800,7 @@ server.tool("diagram_svg", "Render a JTD to SVG with no browser and no dev serve
     const { svg, error } = renderJtdSvg(jtd);
     return svg ? ok({ svg, warnings: v.warnings }) : err(error ?? "Could not render to SVG.");
 });
-server.tool("diagram_render", "Render a JTD to PNG with the app's REAL engine (full fidelity; only needed to check skins and effects). Requires a checkout of the repo AND a running dev server. For everything else use diagram_svg, which needs neither.", { jtd: z.string(), baseUrl: z.string().optional().describe("Dev server URL (default http://localhost:4201)"), out: z.string().optional().describe("Output path: .png (default, full fidelity) or .svg for a vector image (no skins, images or icon glyphs). Default: a temp PNG") }, async ({ jtd, baseUrl, out }) => {
+server.tool("diagram_render", "Render a JTD to PNG with the app's REAL engine (full fidelity; only needed to check skins and effects), and measure it: nodes that overlap and labels cut short with an ellipsis, read from the engine \u2014 the defects that are easy to miss when looking at the image. Requires a checkout of the repo AND a running dev server. For everything else use diagram_svg, which needs neither.", { jtd: z.string(), baseUrl: z.string().optional().describe("Dev server URL (default http://localhost:4201)"), out: z.string().optional().describe("Output path: .png (default, full fidelity) or .svg for a vector image (no skins, images or icon glyphs). Default: a temp PNG"), measure: z.boolean().default(true).describe("Also return overlapping nodes and truncated labels (and every node box, in a JSON next to the image)") }, async ({ jtd, baseUrl, out, measure }) => {
     const v = validateJtd(jtd);
     if (!v.ok)
         return err("Invalid JTD:\n- " + v.errors.join("\n- "));
@@ -807,10 +814,59 @@ server.tool("diagram_render", "Render a JTD to PNG with the app's REAL engine (f
     }
     const tmp = join(tmpdir(), `jtd-${Date.now()}.json`), outPath = out || join(tmpdir(), "jtd-render.png");
     writeFileSync(tmp, jtd);
-    const r = spawnSync("node", [guion, tmp, outPath, baseUrl || "http://localhost:4201"], { cwd: repoRoot, encoding: "utf8", timeout: 90000 });
+    const r = spawnSync("node", [guion, tmp, outPath, baseUrl || "http://localhost:4201", ...(measure ? ["--medidas"] : [])], { cwd: repoRoot, encoding: "utf8", timeout: 90000 });
     if (r.status !== 0)
         return err(`Rendering failed. The dev server may not be running at that URL.\n${(r.stdout || "") + (r.stderr || "")}`);
-    return ok({ image: outPath, stdout: (r.stdout || "").trim(), warnings: v.warnings });
+    const fm = outPath.replace(/\.(png|svg)$/i, "") + ".medidas.json";
+    let measurements: Record<string, unknown> | undefined;
+    if (measure && existsSync(fm)) {
+        type M = {
+            nodos: unknown[];
+            solapes: {
+                a: string;
+                b: string;
+                tapado: string;
+            }[];
+            cortados: {
+                nodo: string;
+                visible: string;
+                texto: string;
+            }[];
+        };
+        const m = JSON.parse(readFileSync(fm, "utf8")) as M;
+        const delJtd = ((JSON.parse(jtd) as {
+            nodes?: {
+                id?: string;
+                text?: string;
+            }[];
+        }).nodes ?? []).filter((n) => n.id && n.text);
+        const casar = (texto: string) => {
+            const c = texto ? delJtd.filter((n) => n.text!.startsWith(texto)) : [];
+            return c.length === 1 ? c[0] : undefined;
+        };
+        const cajas = m.nodos as {
+            id: string;
+            texto: string;
+            x: number;
+            y: number;
+            w: number;
+            h: number;
+        }[];
+        const idDe = (motor: string, texto: string) => casar(texto)?.id ?? casar(cajas.find((n) => n.id === motor)?.texto ?? "")?.id ?? motor;
+        const boxes = fm.replace(/\.medidas\.json$/, ".measurements.json");
+        writeFileSync(boxes, JSON.stringify(cajas.map((n) => ({ id: idDe(n.id, n.texto), text: casar(n.texto)?.text ?? n.texto, x: n.x, y: n.y, width: n.w, height: n.h })), null, 2));
+        measurements = {
+            nodes: m.nodos.length,
+            overlaps: m.solapes.map((x) => ({ a: casar(x.a)?.id ?? x.a, b: casar(x.b)?.id ?? x.b, coveredPercentOfSmaller: Number.parseInt(x.tapado, 10) })),
+            truncatedLabels: m.cortados.map((x) => {
+                const n = casar(x.texto) ?? casar(cajas.find((c) => c.id === x.nodo)?.texto ?? "");
+                return { node: n?.id ?? x.nodo, fullText: n?.text ?? x.texto, visible: x.visible };
+            }),
+            nodeBoxes: boxes,
+            note: "A node fully inside another is a container, not an overlap. Fix every overlap and truncated label before calling the diagram done.",
+        };
+    }
+    return ok({ image: outPath, ...(measurements ? { measurements } : {}), stdout: (r.stdout || "").trim(), warnings: v.warnings });
 });
 type JtdScene = {
     layout?: string;
@@ -1243,22 +1299,25 @@ server.registerTool("db_rls_check", {
     return ok(r.valor);
 });
 server.registerTool("prompt_review", {
-    title: "Review a system prompt",
-    description: "Check a system prompt against the rules that make it followable: an explicit output contract, a definition of done, what to do when the model does not know (the rule that prevents made-up answers), contradictions, unverifiable requirements, prohibitions with no alternative, example count and context budget. It does NOT judge whether the prompt is GOOD \u2014 that needs evals and a real model run \u2014 it is the deterministic layer underneath. Useful on your own system prompt.",
+    title: "Review a prompt before using it",
+    description: "Check a prompt against the rules that make it followable, in English or Spanish. kind \"system\" (an app's system prompt): explicit output contract, definition of done, what to do when the model does not know (the rule that prevents made-up answers), contradictions, vague or unverifiable requirements, prohibitions with no alternative, examples and context budget. kind \"task\" (a brief for an agent: \"fix X in file Y\"): deliverable, where to look, how to verify the result, what not to touch, definition of done. Both also flag an expert persona used to buy accuracy and shouting in capitals. Each finding says what to fix and, when a dated practice backs it, its id for practice_check. It does NOT judge whether the prompt is GOOD \u2014 that needs evals and a real model run \u2014 it is the deterministic layer underneath. Useful on prompts you write yourself.",
     inputSchema: {
-        prompt: z.string().describe("The complete system prompt, exactly as it would be sent"),
+        prompt: z.string().describe("The complete prompt, exactly as it would be sent"),
+        kind: z.enum(["system", "task"]).default("system")
+            .describe("\"system\": the system prompt of an app or assistant. \"task\": what you ask an agent to do once"),
         outputFormat: z.string().optional().describe("The part describing the output format, if it is kept separate from the prompt"),
         examples: z.number().int().min(0).default(0).describe("How many input\u2192output (few-shot) examples accompany the prompt"),
     },
-}, ({ prompt, outputFormat: formato, examples: ejemplos }) => {
+}, ({ prompt, kind, outputFormat: formato, examples: ejemplos }) => {
     const secciones: SeccionPrompt[] = [{ id: "todo", enabled: true, content: prompt }];
     if (formato?.trim())
         secciones.push({ id: "format", enabled: true, content: formato });
-    const hallazgos = S.promptLint.lint(secciones, ejemplos, prompt);
+    const hallazgos = S.promptLint.lint(secciones, ejemplos, prompt, kind === "task" ? "encargo" : "sistema");
     const r = S.promptLint.resumen(hallazgos);
     return ok({
+        kind,
         summary: { errors: r.errores, warnings: r.avisos, suggestions: r.sugerencias, clean: r.limpio },
-        findings: hallazgos,
+        findings: hallazgos.map(hallazgoPromptEn),
     });
 });
 server.registerTool("rag_prepare", {
@@ -2223,6 +2282,81 @@ server.tool("ignore_check", "Say which paths a `.gitignore` or `.dockerignore` i
             line: x.linea,
             ...avisoIgnoreEn(x),
         })),
+    });
+});
+function pasoMavenEn(p: PasoPlan): Record<string, unknown> {
+    return {
+        phase: p.fase,
+        goal: `${p.prefijo}:${p.goal}`,
+        execution: p.ejecucion,
+        plugin: p.ga,
+        from: origenEn(p.origen),
+        ...(p.salta ? { runsButSkips: p.salta.por === "propiedad" ? `-D${p.salta.nombre}` : `<${p.salta.nombre}>true</${p.salta.nombre}> in the pom` } : {}),
+        ...(p.bifurca ? { forksLifecycleUpTo: p.bifurca.hasta, ...(p.bifurca.omitida ? { forkSkipped: "Maven 4 does not repeat phases this build already ran" } : { forkedGoals: p.bifurca.pasos.map(pasoMavenEn) }) } : {}),
+    };
+}
+server.tool("maven_plan", "What `mvn <command>` would actually run in THIS project, without running Maven: module by module (reactor order with -pl/-am/-amd), phase by phase, goal by goal, and WHERE each goal comes from \u2014 the packaging default binding, your pom (with line), the parent (e.g. spring-boot:repackage comes from spring-boot-starter-parent), or a profile. Also: what is declared but never runs and why, which profiles are active and why, what changes between Maven 3.10 and 4.0, and a pom review (duplicates that fail the build since 3.10, plugins without a version). Verified goal by goal against real `mvn` logs (Maven 3.10.0 and 4.0.0-rc-7) on 11 real cases. Unknown parents or plugins are reported, never guessed.", {
+    project: z.string().optional().describe("Project folder: every pom.xml in it is read (target/ and node_modules/ skipped)"),
+    pom: z.string().optional().describe("A single pom.xml pasted, if there is no folder"),
+    command: z.string().optional().describe("The command, e.g. \"mvn -pl api -am clean install -DskipTests -Pprod\". Default: \"mvn clean package\""),
+    maven: z.enum(["3", "4"]).optional().describe("Maven version to simulate: 3 (3.10) or 4 (4.0). Default 3"),
+    jdk: z.number().int().optional().describe("JDK major version, for <activation><jdk> profiles. Default 21"),
+}, async (a) => {
+    let poms: {
+        ruta: string;
+        xml: string;
+    }[] = [];
+    let ficheros: string[] | undefined;
+    if (a.project) {
+        const r = await leerProyecto(a.project, 20000);
+        if (r.error)
+            return err(r.error);
+        const fuera = (x: string) => x.split("/").some(p => p === "target" || p === "node_modules" || p === "build");
+        ficheros = r.ficheros.map(f => f.ruta).filter(x => !fuera(x));
+        for (const ruta of ficheros.filter(x => /(^|\/)pom\.xml$/.test(x) && !x.split("/").includes("src"))) {
+            const xml = await leerTexto(a.project.replace(/\/+$/, "") + "/" + ruta);
+            if (xml)
+                poms.push({ ruta, xml });
+        }
+    }
+    else if (a.pom)
+        poms = [{ ruta: "pom.xml", xml: a.pom }];
+    if (!poms.length)
+        return err("One of `project` (a folder with a pom.xml) or `pom` is required.");
+    const comando = a.command || "mvn clean package";
+    const plan = planMaven(poms, { maven: a.maven ?? "3", comando, jdk: a.jdk, ficheros });
+    const otro = planMaven(poms, { maven: a.maven === "4" ? "3" : "4", comando, jdk: a.jdk, ficheros });
+    const clave = (p: PasoPlan[]): string[] => p.flatMap(x => [...(x.bifurca && !x.bifurca.omitida ? clave(x.bifurca.pasos) : []), `${x.prefijo}:${x.goal} (${x.ejecucion})`]);
+    const difiere = plan.reactor.filter(m => clave(m.pasos).join() !== clave(otro.reactor.find(o => o.ruta === m.ruta)?.pasos ?? []).join()).map(m => m.ruta);
+    const rev = revisarPom(poms);
+    return ok({
+        command: comando,
+        maven: plan.maven === "4" ? "4.0" : "3.10",
+        warnings: plan.avisos.map(x => AVISO_MAVEN_EN[x.codigo](x.datos)),
+        reactor: plan.reactor.map(m => ({
+            module: m.ga,
+            pom: m.ruta,
+            packaging: m.packaging,
+            goals: m.pasos.map(pasoMavenEn),
+            declaredButNotRun: m.noEjecuta.map(n => ({ goal: `${n.ga}:${n.goal}`, execution: n.ejecucion, why: NO_CORRE_EN[n.motivo], from: origenEn(n.origen) })),
+            profiles: m.perfiles.map(p => ({ id: p.id, active: p.activo, why: PERFIL_EN[p.porque], from: origenEn(p.origen) })),
+            parents: m.cadena.map(c => ({ parent: `${c.ga}:${c.version}`, known: !!c.origen })),
+        })),
+        excludedModules: plan.fuera,
+        differsInOtherMavenVersion: difiere,
+        pomReview: rev.hallazgos.map(h => ({ severity: h.gravedad === "rompe" ? "breaks-build" : h.gravedad === "cambia" ? "changes-build" : "improvement", pom: h.ruta, line: h.linea, message: REVISION_EN[h.regla](h.datos) })),
+        pluginVersionsNotReviewed: rev.sinSaberVersiones,
+    });
+});
+server.tool("gradle_plan", "Read the output of `./gradlew <tasks> --dry-run` (or of a real build with --console=plain) and return the task order with each task's project, status (UP-TO-DATE, FROM-CACHE, NO-SOURCE, FAILED\u2026) and its Maven equivalent. A build.gradle is code, so the task graph cannot be known without running Gradle: --dry-run computes it without executing anything. Note that Gradle interleaves tasks of different projects; Maven builds module by module.", { output: z.string().describe("What Gradle printed") }, async (a) => {
+    const g = leerPlanGradle(a.output);
+    if (g.tipo === "vacio")
+        return err("No Gradle task found: expected lines like \":compileJava SKIPPED\" (--dry-run) or \"> Task :compileJava\".");
+    return ok({
+        kind: g.tipo,
+        result: g.resultado || "unknown",
+        projects: g.proyectos,
+        tasks: g.tareas.map(t => ({ task: t.ruta, project: t.proyecto, status: t.estado === "ejecutada" ? "executed" : t.estado, ...(t.maven ? { maven: t.maven } : {}), ...(t.agrupa ? { groupsOthersOnly: true } : {}) })),
     });
 });
 server.tool("dockerfile_cache", "Say which LAYERS of a Dockerfile would be rebuilt when given files change, and which come from cache. Dockerfile linters spot suspicious ordering patterns; this SIMULATES invalidation, which is a different thing: it needs to know which files exist and which changed. In Docker, when one layer is invalidated so is EVERY layer after it, so a `COPY . .` before the `RUN` that installs dependencies condemns you to reinstalling all of them every time you touch a line of code \u2014 and that shows up here as numbers. Respects the `.dockerignore`: what stays out of the context cannot invalidate anything.", {
@@ -4009,6 +4143,20 @@ server.tool("k8s_manifest_check", "Will the cluster accept these Kubernetes mani
         note: "\"no-schema\" means the kind is not in the official API (e.g. a CRD) and was NOT validated.",
     });
 });
+const MES = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, "YYYY-MM");
+server.registerTool("pension_base", {
+    title: "Spanish retirement pension: regulatory base and percentage",
+    description: "Compute the regulatory base (base reguladora) of a Spanish contributory retirement pension (General Scheme) from the monthly contribution bases, the way the law does it and models usually get wrong: BOTH systems while they coexist (the new one with its 2026-2036 calendar and the previous 300-month one, the higher wins), gaps filled with the minimum base (48 months at 100 %, then 50 %; improved for women under DT 41.\u00AA), the older bases updated with the INE CPI, and the best months chosen. With the days contributed it also gives the percentage and the monthly pension. Each warning says what was assumed. It explains how the number is made; the official simulator of the Social Security has the full record.",
+    inputSchema: {
+        retirementMonth: MES.describe("Month of retirement (the hechoCausante), YYYY-MM"),
+        bases: z.record(z.string().regex(/^\d{4}-\d{2}$/), z.number().min(0).nullable()).refine((b) => Object.keys(b).length > 0, "At least one month")
+            .describe("Contribution base per month from the Informe de bases, summing employers: {\"2024-05\": 2150.4}. A month with NO contribution is null (a gap); a month left out is unknown and counts as 0"),
+        untilRetirement: z.enum(["last-base", "no-contributions"]).default("last-base")
+            .describe("From the month after the last base given to the retirement: keep contributing at the last base, or no contributions (gaps)"),
+        daysContributed: z.number().int().min(0).max(40000).optional().describe("Days contributed (Informe de vida laboral) up to the last base given: adds the percentage and the monthly pension"),
+        improvedGaps: z.boolean().default(false).describe("Improved gap filling of DT 41.\u00AA (women, while the gender gap in pensions is above 5 %)"),
+    },
+}, (a) => ok(pensionBase(a)));
 const dominioDe = cuadrarCatalogo(REGISTRADAS.keys());
 for (const [nombre, handle] of REGISTRADAS)
     handle.update({ annotations: anotacionesDe(nombre) });
@@ -4019,6 +4167,33 @@ if (pedidos) {
         if (!activos.has(dominioDe.get(nombre)!))
             handle.remove();
     }
+}
+const PASOS_WRITE_PROMPT = (purpose: string, kind: "system" | "task") => `Write a ${kind === "task" ? "task brief for an AI agent" : "system prompt"} for this purpose: ${purpose}
+
+Work in this order:
+
+1. Find what is missing. Before drafting, make sure you know: the goal, who or what will read the output, the inputs available${kind === "task" ? ", which files, folders or docs matter, how the result can be verified (a test, a command, a way to reproduce), and what is out of scope" : ", the exact output format, and what to do when information is missing"}. If any of these is unclear and you cannot infer it from the conversation, ask me, in at most three short questions, and wait.
+
+2. Draft it. ${kind === "task"
+    ? "Include: the goal; the context (paths, links); the constraints and what not to touch; a checkable definition of done; how to verify it; what to hand back; and when to stop and ask."
+    : "Include: the goal; the context; the rules, each with its reason; the output contract with an example; what to do when the model does not know; a definition of done; and two or three varied examples if the behaviour needs showing."} Separate the parts with Markdown headings or XML tags. Use a role only to set tone, focus or audience: an expert persona does not make a model more accurate. Write instructions as what to do, in a normal tone, without emphatic capitals.
+
+3. Review it with the prompt_review tool, kind "${kind}". Fix every error and warning. For each suggestion, either apply it or keep the text and say why.
+
+4. Check what you are relying on. For any prompting technique you are applying from memory, call practice_check with the topic and your knowledge cutoff as since; for the practices that prompt_review cites, call practice_check with that id. Follow what the register says when it differs from what you remember.
+
+5. Deliver: the final prompt in a single code block, then a short list of what the review flagged and what you changed, and any question that is still open.`;
+if (!pedidos || pedidos.includes("ai")) {
+    server.registerPrompt("write_prompt", {
+        title: "Write a prompt following current practice",
+        description: "Write a system prompt or a task brief for an agent with a fixed method: ask what is missing, draft, review it with prompt_review, check the techniques used with practice_check, and deliver it with what changed.",
+        argsSchema: z.object({
+            purpose: z.string().min(3).max(2000).describe("What the prompt is for: the assistant or the task, and for whom"),
+            kind: z.enum(["system", "task"]).optional().describe("\"system\" (default): a system prompt. \"task\": a one-off brief for an agent"),
+        }),
+    }, ({ purpose, kind }) => ({
+        messages: [{ role: "user" as const, content: { type: "text" as const, text: PASOS_WRITE_PROMPT(purpose, kind ?? "system") } }],
+    }));
 }
 const canalRoto = (e: unknown) => ["EPIPE", "ERR_STREAM_DESTROYED", "ERR_STREAM_WRITE_AFTER_END", "ECONNRESET"].includes((e as {
     code?: string;

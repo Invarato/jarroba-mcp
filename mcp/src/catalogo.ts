@@ -1,4 +1,4 @@
-export type Dominio = "core" | "calc" | "api" | "diagram" | "kg" | "db" | "ai" | "logs" | "queue" | "project" | "tests" | "chem" | "chip" | "access" | "archsim" | "security" | "experiments";
+export type Dominio = "core" | "calc" | "api" | "diagram" | "kg" | "db" | "ai" | "logs" | "queue" | "project" | "tests" | "chem" | "chip" | "access" | "archsim" | "security" | "experiments" | "payroll";
 export const DOMINIOS: Record<Dominio, {
     titulo: string;
     tools: readonly string[];
@@ -111,7 +111,9 @@ export const DOMINIOS: Record<Dominio, {
             "ignore_check",
             "dockerfile_cache",
             "make_log_diff",
-            "dora_metrics"
+            "dora_metrics",
+            "maven_plan",
+            "gradle_plan"
         ] },
     tests: { titulo: "auditor\u00EDa de tests", tools: [
             "test_audit",
@@ -174,6 +176,7 @@ export const DOMINIOS: Record<Dominio, {
             "abtest_sample_size",
             "abtest_sequential"
         ] },
+    payroll: { titulo: "n\u00F3minas y pensiones (Espa\u00F1a)", tools: ["pension_base"] },
 };
 export const NO_SOLO_LECTURA = new Set(["diagram_render", "diagram_new", "diagram_add"]);
 export const DESTRUCTIVAS = new Set(["diagram_render"]);

@@ -7,18 +7,18 @@
     "source": "github",
     "subfolder": "mcp/packages/tests"
   },
-  "version": "0.2.0",
+  "version": "0.3.0",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "@jarroba/mcp-tests",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "transport": {
         "type": "stdio"
       },
       "environmentVariables": [
         {
-          "description": "Which tool domains to publish, comma-separated. Defaults to what this package is for. Valid: core, calc, diagram, kg, db, ai, logs, queue, project, tests, api, chip, chem, access, archsim, security, experiments. Fewer domains means less of your context window spent on tool definitions.",
+          "description": "Which tool domains to publish, comma-separated. Defaults to what this package is for. Valid: core, calc, diagram, kg, db, ai, logs, queue, project, tests, api, chip, chem, access, archsim, security, experiments, payroll. Fewer domains means less of your context window spent on tool definitions.",
           "isRequired": false,
           "format": "string",
           "isSecret": false,

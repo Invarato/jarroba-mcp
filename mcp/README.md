@@ -10,12 +10,12 @@ second implementation to drift.
 
 ## Four packages, because context is not free
 
-Loading all 137 tools costs **~51,700 tokens of context** before you type anything, in a client that
+Loading all 140 tools costs **~53,800 tokens of context** before you type anything, in a client that
 loads every tool definition up front (Cursor and most others; Claude Code with Tool Search turned off).
 That is Claude Code's own count: measured with `/context` on 0.1.7 (120 tools: 41,996 tokens) and
 extrapolated with `npm run tokens`. Claude Code's **Tool Search**, on by default, only loads a definition
 when it is about to be used: there the whole catalogue costs a few hundred tokens. GitHub's official MCP
-server is the usual example of the problem; Cursor caps out around 40 tools. A catalogue of 137 is not "more
+server is the usual example of the problem; Cursor caps out around 40 tools. A catalogue of 140 is not "more
 complete", it is more expensive — and the model also *chooses* worse, because the usual failure of a
 big catalogue is not a missing tool, it is calling the one next to it.
 
@@ -26,12 +26,12 @@ So pick the one you actually want:
 | **`@jarroba/mcp-logs`** | 12 | **~5,500 tok** | Reading logs that do not fit in your context |
 | **`@jarroba/mcp-tests`** | 4 | **~1,700 tok** | Auditing tests — including your own |
 | **`@jarroba/mcp-calc`** | 5 | **~1,600 tok** | Maths with units, equations and sheets |
-| `@jarroba/mcp` | 137 | ~51,700 tok | Everything |
+| `@jarroba/mcp` | 140 | ~53,800 tok | Everything |
 
 All four come from the same source. The filter is the `JARROBA_MCP_DOMAINS` environment variable and
 each binary sets its own as a **default**, not a cage: install `mcp-logs` and add
 `JARROBA_MCP_DOMAINS=logs,core` if you want the general-purpose tools too. Domains: `core`,
-`calc`, `diagram`, `kg`, `db`, `ai`, `logs`, `queue`, `project`, `tests`, `api`, `chip`, `chem`, `access`, `archsim`, `security`, `experiments`.
+`calc`, `diagram`, `kg`, `db`, `ai`, `logs`, `queue`, `project`, `tests`, `api`, `chip`, `chem`, `access`, `archsim`, `security`, `experiments`, `payroll`.
 
 ### A newer complement, not a replacement: Tool Search
 
@@ -161,13 +161,16 @@ that changed after approval) — without spending a model call. And before recom
 training, `practice_check` tells it whether that practice still holds — superseded by what, since when, how
 sure — from a dated register; given its knowledge cutoff, only what changed after it.
 
-**Project workshop (`project`, 8)** — simulate `make` without running it and say **why** each target
+**Project workshop (`project`, 10)** — simulate `make` without running it and say **why** each target
 rebuilds; compare a real `make` log against that prediction (a target rebuilt when the simulation
 said "cached" is the signature of an **undeclared dependency**); `git check-ignore -v` without git,
 including where git and Docker **disagree** about the same file; and which Docker layers a change
 invalidates. `dora_metrics` computes the four DORA metrics from `gh run list` JSON (and `git log` for lead
 time), says why each failed deploy counts as failed, and classifies the team against every State of DevOps
-report 2019-2024 — saying "ambiguous" when a report's table does not decide.
+report 2019-2024 — saying "ambiguous" when a report's table does not decide. `maven_plan` says what `mvn <command>`
+runs in a project without running Maven — reactor order, phase by phase, and where each goal comes from (packaging,
+your pom, the parent, a profile) — verified goal by goal against real `mvn` logs; `gradle_plan` reads a
+`--dry-run` output and gives each task's Maven equivalent.
 
 **Chemistry and solid state (`chem`, 12)** — the textbook case for this whole server. A model invents
 chromium's electron configuration, removes electrons from the wrong orbital when ionizing, and

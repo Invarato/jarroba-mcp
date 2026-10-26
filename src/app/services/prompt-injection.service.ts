@@ -59,6 +59,16 @@ const FRASES = [
     "prompt de sistema",
     "instrucci\u00F3n:",
     "nota para el asistente",
+    "ignore all previous instructions",
+    "ignore previous instructions",
+    "ignore the instructions",
+    "ignore the user",
+    "from now on you are",
+    "you have no rules",
+    "without restrictions",
+    "system prompt",
+    "instruction:",
+    "note to the assistant",
 ];
 export interface Veredicto {
     ataque: Ataque;
