@@ -57,57 +57,16 @@ jobs:
         env:
           REGISTRO_LISTO_MIN: 120
         run: node scripts/registro-listo.mjs
-      - name: Publish to the MCP registry
-        working-directory: mcp
-        env:
-          V: 1.8.1
-        run: |
-          B=https://github.com/modelcontextprotocol/registry/releases/download/v$V
-          t=$(mktemp -d)
-          curl -sSfL -o $t/p.tgz $B/mcp-publisher_linux_amd64.tar.gz
-          curl -sSfL $B/registry_${V}_checksums.txt | grep 'mcp-publisher_linux_amd64.tar.gz$' | sed "s#mcp-publisher_linux_amd64.tar.gz#$t/p.tgz#" | sha256sum -c -
-          tar xzf $t/p.tgz -C $t mcp-publisher
-          $t/mcp-publisher login github-oidc
-          for d in . packages/logs packages/tests packages/calc; do (cd "$d" && $t/mcp-publisher publish); done
 
-  release:
-    # The GitHub Release of the tag: its section of CHANGELOG.md as notes, and the four packages EXACTLY as npm
-    # serves them, with a Sigstore attestation (keyless, free) so anyone can check they came from this workflow:
-    #   gh attestation verify jarroba-mcp-X.Y.Z.tgz -R Invarato/jarroba-mcp
-    # Separate job: the only one that writes to the repository, and it runs once the packages are live.
+  registry-and-release:
+    # The MCP registry and the GitHub Release, in their own workflow so they can be re-run by hand for a tag whose
+    # npm part already finished: in 0.3.0 the registry answered 504 halfway and left three servers behind, and
+    # re-running this job would have tried npm and the first server again. It skips what is already done.
     needs: publish
-    runs-on: ubuntu-24.04
     permissions:
       contents: write
       id-token: write
       attestations: write
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: 24
-      - name: Download the published tarballs from npm (the bytes users install)
-        env:
-          TAG: ${{ github.ref_name }}
-        run: |
-          v="${TAG#v}"
-          mkdir release
-          for p in mcp mcp-logs mcp-tests mcp-calc; do npm pack "@jarroba/$p@$v" --pack-destination release --silent; done
-          ls -l release
-      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
-        id: attest
-        with:
-          subject-path: release/*.tgz
-      - name: Create the release from CHANGELOG.md, with the packages and their attestation
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.ref_name }}
-          BUNDLE: ${{ steps.attest.outputs.bundle-path }}
-        run: |
-          v="${TAG#v}"
-          awk -v v="$v" '$0 ~ "^## "v" " {f=1; next} /^## / {f=0} f' CHANGELOG.md > notes.md
-          [ -s notes.md ] || { echo "::error::CHANGELOG.md has no section for $v"; exit 1; }
-          cp "$BUNDLE" "release/jarroba-mcp-$v.sigstore.json"
-          gh release create "$TAG" --verify-tag --title "$TAG" --notes-file notes.md release/*
+    uses: ./.github/workflows/registry-and-release.yml
+    with:
+      tag: ${{ github.ref_name }}

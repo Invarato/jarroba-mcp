@@ -24,7 +24,7 @@ export const NO_CORRE_EN: Record<MotivoNoEjecuta, string> = {
     "fase-none": "switched off on purpose with <phase>none</phase>",
     "fase-inexistente": "bound to a phase that does not exist; Maven 3 ignores it silently (a typo?)",
     "sin-fase": "neither the pom nor the plugin gives it a phase: it only runs when invoked by hand",
-    "plugin-desconocido": "no <phase> and the plugin is not in our data: its phase is unknown",
+    "plugin-desconocido": "no <phase> and the plugin is not in our data: its phase is unknown (pass `log` with a real mvn output to locate it)",
     "goal-desconocido": "this goal does not exist in the latest version of the plugin",
 };
 export const PERFIL_EN: Record<PerfilEvaluado["porque"], string> = {

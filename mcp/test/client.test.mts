@@ -615,6 +615,8 @@ check("dockerfile_cache respeta el .dockerignore: fuera del contexto no invalida
     check("maven_plan: repackage sale del parent, en ingl\u00E9s", web?.goals?.some((g: any) => g.goal === "spring-boot:repackage" && /^parent org\.springframework\.boot:spring-boot-starter-parent 3\.5\.6/.test(g.from)), web?.goals);
     check("maven_plan: -DskipTests se dice en surefire", web?.goals?.some((g: any) => g.goal === "surefire:test" && g.runsButSkips === "-DskipTests"), web?.goals);
     check("maven_plan: el plugin duplicado rompe el build desde 3.10", mp?.pomReview?.some((h: any) => h.severity === "breaks-build" && /declared twice/.test(h.message)), mp?.pomReview);
+    const conLog = (await call("maven_plan", { project: dir, command: "mvn package -DskipTests", log: "[INFO] --- clean:3.5.0:clean (default-clean) @ raiz ---\n[INFO] --- raro:1.0:hazlo (x) @ web ---\n[INFO] BUILD SUCCESS" })).o;
+    check("maven_plan con log: dice lo que corri\u00F3 y el plan no ten\u00EDa", conLog?.comparedWithLog?.modules?.some((m: any) => m.module === "web" && m.ranButNotInPlan.some((x: any) => x.goal === "raro:hazlo (x)")), conLog?.comparedWithLog);
     const sinPom = await call("maven_plan", {});
     check("maven_plan sin pom: error claro", sinPom.isError && /pom/.test(sinPom.text ?? ""), sinPom);
     const gp = (await call("gradle_plan", { output: ":core:compileJava SKIPPED\n:app:compileJava SKIPPED\n:core:jar SKIPPED" })).o;

@@ -1,0 +1,120 @@
+name: registry-and-release
+# What happens once the packages are live on npm: publish their server.json to the MCP registry, then create the
+# GitHub Release with the packages exactly as npm serves them and a Sigstore attestation.
+# Called by `publish` after npm. Can also be run by hand for a tag whose npm part already finished (in 0.3.0 the
+# registry answered 504 halfway and left three servers behind): every step skips what is already done.
+on:
+  workflow_call:
+    inputs:
+      tag:
+        type: string
+        required: true
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Version tag already published on npm, e.g. v0.3.0'
+        type: string
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: registry-and-release
+  cancel-in-progress: false
+jobs:
+  registry:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Tag format
+        env:
+          TAG: ${{ inputs.tag }}
+        run: '[[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::not a version tag: $TAG"; exit 1; }'
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.tag }}
+          persist-credentials: false
+      - name: Every package is live on npm with this version
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          for p in mcp mcp-logs mcp-tests mcp-calc; do
+            npm view "@jarroba/$p@${TAG#v}" version >/dev/null || { echo "::error::@jarroba/$p@${TAG#v} is not on npm yet"; exit 1; }
+          done
+      - name: Publish to the MCP registry (only what is missing; retries on a 5xx)
+        working-directory: mcp
+        env:
+          V: 1.8.1
+        run: |
+          B=https://github.com/modelcontextprotocol/registry/releases/download/v$V
+          t=$(mktemp -d)
+          curl -sSfL -o $t/p.tgz $B/mcp-publisher_linux_amd64.tar.gz
+          curl -sSfL $B/registry_${V}_checksums.txt | grep 'mcp-publisher_linux_amd64.tar.gz$' | sed "s#mcp-publisher_linux_amd64.tar.gz#$t/p.tgz#" | sha256sum -c -
+          tar xzf $t/p.tgz -C $t mcp-publisher
+          $t/mcp-publisher login github-oidc
+          for d in . packages/logs packages/tests packages/calc; do
+            n=$(node -p "require('./$d/server.json').name"); v=$(node -p "require('./$d/server.json').version")
+            url="https://registry.modelcontextprotocol.io/v0/servers/$(node -p "encodeURIComponent('$n')")/versions/$v"
+            for i in 1 2 3 4 5; do
+              # A 504 may hide a publish that DID go through: look before every attempt.
+              if [ "$(curl -s -o /dev/null -w '%{http_code}' "$url")" = 200 ]; then echo "$n $v is in the registry"; continue 2; fi
+              (cd "$d" && $t/mcp-publisher publish) && continue 2
+              echo "::warning::$n $v: attempt $i failed, retrying in $((i * 20)) s"; sleep $((i * 20))
+            done
+            echo "::error::$n $v could not be published to the registry"; exit 1
+          done
+
+  release:
+    # The GitHub Release of the tag: its section of CHANGELOG.md as notes, and the four packages EXACTLY as npm
+    # serves them, with a Sigstore attestation (keyless, free) so anyone can check they came from this workflow:
+    #   gh attestation verify jarroba-mcp-X.Y.Z.tgz -R Invarato/jarroba-mcp
+    # Separate job: the only one that writes to the repository.
+    needs: registry
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.tag }}
+          persist-credentials: false
+      - name: Already released?
+        id: existe
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then echo "si=1" >> "$GITHUB_OUTPUT"; echo "$TAG is already released"; fi
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        if: steps.existe.outputs.si != '1'
+        with:
+          node-version: 24
+      - name: Download the published tarballs from npm (the bytes users install)
+        if: steps.existe.outputs.si != '1'
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          v="${TAG#v}"
+          mkdir release
+          for p in mcp mcp-logs mcp-tests mcp-calc; do npm pack "@jarroba/$p@$v" --pack-destination release --silent; done
+          ls -l release
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        if: steps.existe.outputs.si != '1'
+        id: attest
+        with:
+          subject-path: release/*.tgz
+      - name: Create the release from CHANGELOG.md, with the packages and their attestation
+        if: steps.existe.outputs.si != '1'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+          BUNDLE: ${{ steps.attest.outputs.bundle-path }}
+        run: |
+          v="${TAG#v}"
+          awk -v v="$v" '$0 ~ "^## "v" " {f=1; next} /^## / {f=0} f' CHANGELOG.md > notes.md
+          [ -s notes.md ] || { echo "::error::CHANGELOG.md has no section for $v"; exit 1; }
+          cp "$BUNDLE" "release/jarroba-mcp-$v.sigstore.json"
+          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --title "$TAG" --notes-file notes.md release/*

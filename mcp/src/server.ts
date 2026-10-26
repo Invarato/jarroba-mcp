@@ -112,6 +112,7 @@ import { avisoDfEn, diagMkEn, carreraEn, hallazgoMkEn, divergenciaEn, avisoIgnor
 import { planMaven, type PasoPlan } from "../../src/app/services/maven-plan";
 import { revisar as revisarPom } from "../../src/app/services/maven-revision";
 import { leerPlanGradle } from "../../src/app/services/gradle-plan";
+import { compararConLog } from "../../src/app/services/maven-log";
 import { AVISO_MAVEN_EN, NO_CORRE_EN, PERFIL_EN, REVISION_EN, origenEn } from "./maven-en";
 import { PIPELINE_AZURE, crearMundoAzure } from "../../src/app/services/accesos-azure";
 import { PIPELINE_AWS, crearMundoAws } from "../../src/app/services/accesos-aws";
@@ -2301,6 +2302,7 @@ server.tool("maven_plan", "What `mvn <command>` would actually run in THIS proje
     command: z.string().optional().describe("The command, e.g. \"mvn -pl api -am clean install -DskipTests -Pprod\". Default: \"mvn clean package\""),
     maven: z.enum(["3", "4"]).optional().describe("Maven version to simulate: 3 (3.10) or 4 (4.0). Default 3"),
     jdk: z.number().int().optional().describe("JDK major version, for <activation><jdk> profiles. Default 21"),
+    log: z.string().optional().describe("Optional: what a real `mvn` run of the same command printed. The plan is checked against it goal by goal, and goals the plan could not place (unknown plugins) get located"),
 }, async (a) => {
     let poms: {
         ruta: string;
@@ -2346,6 +2348,23 @@ server.tool("maven_plan", "What `mvn <command>` would actually run in THIS proje
         differsInOtherMavenVersion: difiere,
         pomReview: rev.hallazgos.map(h => ({ severity: h.gravedad === "rompe" ? "breaks-build" : h.gravedad === "cambia" ? "changes-build" : "improvement", pom: h.ruta, line: h.linea, message: REVISION_EN[h.regla](h.datos) })),
         pluginVersionsNotReviewed: rev.sinSaberVersiones,
+        ...(a.log ? { comparedWithLog: (() => {
+                const c = compararConLog(plan, a.log!);
+                if (c.vacio)
+                    return { error: "No goal line found in the log: expected lines like \"[INFO] --- jar:3.4.2:jar (default-jar) @ my-module ---\"." };
+                return {
+                    buildResult: c.resultado || "unknown",
+                    modules: c.modulos.map(m => ({
+                        module: m.artefacto,
+                        matchesPlan: m.igual,
+                        sameGoalsOtherOrder: m.otroOrden,
+                        ranButNotInPlan: m.soloEnLog.map(x => ({ goal: x.clave, version: x.version, after: x.despuesDe || null, wasUnknownToPlan: x.desconocido })),
+                        inPlanButDidNotRun: m.soloEnPlan,
+                    })),
+                    modulesOnlyInLog: c.soloEnLog,
+                    modulesOnlyInPlan: c.soloEnPlan,
+                };
+            })() } : {}),
     });
 });
 server.tool("gradle_plan", "Read the output of `./gradlew <tasks> --dry-run` (or of a real build with --console=plain) and return the task order with each task's project, status (UP-TO-DATE, FROM-CACHE, NO-SOURCE, FAILED\u2026) and its Maven equivalent. A build.gradle is code, so the task graph cannot be known without running Gradle: --dry-run computes it without executing anything. Note that Gradle interleaves tasks of different projects; Maven builds module by module.", { output: z.string().describe("What Gradle printed") }, async (a) => {
