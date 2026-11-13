@@ -3,6 +3,36 @@
 All four packages (`@jarroba/mcp`, `@jarroba/mcp-logs`, `@jarroba/mcp-tests`, `@jarroba/mcp-calc`) share one
 version number. Each release is built and published from this repository's CI, with npm provenance.
 
+## 0.3.1 — 2026-11-13
+
+- New tool `forecast` (new domain `forecast`): a time series forecast with intervals, where Holt-Winters, automatic
+  ARIMA/SARIMA and the two naive baselines are all backtested with a rolling origin — it says whether any model really
+  beats the naive forecast and how much of the promised interval coverage was achieved, plus anomalies and a likely
+  level shift. Daily series can take official holidays (Spain by region, other countries) or your own dates.
+- New tools `llm_memory` (does a language model fit a GPU: weights by quantization, KV cache, the longest context that
+  fits and the decode speed ceiling; mixture-of-experts aware) and `semantic_cache_threshold` (a semantic cache's
+  similarity threshold from question pairs measured with your own embedding model, with a link that loads the curve
+  into the Architecture Simulator's LLM gateway).
+- `archsim_simulate` reports the LLM gateway's wrong answers served from a semantic cache and the traffic sent to the
+  fallback model, when there is any.
+- New tool `code_smells`: eight code smells in JavaScript or TypeScript (long function, long parameter list,
+  conditional on type, message chain, large class, feature envy, duplicated code, global instance), each with its lines,
+  Fowler's refactoring, the design pattern that usually resolves it and a `practice_check` entry on when not to refactor.
+  Tolerates half-written code and reads by path.
+- New tools for business in Spain: `work_calendar` (the yearly work calendar of a workplace with the BOE public
+  holidays, squared with the annual hours of the collective agreement), `shift_validate` (a pasted rota checked against
+  the Workers' Statute: rest between shifts, weekly rest, daily hours, night work) and `cash_forecast` (13-week cash
+  forecast from a Norma 43 or CSV bank statement; reads it from a file so it never enters the conversation).
+- New tools `archsim_from_terraform` (Terraform / OpenTofu turned into an architecture with each resource's cloud
+  technology and price, simulated) and `archsim_from_pipeline` (a GitHub Actions, Azure Pipelines, GitLab CI or
+  declarative Jenkins pipeline simulated as CI/CD: lead time, waiting for a runner, cost, DORA level).
+- `work_calendar`: `region` is optional (national holidays only); `shift_validate`: per-person contracted hours and
+  minors (`people`), with the rules for minors and the yearly overtime cap.
+- The domain `payroll` becomes `business` (it now holds those three and `pension_base`); `payroll` still works as an
+  alias in `JARROBA_MCP_DOMAINS`.
+- The database engines load 0.02 MB instead of 0.52 MB (they no longer pull in Angular).
+- MCP TypeScript SDK 2.4.0 (was 2.3.1). The tools that already existed announce and answer exactly as in 0.3.0.
+
 ## 0.3.0 — 2026-10-26
 
 - `prompt_review` understands prompts in English (a prompt that did say what to do when the model does not know was

@@ -58,7 +58,7 @@ export interface ModelProfile {
 }
 export const TYPICAL_TOKENS = { input: 1500, output: 500 } as const;
 const model = (id: string, label: string, latencyMs: number, inPer1M: number, outPer1M: number): ModelProfile => ({ id, label, latencyMs, inPer1M, outPer1M, costPerReq: (TYPICAL_TOKENS.input * inPer1M + TYPICAL_TOKENS.output * outPer1M) / 1000000 });
-export const MODEL_PRICES_FROM = "2026-10-15.json";
+export const MODEL_PRICES_FROM = "2026-11-11.json";
 export const MODEL_PROFILES: ModelProfile[] = [
     model("gemini-3-5-flash-lite", "Gemini 3.5 Flash-Lite (r\u00E1pido/barato)", 300, 0.3, 2.5),
     model("gpt-6-luna", "GPT-6 Luna (r\u00E1pido/barato)", 400, 0.1, 0.5),
@@ -141,12 +141,13 @@ export const AI_CATALOG: Record<AiNodeKind, AiNodeMeta> = {
             { key: "tpm_limit", label: "L\u00EDmite del proveedor (tokens/min)", type: "number", help: "La TPM (no la RPM) suele ser el techo real. 0 = sin l\u00EDmite." },
             { key: "retry_policy", label: "Pol\u00EDtica de reintento", type: "select", help: "Ante un 429: el backoff reparte los reintentos en el tiempo (absorbe un pico breve) y cobra la espera en latencia; si el l\u00EDmite se pasa de forma sostenida, los reintentos se multiplican igual. Lo que los acota es el circuit breaker (presupuesto del 10 %).", options: [{ value: "none", label: "Sin reintentos" }, { value: "immediate", label: "Inmediato (peligroso)" }, { value: "backoff", label: "Backoff + jitter" }] },
             { key: "num_retries", label: "Reintentos por petici\u00F3n", type: "number", help: "Cu\u00E1ntas veces se reintenta lo que el proveedor rechaza (num_retries de LiteLLM). Cada rechazo cuenta para tu l\u00EDmite." },
-            { key: "fallback_model", label: "Modelo de respaldo (failover)", type: "select", help: "Si marcas el router \u00ABca\u00EDdo\u00BB, las peticiones van aqu\u00ED.", options: MODEL_PROFILES.map(m => ({ value: m.id, label: m.label })) },
+            { key: "fallback_model", label: "Modelo de respaldo (failover)", type: "select", help: "Recibe lo que el principal no atiende: si cae y, seg\u00FAn \u00ABCu\u00E1ndo usar el respaldo\u00BB, tambi\u00E9n lo que no cabe.", options: MODEL_PROFILES.map(m => ({ value: m.id, label: m.label })) },
+            { key: "fallback_on", label: "Cu\u00E1ndo usar el respaldo", type: "select", help: "Como los fallbacks de LiteLLM, que saltan con el 429 tras agotar los reintentos: lo que no cabe en el principal (su TPM o su concurrencia) va al respaldo, con la latencia y el coste de ese modelo. \u00ABSolo si cae\u00BB lo deja para la ca\u00EDda.", options: [{ value: "down", label: "Solo si el principal cae" }, { value: "overflow", label: "Si cae o se satura (429)" }] },
             { key: "strategy", label: "Estrategia", type: "select", options: [{ value: "cost", label: "Coste (cascada)" }, { value: "latency", label: "Latencia" }, { value: "semantic", label: "Sem\u00E1ntica / clasificador" }, { value: "least_busy", label: "Menos ocupado" }, { value: "simple", label: "Simple" }] },
             { key: "models", label: "Modelos / niveles", type: "tags", help: "p.ej. tier-fast, tier-strong", placeholder: "gpt-mini, gpt-strong" },
             { key: "budget_tokens", label: "Budget de tokens", type: "number" },
         ],
-        defaults: { model: "gpt-6-1-sol", cache_hit: 0, escalation: 0, strong_model: "claude-opus-5-5", tpm_limit: 0, retry_policy: "backoff", num_retries: 2, fallback_model: "gpt-6-luna", strategy: "cost", models: [], budget_tokens: 0 },
+        defaults: { model: "gpt-6-1-sol", cache_hit: 0, escalation: 0, strong_model: "claude-opus-5-5", tpm_limit: 0, retry_policy: "backoff", num_retries: 2, fallback_model: "gpt-6-luna", fallback_on: "down", strategy: "cost", models: [], budget_tokens: 0 },
     },
     ai_tool: {
         label: "Herramienta / MCP",
@@ -264,15 +265,17 @@ export const AI_CATALOG: Record<AiNodeKind, AiNodeMeta> = {
         group: "Seguridad IA",
         color: C.gate,
         icon: "\uD83D\uDEAA",
-        blurb: "Gateway tipo APIM: rate-limit, budget de tokens y filtros de prompt/palabras.",
+        blurb: "Gateway tipo APIM: l\u00EDmites de peticiones y de tokens, cach\u00E9 (simple o sem\u00E1ntica) y filtros de prompt.",
         fields: [
-            { key: "rate_limit", label: "Rate limit (rpm)", type: "number" },
-            { key: "token_budget", label: "Budget de tokens", type: "number" },
+            { key: "rate_limit", label: "L\u00EDmite de peticiones (por minuto)", type: "number", help: "Lo que pasa del l\u00EDmite se rechaza al momento (429), sin cola. 0 = sin l\u00EDmite." },
+            { key: "token_budget", label: "L\u00EDmite de tokens (por minuto)", type: "number", help: "Como el llm-token-limit de Azure API Management: tokens por minuto, estimados a 500 por llamada al LLM. Lo que pasa se rechaza (429). 0 = sin l\u00EDmite." },
             { key: "prompt_filter", label: "Filtro de prompt (inyecci\u00F3n)", type: "bool" },
             { key: "word_filters", label: "Filtros de palabras", type: "tags", placeholder: "competidor, secreto\u2026" },
-            { key: "cache", label: "Cach\u00E9", type: "select", options: [{ value: "none", label: "Ninguna" }, { value: "simple", label: "Simple" }, { value: "semantic", label: "Sem\u00E1ntica" }] },
+            { key: "cache", label: "Cach\u00E9", type: "select", help: "Simple: solo acierta la misma pregunta exacta. Sem\u00E1ntica: tambi\u00E9n las parecidas (por embeddings y un umbral de similitud), con m\u00E1s aciertos y algunos equivocados.", options: [{ value: "none", label: "Ninguna" }, { value: "simple", label: "Simple" }, { value: "semantic", label: "Sem\u00E1ntica" }] },
+            { key: "cache_hit", label: "Aciertos de cach\u00E9 (%)", type: "number", help: "Las peticiones que acierta se responden aqu\u00ED: no llegan al LLM ni pagan tokens (0\u2013100)." },
+            { key: "cache_wrong", label: "De los aciertos, equivocados (%)", type: "number", help: "Solo con cach\u00E9 sem\u00E1ntica: aciertos con una pregunta parecida pero distinta (\u00AB\u00BFcu\u00E1nto cuesta el env\u00EDo?\u00BB y \u00AB\u00BFcu\u00E1nto cuesta la devoluci\u00F3n?\u00BB), que reciben la respuesta de la otra. Depende del umbral y de tus preguntas, y no hay una cifra general: m\u00EDdelo con las tuyas. En 0, el ahorro que ves no descuenta ning\u00FAn error." },
         ],
-        defaults: { rate_limit: 0, token_budget: 0, prompt_filter: true, word_filters: [], cache: "none" },
+        defaults: { rate_limit: 0, token_budget: 0, prompt_filter: true, word_filters: [], cache: "none", cache_hit: 0, cache_wrong: 0 },
     },
     ai_observability: {
         label: "Observabilidad",

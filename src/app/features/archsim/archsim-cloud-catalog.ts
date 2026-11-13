@@ -19,7 +19,7 @@ export interface CloudTech {
 }
 const PRICED = "2026-08";
 export const AVG_RESP_BYTES = 60000;
-export const FX_FROM = { capture: "2026-10-15.json", date: "2026-10-14", usdPerEur: 1.1195 } as const;
+export const FX_FROM = { capture: "2026-11-07.json", date: "2026-11-06", usdPerEur: 1.1165 } as const;
 export const FX: Record<Currency, {
     rate: number;
     symbol: string;

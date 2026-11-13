@@ -49,5 +49,5 @@ has a `hash_text` and a `cidr_contains` tool; otherwise, change the three calls 
 ```
 
 Python dependencies are pinned with hashes (`requirements.txt`, generated from `requirements.in` with
-`pip-compile --generate-hashes`). Tested with Node 24 and Python 3.12 (CI) and 3.13, `@modelcontextprotocol/server` 2.3.1,
+`pip-compile --generate-hashes`). Tested with Node 24 and Python 3.12 (CI) and 3.13, `@modelcontextprotocol/server` 2.4.0,
 zod 4.6.7 and `mcp` 2.3.0. MIT licence, like the rest of this repository.

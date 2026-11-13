@@ -1,6 +1,9 @@
 interface EstadoIncrustado {
     part: string | null;
     theme: string | null;
+    link?: string | null;
+    tabs?: string | null;
+    tab?: boolean;
 }
 const estado = (): EstadoIncrustado | null => typeof window === "undefined" ? null : ((window as unknown as {
     __jtIncrustado?: EstadoIncrustado;
@@ -11,7 +14,27 @@ export function temaIncrustado(): "dark" | "light" | null {
     const t = estado()?.theme;
     return t === "dark" || t === "light" ? t : null;
 }
-const DEL_MARCO = ["embed", "part", "theme"];
+export function enlaceVisible(): boolean { return estado()?.link !== "0"; }
+export function unaPestana(): boolean { const e = estado(); return !!e?.tab && e.tabs !== "1"; }
+export const DEL_MARCO = ["embed", "part", "theme", "link", "tabs"];
+export function direccionIncrustada(enlaceTool: string, actual: string): string | null {
+    try {
+        const t = new URL(enlaceTool, actual);
+        const a = new URL(actual);
+        if (t.origin !== a.origin || t.pathname !== a.pathname)
+            return null;
+        for (const p of DEL_MARCO) {
+            t.searchParams.delete(p);
+            const v = a.searchParams.get(p);
+            if (v !== null)
+                t.searchParams.set(p, v);
+        }
+        return t.toString();
+    }
+    catch {
+        return null;
+    }
+}
 export function enlaceCompleto(href: string): string {
     try {
         const u = new URL(href);

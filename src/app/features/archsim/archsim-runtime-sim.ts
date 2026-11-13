@@ -3,7 +3,7 @@ import { isAiKind } from "./archsim-ai";
 import { isCicdKind } from "./archsim-cicd";
 import { SimResult, NodeSim } from "./archsim-sim";
 import { estimateDesign } from "./archsim-ai-estimate";
-import { aiNodePhysics } from "./archsim-ai-sim";
+import { aiNodePhysics, gatewayHit, gatewayWrong, Overflow } from "./archsim-ai-sim";
 export function isRuntimeKind(k: string): boolean { return !isContainer(k as ArchNodeKind) && !isCicdKind(k); }
 export function deployFailImpact(dep: ArchNode): number {
     const a = dep.ai ?? {};
@@ -76,6 +76,8 @@ export interface RuntimeSimResult extends SimResult {
     edgeFlow: Record<string, number>;
     edgeRetry: Record<string, number>;
     p95Path: string[];
+    cacheWrongPerSec: number;
+    fallbackPerSec: number;
 }
 interface Physics {
     cap: number;
@@ -85,6 +87,8 @@ interface Physics {
     selfRetries: number;
     backoffSec: number;
     jitter: number;
+    limiter?: boolean;
+    overflow?: Overflow;
 }
 function infraPhysics(n: ArchNode, isSource: boolean): Physics {
     let cap = Math.max(0, n.capacity ?? CATALOG[n.kind].defaults.capacity ?? 0);
@@ -172,6 +176,8 @@ export function fanoutOf(n: ArchNode): "split" | "all" {
 }
 export const DEFAULT_HIT: Readonly<Record<string, number>> = { cache: 0.8, cdn: 0.9 };
 export function hitRatioOf(n: ArchNode): number | null {
+    if (n.kind === "ai_gateway")
+        return gatewayHit(n);
     if (!(n.kind in DEFAULT_HIT))
         return null;
     const h = n.hitRatio ?? DEFAULT_HIT[n.kind];
@@ -278,6 +284,11 @@ export function stepRuntimeSim(allNodes: ArchNode[], edges: ArchEdge[], prevQ: R
         number,
         number
     ] = [0, 0];
+    const fbWait: [
+        number,
+        number
+    ] = [0, 0];
+    let fallbackPerSec = 0;
     const retryMult = new Map<string, number>();
     const retryExtra = new Map<string, [
         number,
@@ -500,7 +511,7 @@ export function stepRuntimeSim(allNodes: ArchNode[], edges: ArchEdge[], prevQ: R
             nextQ[wk] = lambdaIn >= warm0 ? lambdaIn : warm0 * Math.exp(-dt / SERVERLESS_IDLE_SEC);
             coldExtra[id] = { p50: coldFrac >= 0.5 ? cold : 0, p95: coldFrac >= 0.05 ? cold : 0 };
         }
-        if (n.kind === "ratelimit" && !source && !down) {
+        if ((n.kind === "ratelimit" || p.limiter) && !source && !down) {
             const tk = `${id}#tok`, burst = Math.max(0, n.burst ?? effCap);
             const avail = Math.min(burst, prevQ[tk] ?? burst) + effCap * dt;
             served = Math.min(inflow, avail);
@@ -530,6 +541,17 @@ export function stepRuntimeSim(allNodes: ArchNode[], edges: ArchEdge[], prevQ: R
             nextQ[`${id}#rf`] = p.backoffSec > 0 ? selfF + (fNow - selfF) * Math.min(1, dt / (2 * p.backoffSec)) : fNow;
             servedRate = Math.min(servedRate, lambdaReq);
         }
+        if (p.overflow && !source && !down && servedRate > p.overflow.primCap) {
+            const of = (servedRate - p.overflow.primCap) / servedRate;
+            nodeCost[id] = (1 - of) * p.costReq + of * p.overflow.costFb;
+            nodeTok[id] = (1 - of) * p.tokReq + of * p.overflow.tokFb;
+            fallbackPerSec += servedRate * of;
+            const extra = Math.max(0, p.overflow.extraMs);
+            if (of >= 0.5 - 1e-9)
+                fbWait[0] = Math.max(fbWait[0], extra);
+            if (of >= 0.05 - 1e-9)
+                fbWait[1] = Math.max(fbWait[1], extra);
+        }
         const erroredRate = source ? 0 : servedRate * fr;
         const outRate = servedRate - erroredRate;
         const legitFrac = lambdaMix > 0 ? legitIn / lambdaMix : 1;
@@ -537,10 +559,12 @@ export function stepRuntimeSim(allNodes: ArchNode[], edges: ArchEdge[], prevQ: R
         attackOut[id] = outRate * (1 - legitFrac);
         const rho = down && !source ? (lambdaIn > 0 ? 2 : 0) : (effCap > 0 && !source ? lambdaIn / effCap : 0);
         const waitMs = (!down && effCap > 0) ? (q1 / effCap) * 1000 : 0;
-        const qw = source || down || n.kind === "ratelimit" ? null
+        const qw = source || down || n.kind === "ratelimit" || p.limiter ? null
             : queueWait(lambdaIn, effCap, serversOf(n, effCap, p.svcMs), p.svcMs, p.jitter, breakerShed > 0 ? 0 : qMax);
         const delayMs = p.svcMs + Math.max(waitMs, qw?.mean ?? 0);
         perNode[id] = { q: q1, lambdaIn, rho, served: outRate, dropped: droppedReq / dt, errored: erroredRate, delayMs, down, degraded: marked(n) && !down || undefined };
+        if (p.overflow && servedRate > p.overflow.primCap)
+            perNode[id].fallbackFrac = (servedRate - p.overflow.primCap) / servedRate;
         if (qw && waitMs < 1e-9 && lambdaIn < effCap) {
             perNode[id].queueWaitMs = qw.mean;
             perNode[id].waitingAvg = lambdaIn * qw.mean / 1000;
@@ -701,8 +725,8 @@ export function stepRuntimeSim(allNodes: ArchNode[], edges: ArchEdge[], prevQ: R
             errored += s.errored;
         }
         if (s.lambdaIn > 0.0001) {
-            tokensPerReq += nodeTok[id];
-            costPerReq += nodeCost[id];
+            tokensPerReq += nodeTok[id] * (prob[id] ?? 1);
+            costPerReq += nodeCost[id] * (prob[id] ?? 1);
         }
         if (!isSource(id) && s.rho > bnRho) {
             bnRho = s.rho;
@@ -747,8 +771,8 @@ export function stepRuntimeSim(allNodes: ArchNode[], edges: ArchEdge[], prevQ: R
     if (hasAi) {
         const est = estimateDesign(allNodes, edges);
         if (est.p50 > 0) {
-            p50 = est.p50 + selfWait[0];
-            p95 = Math.round(est.p95 * Math.max(1, bnRho > 0 ? bnRho : 1)) + selfWait[1];
+            p50 = est.p50 + selfWait[0] + fbWait[0];
+            p95 = Math.round(est.p95 * Math.max(1, bnRho > 0 ? bnRho : 1)) + selfWait[1] + fbWait[1];
         }
     }
     if (!hasAsync) {
@@ -761,6 +785,12 @@ export function stepRuntimeSim(allNodes: ArchNode[], edges: ArchEdge[], prevQ: R
     }
     const tokensPerSec = (throughput + asyncThroughput) * tokensPerReq;
     const costPerHour = (throughput + asyncThroughput) * costPerReq * 3600;
+    let cacheWrongPerSec = 0;
+    for (const id of ids) {
+        const n = byId.get(id)!, w = gatewayWrong(n), h = hitRatioOf(n);
+        if (w > 0 && h && perNode[id])
+            cacheWrongPerSec += perNode[id].served * h * w;
+    }
     return {
         perNode,
         offered,
@@ -789,5 +819,7 @@ export function stepRuntimeSim(allNodes: ArchNode[], edges: ArchEdge[], prevQ: R
         edgeFlow,
         edgeRetry,
         p95Path,
+        cacheWrongPerSec,
+        fallbackPerSec,
     };
 }

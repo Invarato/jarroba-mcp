@@ -95,6 +95,7 @@ export interface SchemaModel {
     roles: RoleModel[];
     enums?: EnumType[];
     sequences?: SequenceModel[];
+    extensions?: string[];
 }
 export const EMPTY_SCHEMA: SchemaModel = { schemas: [], tables: [], roles: [], enums: [], sequences: [] };
 interface SeqRow {
@@ -303,6 +304,7 @@ const Q_SEQUENCES = `
     AND NOT EXISTS (SELECT 1 FROM pg_depend d
                     WHERE d.objid = c.oid AND d.classid = 'pg_class'::regclass AND d.deptype IN ('a','i'))
   ORDER BY 1, 2`;
+const Q_EXTENSIONS = `SELECT extname AS name FROM pg_extension WHERE extname <> 'plpgsql' ORDER BY 1`;
 export const CATALOG_QUERIES = [
     Q_COLUMNS,
     Q_PRIMARY_KEYS,
@@ -315,6 +317,7 @@ export const CATALOG_QUERIES = [
     Q_ENUMS,
     Q_PARTITIONS,
     Q_SEQUENCES,
+    Q_EXTENSIONS,
 ] as const;
 export interface CatalogRows {
     cols: unknown[];
@@ -328,6 +331,7 @@ export interface CatalogRows {
     enm: unknown[];
     part: unknown[];
     seq?: unknown[];
+    ext?: unknown[];
 }
 export function assembleSchema(r: CatalogRows): SchemaModel {
     const cols = { rows: r.cols }, pks = { rows: r.pks }, fks = { rows: r.fks };
@@ -446,6 +450,9 @@ export function assembleSchema(r: CatalogRows): SchemaModel {
             canLogin: r.rolcanlogin,
         })),
         enums: (enm.rows as unknown as EnumRow[]).map(r => ({ schema: r.schema, name: r.name, values: r.values ?? [] })),
+        extensions: ((r.ext ?? []) as {
+            name: string;
+        }[]).map(x => x.name),
         sequences: ((r.seq ?? []) as SeqRow[]).map(q => ({
             schema: q.schema,
             name: q.name,

@@ -51,8 +51,9 @@ export const CICD_CATALOG: Record<CicdNodeKind, CicdNodeMeta> = {
             { key: "cacheable", label: "Cacheable", type: "bool", help: "Con una cach\u00E9 delante, un acierto acelera esta etapa." },
             { key: "flaky", label: "Tests flaky (%)", type: "number", help: "Fallos intermitentes \u2192 reintentos que alargan el lead time y comen 20-30% del compute." },
             { key: "retry", label: "Reintentar los flaky", type: "bool", help: "Re-run autom\u00E1tico: recupera el flaky pero empuja la cola de TODOS los PRs." },
+            { key: "steps", label: "Pasos", type: "textarea", help: "Los pasos del job, uno por l\u00EDnea. Al importar un pipeline salen con una duraci\u00F3n ESTIMADA por tipo de paso (el fichero no la trae): ajusta la duraci\u00F3n de la etapa." },
         ],
-        defaults: { duration: 6, shards: 1, cacheable: false, flaky: 0, retry: true },
+        defaults: { duration: 6, shards: 1, cacheable: false, flaky: 0, retry: true, steps: "" },
     },
     ci_runners: {
         label: "Pool de runners",
@@ -106,8 +107,9 @@ export const CICD_CATALOG: Record<CicdNodeKind, CicdNodeMeta> = {
             { key: "bake", label: "Bake time (min)", type: "number", help: "Espera entre pasos del canary/blue-green para observar m\u00E9tricas antes de avanzar (baja el change failure rate)." },
             { key: "auto_rollback", label: "Rollback autom\u00E1tico por m\u00E9tricas", type: "bool", help: "Aborta y revierte solo si las m\u00E9tricas del canary/verde empeoran \u2192 recuperaci\u00F3n casi instant\u00E1nea y menos fallos en prod." },
             { key: "sim_state", label: "Estado del despliegue (efecto en runtime)", type: "select", help: "Puente CI/CD\u2192Runtime: enlaza este Despliegue a un subsistema (arrastra un cable a un nodo del runtime) y elige su estado para ver el RADIO DE IMPACTO en la lente Runtime. \u00ABCanary con fallo\u00BB solo afecta a su % de tr\u00E1fico; \u00ABFallo\u00BB tumba seg\u00FAn la estrategia (rolling/recreate\u2248todo, blue-green\u2248poco); \u00ABRevertido\u00BB (rollback) recupera.", options: [{ value: "sano", label: "Sano (sin impacto)" }, { value: "canary_bad", label: "Canary con fallo (solo su %)" }, { value: "fail", label: "Fallo (seg\u00FAn estrategia)" }, { value: "rolled_back", label: "Revertido (rollback \u2192 recupera)" }] },
+            { key: "steps", label: "Pasos", type: "textarea", help: "Los pasos del job, uno por l\u00EDnea. Al importar un pipeline salen con una duraci\u00F3n ESTIMADA por tipo de paso (el fichero no la trae): ajusta la duraci\u00F3n de la etapa." },
         ],
-        defaults: { env: "prod", strategy: "rolling", duration: 5, canary_pct: 10, bake: 0, auto_rollback: false, sim_state: "sano" },
+        defaults: { env: "prod", strategy: "rolling", duration: 5, steps: "", canary_pct: 10, bake: 0, auto_rollback: false, sim_state: "sano" },
     },
     ci_promptlint: {
         label: "Prompt lint",

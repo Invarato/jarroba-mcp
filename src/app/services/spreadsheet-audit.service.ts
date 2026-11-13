@@ -293,6 +293,106 @@ export function grafoDeHallazgo(claveCelda: string, resumen: ResumenAuditoria, p
     });
     return { nodos: nodosGrafo, aristas, enCiclo: anillo ? new Set(anillo) : new Set() };
 }
+export type EstadoDiffCelda = "formula" | "valor" | "anadida" | "eliminada";
+export interface CeldaDiferente {
+    hoja: string;
+    direccion: string;
+    estado: EstadoDiffCelda;
+    formulaA: string | null;
+    formulaB: string | null;
+    valorA: ValorPlano;
+    valorB: ValorPlano;
+}
+export interface ResumenComparacion {
+    hojasSoloA: string[];
+    hojasSoloB: string[];
+    diferencias: CeldaDiferente[];
+    celdasComparadas: number;
+    truncado: boolean;
+}
+export const LIMITE_CELDAS_COMPARACION = 100000;
+function celdaConContenido(cell: XLSX.CellObject | undefined): boolean {
+    return !!cell && cell.t !== "z" && valorLiteral(cell) !== null;
+}
+export function compararWorkbooks(wbA: XLSX.WorkBook, wbB: XLSX.WorkBook): ResumenComparacion {
+    const hojasSoloA = wbA.SheetNames.filter(h => !wbB.SheetNames.includes(h));
+    const hojasSoloB = wbB.SheetNames.filter(h => !wbA.SheetNames.includes(h));
+    const hojasComunes = wbA.SheetNames.filter(h => wbB.SheetNames.includes(h));
+    const diferencias: CeldaDiferente[] = [];
+    let celdasComparadas = 0;
+    let truncado = false;
+    for (const hoja of hojasComunes) {
+        const wsA = wbA.Sheets[hoja];
+        const wsB = wbB.Sheets[hoja];
+        const direcciones = new Set<string>();
+        for (const addr of Object.keys(wsA))
+            if (!addr.startsWith("!"))
+                direcciones.add(addr);
+        for (const addr of Object.keys(wsB))
+            if (!addr.startsWith("!"))
+                direcciones.add(addr);
+        for (const direccion of direcciones) {
+            if (celdasComparadas >= LIMITE_CELDAS_COMPARACION) {
+                truncado = true;
+                break;
+            }
+            celdasComparadas++;
+            const cellA = wsA[direccion] as XLSX.CellObject | undefined;
+            const cellB = wsB[direccion] as XLSX.CellObject | undefined;
+            const hayA = celdaConContenido(cellA);
+            const hayB = celdaConContenido(cellB);
+            if (!hayA && !hayB)
+                continue;
+            const formulaA = cellA?.f ?? null;
+            const formulaB = cellB?.f ?? null;
+            const valorA = normalizar(valorLiteral(cellA));
+            const valorB = normalizar(valorLiteral(cellB));
+            let estado: EstadoDiffCelda | null = null;
+            if (!hayA && hayB)
+                estado = "anadida";
+            else if (hayA && !hayB)
+                estado = "eliminada";
+            else if (formulaA !== formulaB)
+                estado = "formula";
+            else if (!equivalentes(valorA, valorB))
+                estado = "valor";
+            if (estado)
+                diferencias.push({ hoja, direccion, estado, formulaA, formulaB, valorA, valorB });
+        }
+        if (truncado)
+            break;
+    }
+    return { hojasSoloA, hojasSoloB, diferencias, celdasComparadas, truncado };
+}
+function textoValorDiff(valor: ValorPlano, vacio: string): string {
+    return valor === null ? vacio : String(valor);
+}
+export function construirXlsxDiferencias(resumen: ResumenComparacion, cabeceras: {
+    hoja: string;
+    direccion: string;
+    estado: string;
+    formulaA: string;
+    valorA: string;
+    formulaB: string;
+    valorB: string;
+}, etiquetaEstado: (e: EstadoDiffCelda) => string, vacio: string): Uint8Array {
+    const filas = [
+        [cabeceras.hoja, cabeceras.direccion, cabeceras.estado, cabeceras.formulaA, cabeceras.valorA, cabeceras.formulaB, cabeceras.valorB],
+        ...resumen.diferencias.map(d => [
+            d.hoja,
+            d.direccion,
+            etiquetaEstado(d.estado),
+            d.formulaA ?? "",
+            d.estado === "anadida" ? "" : textoValorDiff(d.valorA, vacio),
+            d.formulaB ?? "",
+            d.estado === "eliminada" ? "" : textoValorDiff(d.valorB, vacio),
+        ]),
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(filas);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Diferencias");
+    return XLSX.write(wb, { type: "array", bookType: "xlsx" }) as Uint8Array;
+}
 export function pareceHojaDeCalculo(datos: ArrayBuffer): boolean {
     const b = new Uint8Array(datos, 0, Math.min(8, datos.byteLength));
     const zip = b[0] === 80 && b[1] === 75 && (b[2] === 3 || b[2] === 5 || b[2] === 7);

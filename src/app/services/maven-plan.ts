@@ -1,4 +1,4 @@
-import { type VersionMaven, type Ciclo, FASES, cicloDe, faseNormalizada, prioridadDe, ALIAS_MAVEN_4, FASES_SOLO_MAVEN_4, VINCULACIONES, VINCULACIONES_FIJAS, GRUPO_PLUGINS, } from "./maven-ciclos";
+import { type VersionMaven, type Ciclo, FASES, cicloDe, faseNormalizada, prioridadDe, esFaseMaven4, fasesMaven4, antesDeMaven4, VINCULACIONES, VINCULACIONES_FIJAS, GRUPO_PLUGINS, } from "./maven-ciclos";
 import { type Fuente, type PomBuild, type PluginBuild, type Ejecucion, type Build, type Perfil, leerPomBuild, padreConocido, heredar, aplicarPerfil, aplicarGestion, mezclarEjecuciones, compararVersiones, } from "./maven-modelo";
 import { interpolar } from "./pom-parse";
 import { PLUGINS, type GoalDescriptor } from "./maven-datos";
@@ -106,10 +106,10 @@ export function leerComando(texto: string, maven: VersionMaven): ComandoMvn {
 function leerTarea(t: string, maven: VersionMaven): Tarea {
     if (cicloDe(t))
         return { tipo: "fase", fase: t, escrita: t };
-    if (maven === "4" && ALIAS_MAVEN_4[t])
-        return { tipo: "fase", fase: ALIAS_MAVEN_4[t], escrita: t };
-    if ((FASES_SOLO_MAVEN_4 as readonly string[]).includes(t) || /^(before|after):/.test(t)) {
-        return { tipo: "desconocida", escrita: t, motivo: maven === "4" ? "solo-maven-4" : "no-es-fase" };
+    if (maven === "4" && esFaseMaven4(t))
+        return { tipo: "fase", fase: t, escrita: t };
+    if (esFaseMaven4(t) || /^(before|after):/.test(t)) {
+        return { tipo: "desconocida", escrita: t, motivo: maven === "3" && esFaseMaven4(t) ? "solo-maven-4" : "no-es-fase" };
     }
     if (!t.includes(":"))
         return { tipo: "desconocida", escrita: t, motivo: "no-es-fase" };
@@ -189,7 +189,7 @@ export interface ModuloPlan {
         origen: OrigenPaso | null;
     }[];
 }
-export type CodigoAviso = "sin-poms" | "sin-tareas" | "extension-desconocida" | "padre-desconocido" | "padre-aproximado" | "modulo-no-cargado" | "tarea-desconocida" | "tarea-solo-maven-4" | "prefijo-desconocido" | "packaging-desconocido" | "perfil-no-existe" | "pl-no-encontrado" | "integration-test-sin-post" | "post-clean-maven-4" | "subprojects-en-maven-3" | "prioridad-en-maven-3";
+export type CodigoAviso = "sin-poms" | "sin-tareas" | "extension-desconocida" | "padre-desconocido" | "padre-aproximado" | "modulo-no-cargado" | "tarea-desconocida" | "tarea-solo-maven-4" | "prefijo-desconocido" | "packaging-desconocido" | "perfil-no-existe" | "pl-no-encontrado" | "integration-test-sin-post" | "post-clean-maven-4" | "pide-antes-maven-4" | "subprojects-en-maven-3" | "prioridad-en-maven-3";
 export interface AvisoPlan {
     codigo: CodigoAviso;
     datos: Record<string, string>;
@@ -602,6 +602,11 @@ function pasosDeFase(fase: string, porFase: Map<string, Enlace[]>, ef: Efectivo,
     return (porFase.get(fase) ?? []).map(e => pasoDe(e, ef, cli));
 }
 export function fasesHasta(fase: string, maven: VersionMaven): string[] {
+    if (maven === "4") {
+        const m4 = fasesMaven4(fase);
+        if (m4)
+            return m4;
+    }
     const ciclo = cicloDe(fase) as Ciclo | null;
     if (!ciclo)
         return [];
@@ -858,6 +863,13 @@ export function planMaven(poms: PomEntrada[], op: OpcionesPlan): PlanMaven {
         avisos.push({ codigo: "integration-test-sin-post", datos: {} });
     if (maven === "4" && pide("clean") && enlazaA("post-clean"))
         avisos.push({ codigo: "post-clean-maven-4", datos: {} });
+    if (maven === "4") {
+        for (const t of c.tareas) {
+            const x = t.tipo === "fase" ? antesDeMaven4(t.fase) : "";
+            if (x)
+                avisos.push({ codigo: "pide-antes-maven-4", datos: { tarea: t.escrita, fase: x } });
+        }
+    }
     return { comando: c, maven, reactor, fuera: orden.filter(r => !elegidos.has(r)), avisos: dedup(avisos) };
 }
 function dedup(avisos: AvisoPlan[]): AvisoPlan[] {

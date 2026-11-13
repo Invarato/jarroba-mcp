@@ -11,6 +11,7 @@ export interface SubnetResult {
     totalHosts: number;
     usableHosts: number;
     ipClass: string;
+    categoryId: CategoriaV4;
     category: string;
     isPrivate: boolean;
     hostBits: number;
@@ -20,28 +21,30 @@ export interface SubnetResult {
     ipHex: string;
     reverseDns: string;
 }
+export type CategoriaV4 = "actual" | "privada" | "cgnat" | "loopback" | "linklocal" | "ietf" | "doc1" | "6to4" | "benchmark" | "doc2" | "doc3" | "multicast" | "reservada" | "broadcast" | "publica";
 interface SpecialRange {
     cidr: string;
+    id: CategoriaV4;
     name: string;
     priv: boolean;
 }
 const SPECIAL_RANGES: SpecialRange[] = [
-    { cidr: "0.0.0.0/8", name: "Red actual (RFC1122)", priv: false },
-    { cidr: "10.0.0.0/8", name: "Privada (RFC1918)", priv: true },
-    { cidr: "100.64.0.0/10", name: "CGNAT (RFC6598)", priv: true },
-    { cidr: "127.0.0.0/8", name: "Loopback", priv: false },
-    { cidr: "169.254.0.0/16", name: "Link-local / APIPA", priv: false },
-    { cidr: "172.16.0.0/12", name: "Privada (RFC1918)", priv: true },
-    { cidr: "192.0.0.0/24", name: "Asignaciones IETF", priv: false },
-    { cidr: "192.0.2.0/24", name: "Documentaci\u00F3n (TEST-NET-1)", priv: false },
-    { cidr: "192.88.99.0/24", name: "6to4 anycast (obsoleto)", priv: false },
-    { cidr: "192.168.0.0/16", name: "Privada (RFC1918)", priv: true },
-    { cidr: "198.18.0.0/15", name: "Benchmarking (RFC2544)", priv: false },
-    { cidr: "198.51.100.0/24", name: "Documentaci\u00F3n (TEST-NET-2)", priv: false },
-    { cidr: "203.0.113.0/24", name: "Documentaci\u00F3n (TEST-NET-3)", priv: false },
-    { cidr: "224.0.0.0/4", name: "Multicast (clase D)", priv: false },
-    { cidr: "240.0.0.0/4", name: "Reservada (clase E)", priv: false },
-    { cidr: "255.255.255.255/32", name: "Broadcast limitado", priv: false },
+    { cidr: "0.0.0.0/8", id: "actual", name: "Red actual (RFC1122)", priv: false },
+    { cidr: "10.0.0.0/8", id: "privada", name: "Privada (RFC1918)", priv: true },
+    { cidr: "100.64.0.0/10", id: "cgnat", name: "CGNAT (RFC6598)", priv: true },
+    { cidr: "127.0.0.0/8", id: "loopback", name: "Loopback", priv: false },
+    { cidr: "169.254.0.0/16", id: "linklocal", name: "Link-local / APIPA", priv: false },
+    { cidr: "172.16.0.0/12", id: "privada", name: "Privada (RFC1918)", priv: true },
+    { cidr: "192.0.0.0/24", id: "ietf", name: "Asignaciones IETF", priv: false },
+    { cidr: "192.0.2.0/24", id: "doc1", name: "Documentaci\u00F3n (TEST-NET-1)", priv: false },
+    { cidr: "192.88.99.0/24", id: "6to4", name: "6to4 anycast (obsoleto)", priv: false },
+    { cidr: "192.168.0.0/16", id: "privada", name: "Privada (RFC1918)", priv: true },
+    { cidr: "198.18.0.0/15", id: "benchmark", name: "Benchmarking (RFC2544)", priv: false },
+    { cidr: "198.51.100.0/24", id: "doc2", name: "Documentaci\u00F3n (TEST-NET-2)", priv: false },
+    { cidr: "203.0.113.0/24", id: "doc3", name: "Documentaci\u00F3n (TEST-NET-3)", priv: false },
+    { cidr: "224.0.0.0/4", id: "multicast", name: "Multicast (clase D)", priv: false },
+    { cidr: "240.0.0.0/4", id: "reservada", name: "Reservada (clase E)", priv: false },
+    { cidr: "255.255.255.255/32", id: "broadcast", name: "Broadcast limitado", priv: false },
 ];
 export function ipToInt(ip: string): number | null {
     const m = ip.trim().match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
@@ -123,10 +126,11 @@ function ipClassOf(ipInt: number): string {
     if (first < 224)
         return "C";
     if (first < 240)
-        return "D (multicast)";
-    return "E (reservada)";
+        return "D";
+    return "E";
 }
 function classify(ipInt: number): {
+    categoryId: CategoriaV4;
     category: string;
     isPrivate: boolean;
 } {
@@ -135,10 +139,10 @@ function classify(ipInt: number): {
         const base = ipToInt(ip)!;
         const mask = prefixToMask(+pfx);
         if (((ipInt & mask) >>> 0) === ((base & mask) >>> 0)) {
-            return { category: r.name, isPrivate: r.priv };
+            return { categoryId: r.id, category: r.name, isPrivate: r.priv };
         }
     }
-    return { category: "P\u00FAblica", isPrivate: false };
+    return { categoryId: "publica", category: "P\u00FAblica", isPrivate: false };
 }
 export interface VlsmReq {
     name: string;
@@ -259,6 +263,10 @@ export interface AggregateResult {
     cidrs: string[];
     invalid: string[];
     mergedRanges: number;
+    superred: {
+        cidr: string;
+        deMas: number;
+    } | null;
 }
 export function aggregate(inputs: string[]): AggregateResult {
     const ranges: {
@@ -294,7 +302,23 @@ export function aggregate(inputs: string[]): AggregateResult {
     const cidrs: string[] = [];
     for (const m of merged)
         cidrs.push(...rangeToCidrs(m.start, m.end));
-    return { cidrs, invalid, mergedRanges: merged.length };
+    return { cidrs, invalid, mergedRanges: merged.length, superred: superred(merged) };
+}
+function superred(merged: {
+    start: number;
+    end: number;
+}[]): AggregateResult["superred"] {
+    if (!merged.length)
+        return null;
+    const ini = merged[0].start, fin = merged[merged.length - 1].end;
+    let p = 32;
+    while (p > 0 && ((ini & prefixToMask(p)) >>> 0) !== ((fin & prefixToMask(p)) >>> 0))
+        p--;
+    if (p < 8)
+        return null;
+    const red = (ini & prefixToMask(p)) >>> 0;
+    const cubiertas = merged.reduce((n, m) => n + (m.end - m.start + 1), 0);
+    return { cidr: `${intToIp(red)}/${p}`, deMas: 2 ** (32 - p) - cubiertas };
 }
 export interface SimpleSubnet {
     cidr: string;
@@ -428,20 +452,26 @@ export function compressIpv6(n: bigint): string {
     }
     return g.join(":");
 }
-function ipv6Type(n: bigint): string {
-    if (n === 0n)
-        return "No especificada (::)";
-    if (n === 1n)
-        return "Loopback (::1)";
-    if ((n >> 120n) === 0xffn)
-        return "Multicast (ff00::/8)";
-    if ((n >> 118n) === 0x3fan)
-        return "Link-local (fe80::/10)";
-    if ((n >> 121n) === 0x7en)
-        return "Unique local / ULA (fc00::/7)";
-    if ((n >> 125n) === 0x1n)
-        return "Global unicast (2000::/3)";
-    return "Reservada / otra";
+export type TipoV6 = "noespecificada" | "loopback" | "v4mapeada" | "documentacion" | "multicast" | "linklocal" | "ula" | "global" | "otra";
+const TIPOS_V6: {
+    id: TipoV6;
+    texto: string;
+    es: (n: bigint) => boolean;
+}[] = [
+    { id: "noespecificada", texto: "No especificada (::)", es: n => n === 0n },
+    { id: "loopback", texto: "Loopback (::1)", es: n => n === 1n },
+    { id: "v4mapeada", texto: "IPv4 mapeada (::ffff:0:0/96)", es: n => (n >> 32n) === 0xffffn },
+    { id: "documentacion", texto: "Documentaci\u00F3n (2001:db8::/32)", es: n => (n >> 96n) === 0x20010db8n },
+    { id: "multicast", texto: "Multicast (ff00::/8)", es: n => (n >> 120n) === 0xffn },
+    { id: "linklocal", texto: "Link-local (fe80::/10)", es: n => (n >> 118n) === 0x3fan },
+    { id: "ula", texto: "Unique local / ULA (fc00::/7)", es: n => (n >> 121n) === 0x7en },
+    { id: "global", texto: "Global unicast (2000::/3)", es: n => (n >> 125n) === 0x1n },
+];
+function ipv6Type(n: bigint): {
+    id: TipoV6;
+    texto: string;
+} {
+    return TIPOS_V6.find(t => t.es(n)) ?? { id: "otra", texto: "Reservada / otra" };
 }
 export interface Ipv6Result {
     compressed: string;
@@ -454,6 +484,7 @@ export interface Ipv6Result {
     addressPow: number;
     subnets64: string;
     type: string;
+    typeId: TipoV6;
 }
 export function ipv6Info(cidr: string): Ipv6Result | null {
     const m = cidr.trim().match(/^([^/]+?)(?:\/(\d{1,3}))?$/);
@@ -469,6 +500,7 @@ export function ipv6Info(cidr: string): Ipv6Result | null {
     const mask = prefix === 0 ? 0n : (V6_MAX ^ ((1n << hostBits) - 1n));
     const network = addr & mask;
     const last = network | ((1n << hostBits) - 1n);
+    const tipo = ipv6Type(addr);
     return {
         compressed: compressIpv6(addr),
         expanded: expandIpv6(addr),
@@ -479,7 +511,8 @@ export function ipv6Info(cidr: string): Ipv6Result | null {
         addressCount: (1n << hostBits).toString(),
         addressPow: 128 - prefix,
         subnets64: prefix <= 64 ? (1n << BigInt(64 - prefix)).toString() : "\u2014",
-        type: ipv6Type(network),
+        type: tipo.texto,
+        typeId: tipo.id,
     };
 }
 export function eui64(mac: string): string | null {
@@ -567,6 +600,12 @@ export function treeLeaves(root: TreeNode): TreeLeaf[] {
     walk(root, null);
     return out;
 }
+export function familiaDireccion(input: string): "v4" | "v6" | null {
+    const s = input.trim();
+    if (!s)
+        return null;
+    return s.includes(":") ? "v6" : "v4";
+}
 export class SubnetService {
     calculate(input: string): SubnetResult | null {
         const parsed = parseInput(input);
@@ -596,7 +635,7 @@ export class SubnetService {
         const bcast = (network | (~mask >>> 0)) >>> 0;
         const total = Math.pow(2, 32 - prefix);
         const usable = prefix >= 31 ? total : Math.max(0, total - 2);
-        const { category, isPrivate } = classify(ipInt);
+        const { categoryId, category, isPrivate } = classify(ipInt);
         const netOcts = [24, 16, 8].map(s => (network >>> s) & 255);
         return {
             cidr: `${intToIp(network)}/${prefix}`,
@@ -611,6 +650,7 @@ export class SubnetService {
             totalHosts: total,
             usableHosts: usable,
             ipClass: ipClassOf(ipInt),
+            categoryId,
             category,
             isPrivate,
             hostBits: 32 - prefix,

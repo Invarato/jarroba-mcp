@@ -1071,6 +1071,155 @@ check("\u2026y fuera de un contenedor no sale la pista de montar carpetas", !/co
     else
         console.log("\u00B7 pension_base: sin manifiesto de datos (espejo p\u00FAblico), no se compara la captura del IPC");
 }
+{
+    const { calendarioDeCentro } = await import("../../src/app/services/jornada/calendario.ts");
+    const { revisarTexto } = await import("../../src/app/services/jornada/cuadrante.ts");
+    const { FESTIVOS_FICHERO } = await import("../src/empresa-motores.mts");
+    const festivos = JSON.parse(readFileSync(join(here, "..", "..", "public", "datos", "festivos", FESTIVOS_FICHERO), "utf8"));
+    const locales = [{ date: "2026-05-15", name: "San Isidro" }, { date: "2026-11-09", name: "Almudena" }];
+    const cal = await call("work_calendar", { year: 2026, region: "ES-MD", weeklyHours: [8, 8, 8, 8, 8, 0, 0], localHolidays: locales, vacation: { days: 22, type: "working" }, annualHours: 1780 });
+    const directo = calendarioDeCentro({ anio: 2026, region: "ES-MD", horario: [8, 8, 8, 8, 8, 0, 0], locales: locales.map((l) => ({ fecha: l.date, nombre: l.name })), intensiva: null, cierres: [], vacaciones: { dias: 22, tipo: "laborables" }, jornadaAnual: 1780 }, festivos);
+    check("work_calendar: Madrid 2026 con los festivos del BOE, mismas horas que /work-schedule", cal.o?.officialHolidaysLoaded === true && cal.o.effectiveHours === directo.horasEfectivas && cal.o.difference === directo.diferencia
+        && cal.o.holidays.some((h: any) => h.date === "2026-05-02") && cal.o.holidays.some((h: any) => h.local), { mcp: cal.o?.effectiveHours, web: directo.horasEfectivas });
+    const largo = await call("work_calendar", { year: 2026, region: "ES-CT", weeklyHours: [9.5, 9.5, 9.5, 9.5, 9.5, 0, 0], localHolidays: [] });
+    const avisos = (largo.o?.warnings ?? []).map((w: any) => w.code);
+    check("work_calendar: avisa de semanas de m\u00E1s de 40 h, d\u00EDas de m\u00E1s de 9 y locales que no son dos", ["weekly-hours-above-40", "day-above-9-hours", "local-holidays-not-two"].every((c) => avisos.includes(c)), avisos);
+    const nac = await call("work_calendar", { year: 2026, weeklyHours: [8, 8, 8, 8, 8, 0, 0] });
+    check("work_calendar sin comunidad: los nacionales (A\u00F1o Nuevo, 12 de octubre) y ninguno regional", nac.o?.holidays?.some((h: any) => h.date === "2026-01-01") && nac.o.holidays.some((h: any) => h.date === "2026-10-12")
+        && !nac.o.holidays.some((h: any) => h.date === "2026-05-02"), nac.o?.holidays?.map((h: any) => h.date));
+    check("work_calendar: una comunidad que no existe es un error que dice las v\u00E1lidas", (await call("work_calendar", { year: 2026, region: "ES-XX", weeklyHours: [8, 8, 8, 8, 8, 0, 0] })).isError === true);
+    const dias = Array.from({ length: 14 }, (_, i) => String(i + 1));
+    const rota = ["Persona\t" + dias.join("\t"), "Ana\tL\tT\tM\tL\tL\tL\tL\tL\tL\tL\tL\tL\tL\tL", "Luis\t" + dias.map(() => "M").join("\t")].join("\n");
+    const cu = await call("shift_validate", { rota, year: 2026, month: 3 });
+    const reglasDe = (n: string) => (cu.o?.people ?? []).find((p: any) => p.name === n)?.breaches.map((b: any) => b.rule) ?? [];
+    const web = revisarTexto(rota, { anio: 2026, mes: 3 });
+    check("shift_validate: tarde y luego ma\u00F1ana \u2192 descanso entre jornadas (art. 34.3); 14 d\u00EDas seguidos \u2192 descanso semanal (37.1)", reglasDe("Ana").includes("rest-between-shifts") && reglasDe("Luis").includes("weekly-rest")
+        && cu.o.people.find((p: any) => p.name === "Ana").breaches.find((b: any) => b.rule === "rest-between-shifts")?.restHours === 8, cu.o?.people);
+    check("shift_validate: los mismos incumplimientos que la pantalla", !("error" in web)
+        && cu.o.breaches === web.revision.personas.reduce((n, p) => n + p.incumplimientos.length, 0), cu.o?.breaches);
+    const rota2 = rota + "\nEva\tL\tN\t" + dias.slice(2).map(() => "L").join("\t");
+    const cu2 = await call("shift_validate", { rota: rota2, year: 2026, month: 3, people: { Eva: { minor: true }, Luis: { weeklyHours: 20 } } });
+    const de2 = (n: string) => (cu2.o?.people ?? []).find((p: any) => p.name === n);
+    check("shift_validate: una menor de noche (art. 6.2) y horas extra por encima del tope (35.2), con la jornada de cada uno", de2("Eva")?.minor === true && de2("Eva").breaches.some((b: any) => b.rule === "minor-night-work")
+        && de2("Luis")?.overtimeHours > 0 && de2("Luis").breaches.some((b: any) => b.rule === "overtime-cap"), { Eva: de2("Eva"), Luis: de2("Luis")?.breaches });
+    check("shift_validate: con un convenio que permite 10 h entre jornadas, el de Ana sigue (8 < 10)", (await call("shift_validate", { rota, year: 2026, month: 3, rules: { restBetweenShifts: 10 } })).o?.people?.find((p: any) => p.name === "Ana")?.breaches?.length > 0);
+    const csv = ["Fecha;Concepto;Importe;Saldo", ...["08", "09", "10"].flatMap((m) => [
+            `05/${m}/2026;RECIBO ALQUILER LOCAL REF 99881;-500,00;1000,00`,
+            `10/${m}/2026;TRANSF CLIENTE NÓMINA;800,00;1000,00`,
+        ])].join("\n");
+    const tes = await call("cash_forecast", { statement: csv });
+    check("cash_forecast: detecta alquiler y cobro mensuales, 13 semanas desde el saldo del extracto", tes.o?.startingBalance === 1000 && tes.o.weeks?.length === 13 && tes.o.recurringFlows?.length === 2
+        && tes.o.recurringFlows.every((f: any) => f.every === "monthly"), tes.o?.recurringFlows);
+    check("cash_forecast: no repite el extracto (conceptos sin la referencia, semanas con totales)", !JSON.stringify(tes.o).includes("99881") && tes.o.weeks.every((w: any) => typeof w.items === "number"), tes.o?.recurringFlows);
+    const { mkdtempSync, writeFileSync } = await import("node:fs");
+    const { tmpdir } = await import("node:os");
+    const fichero = join(mkdtempSync(join(tmpdir(), "jt-tes-")), "extracto.csv");
+    writeFileSync(fichero, Buffer.from(csv, "latin1"));
+    const tesF = await call("cash_forecast", { file: fichero });
+    check("cash_forecast: lee el FICHERO aunque venga en Latin-1, como los Norma 43 de los bancos", JSON.stringify(tesF.o?.recurringFlows) === JSON.stringify(tes.o?.recurringFlows), tesF.o ?? tesF.text);
+    check("cash_forecast lee ficheros por ruta \u2192 openWorldHint", anotacionesDe("cash_forecast").openWorldHint === true);
+    const manifiesto = join(here, "..", "..", "public", "datos", "manifiesto.json");
+    if (existsSync(manifiesto)) {
+        const actual = JSON.parse(readFileSync(manifiesto, "utf8")).entradas.find((d: any) => d.id === "festivos")?.actual;
+        check(`work_calendar usa la captura de festivos vigente (${actual})`, actual === FESTIVOS_FICHERO, { actual, FESTIVOS_FICHERO });
+    }
+    check("business: nada en espa\u00F1ol cruza la frontera (salvo los datos: festivos y conceptos del extracto)", !/descanso|semanal|alquiler|recibo|aviso|festivo/i.test(JSON.stringify([cu.o, { ...tes.o, recurringFlows: [] }, { ...cal.o, holidays: [] }, largo.o?.warnings])), JSON.stringify([cu.o, { ...tes.o, recurringFlows: [] }]).match(/descanso|semanal|alquiler|recibo|aviso|festivo/i));
+}
+{
+    const GHA = `name: CI
+on: [push]
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm ci
+      - run: npm run lint
+  test:
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm ci
+      - run: npm test
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - run: kubectl apply -f k8s/
+`;
+    const p = await call("archsim_from_pipeline", { pipeline: GHA });
+    check("archsim_from_pipeline: GitHub Actions \u2192 3 jobs en cadena, el \u00FAltimo despliega a prod, con duraciones estimadas", p.o?.format === "GitHub Actions" && p.o.jobs?.map((j: any) => j.id).join() === "lint,test,deploy"
+        && p.o.jobs[1].needs.join() === "lint" && p.o.jobs[2].deploysTo === "prod"
+        && p.o.notes.some((n: any) => n.code === "durations-estimated"), p.o);
+    check("archsim_from_pipeline: simula lead time, runners, coste y DORA", p.o?.simulation?.leadTimeP50Min > 0
+        && p.o.simulation.costPerMonthUsd >= 0 && ["elite", "high", "medium", "low"].includes(p.o.simulation.doraLevel), p.o?.simulation);
+    const uno = await call("archsim_from_pipeline", { pipeline: GHA, runsPerDay: 400, runners: 1 });
+    const cien = await call("archsim_from_pipeline", { pipeline: GHA, runsPerDay: 400, runners: 100 });
+    check("archsim_from_pipeline: con 1 runner se espera m\u00E1s que con 100 (runsPerDay y runners llegan a la sim)", uno.o?.simulation?.runsPerDay === 400 && uno.o.simulation.waitingForRunnerMin > cien.o?.simulation?.waitingForRunnerMin, [uno.o?.simulation, cien.o?.simulation]);
+    const scripted = await call("archsim_from_pipeline", { pipeline: "node {\n  stage('Build') { sh 'make' }\n}" });
+    check("archsim_from_pipeline: un Jenkinsfile scripted es un error en ingl\u00E9s que dice por qu\u00E9", scripted.isError && /scripted Jenkinsfile/.test(scripted.text ?? ""), scripted.text);
+    const TF = `resource "aws_lb" "web" { name = "web" }
+resource "aws_lb_target_group" "tg" { name = "tg" }
+resource "aws_lb_listener" "l" {
+  load_balancer_arn = aws_lb.web.arn
+  default_action { target_group_arn = aws_lb_target_group.tg.arn }
+}
+resource "aws_ecs_service" "api" {
+  name = "api"
+  load_balancer { target_group_arn = aws_lb_target_group.tg.arn }
+}
+resource "aws_db_instance" "db" { engine = "postgres" }
+resource "aws_security_group" "sg" { name = "sg" }
+resource "aws_ecs_task_definition" "td" {
+  container_definitions = jsonencode([{ environment = [{ name = "DB", value = aws_db_instance.db.address }] }])
+}
+`;
+    const t = await call("archsim_from_terraform", { terraform: TF });
+    const kinds = (t.o?.components ?? []).map((c: any) => c.kind);
+    check("archsim_from_terraform: balanceador, servicio y BD con su tecnolog\u00EDa de AWS; el security group, contado y no dibujado", ["lb", "service", "db"].every((k) => kinds.includes(k)) && t.o.components.some((c: any) => c.tech === "aws-rds")
+        && t.o.notes.some((n: any) => n.code === "plumbing") && t.o.notes.some((n: any) => n.code === "edges-deduced"), t.o);
+    check("archsim_from_terraform: simula (caudal, cuello y coste por hora con el precio de la nube)", t.o?.simulation?.steady?.throughputRps > 0 && t.o.simulation.steady.infraCostPerHourUsd > 0, t.o?.simulation?.steady);
+    const v = await call("archsim_validate", { archsim: JSON.stringify(t.o?.archsim) });
+    check("archsim_from_terraform: el documento archsim que devuelve lo acepta archsim_validate", v.o?.ok === true, v.o);
+    const vacio = await call("archsim_from_terraform", { terraform: "variable \"x\" {}" });
+    check("archsim_from_terraform: sin resource, un error en ingl\u00E9s que dice qu\u00E9 pasar", vacio.isError && /no resource block/.test(vacio.text ?? ""), vacio.text);
+    check("archsim_from_*: nada en espa\u00F1ol cruza la frontera (salvo nombres de jobs y recursos)", !/estimad|conexi|recursos|aviso|despliegue/i.test(JSON.stringify([p.o?.notes, p.o?.simulation, t.o?.notes, t.o?.simulation?.steady])));
+}
+{
+    const CODIGO = `class Shop {
+  static getInstance() { return Shop.i; }
+  price(item) {
+    switch (item.type) {
+      case 'book': return 10;
+      case 'food': return 5;
+      case 'toy': return 7;
+    }
+  }
+  ship(order) { return order.customer.address.city.name; }
+}
+function create(a, b, c, d, e) { return a + b + c + d + e; }
+`;
+    const r = await call("code_smells", { code: CODIGO });
+    const ids = (r.o?.smells ?? []).map((s: any) => s.smell).sort();
+    check("code_smells: instancia global, switch por tipo, cadena y lista de par\u00E1metros, con su l\u00EDnea", JSON.stringify(ids) === JSON.stringify(["global-instance", "long-params", "message-chain", "type-switch"])
+        && r.o.smells.find((s: any) => s.smell === "type-switch").lines === "4-8", r.o);
+    const sw = r.o?.smells?.find((s: any) => s.smell === "type-switch");
+    check("code_smells: cada pista trae el refactor de Fowler, el patr\u00F3n con su demo y la ficha del \u00ABcu\u00E1ndo no\u00BB (id que entiende practice_check)", sw?.refactoring === "Replace Conditional with Polymorphism" && /patterns\?pattern=strategy/.test(sw?.pattern?.demo)
+        && sw?.whenNot?.practice === "sustituir-switch-por-tipo-con-polimorfismo", sw);
+    const pc = await call("practice_check", { topic: sw?.whenNot?.practice ?? "x" });
+    check("code_smells \u2192 practice_check: la ficha enlazada existe en el registro", !pc.isError && JSON.stringify(pc.o).includes("polymorphism"), pc.o ?? pc.text);
+    const limpio = await call("code_smells", { code: "export const add = (a: number, b: number): number => a + b;\n" });
+    check("code_smells: c\u00F3digo limpio (y en TS) \u2192 ninguna pista, y una nota que no lo vende como certificado", limpio.o?.smells?.length === 0 && /not a clean bill/.test(limpio.o?.note), limpio.o);
+    const roto = await call("code_smells", { code: "function f(a, b, c, d, e {\n  return order.customer.address.city.name\n" });
+    check("code_smells: c\u00F3digo a medio pegar se analiza y avisa", roto.o?.syntaxErrors === true && roto.o.smells.some((s: any) => s.smell === "message-chain"), roto.o);
+    const ruta = await call("code_smells", { path: join(here, "..", "..", "src", "app", "services", "patterns-olores.ts") });
+    check("code_smells: lee por ruta", !ruta.isError && ruta.o?.lines > 100, ruta.o ?? ruta.text);
+    const ambos = await call("code_smells", { code: "x", path: "y" });
+    check("code_smells: o code o path, no los dos", ambos.isError, ambos);
+    check("code_smells: nada en espa\u00F1ol cruza la frontera (salvo los ids de las fichas)", !/líneas|parámetros|casos|veces|clase/i.test(JSON.stringify(r.o)), r.o);
+}
 const ab2 = (await call("abtest_analyze", { variants: [{ name: "A", visitors: 1000, conversions: 100 }, { name: "B", visitors: 1000, conversions: 130 }] })).o;
 check("abtest_analyze: 10% vs 13% (n=1000) \u2192 z-test, p\u22480.0355, significativo, gana B", ab2?.test === "two-proportion-z" && Math.abs(ab2.pValue - 0.0355) < 0.001 && ab2.significant === true && ab2.winner === "B"
     && ab2.probabilityVariantBeatsControl > 0.97 && ab2.sampleRatioMismatch?.mismatch === false, ab2);
@@ -1524,6 +1673,61 @@ action view appliesTo { principal: [User], resource: [Doc, Folder] };`;
     const cc = (await call("chem_solubility", { salt: "CaCO3", solidInExcess: true })).o;
     check("chem_solubility: CaCO3 en agua \u2192 el exacto disuelve M\u00C1S que el libro (el carbonato es base) y avisa del vaso cerrado", cc?.equilibrium?.dissolvedMolPerL > cc.textbook.dissolvedMolPerL && cc.assumptions.some((a: string) => /Closed vessel/.test(a)) && cc.constants.some((k: any) => k.substance === "carbonico"), cc);
     check("qu\u00EDmica: nada en espa\u00F1ol cruza la frontera", !/"(agua|debil-acido|anfotero|tampon|compilacion|cumple|valor|metodo)"/.test(JSON.stringify([ac, fos, val, agcl, cc])), JSON.stringify(fos?.textbook));
+}
+{
+    const cerca = (a: number, b: number, tol: number) => Math.abs(a - b) <= tol;
+    let semilla = 7;
+    const azar = () => { semilla = (semilla * 16807) % 2147483647; return semilla / 2147483647 - 0.5; };
+    const mens = Array.from({ length: 72 }, (_, t) => 100 + 2 * t + 20 * Math.sin(2 * Math.PI * t / 12) + 4 * azar());
+    const fechas = mens.map((_, t) => `${2020 + Math.floor(t / 12)}-${String(t % 12 + 1).padStart(2, "0")}`);
+    const f = (await call("forecast", { values: mens, dates: fechas })).o;
+    check("forecast: serie mensual con estaci\u00F3n \u2192 paso mes, estaci\u00F3n 12, 12 previsiones fechadas desde 2026-01", f?.step === "month" && f.season === 12 && f.forecast.length === 12 && f.forecast[0].date === "2026-01-01" && f.forecast.every((p: any) => p.lower < p.mean && p.mean < p.upper), f?.forecast?.[0]);
+    check("forecast: compara los cuatro con backtest y un modelo de verdad BATE al ingenuo; auto elige el de menor MAE", f?.comparison?.length === 4 && /beats the best naive/.test(f.verdict) && f.model.chosenBy
+        && f.model.model === f.comparison.reduce((a: any, b: any) => (b.backtest.mae < a.backtest.mae ? b : a)).model, { verdict: f?.verdict, model: f?.model?.label });
+    check("forecast: la cobertura del intervalo se MIDE y se da junto a la prometida", f?.comparison?.every((c: any) => c.backtest.promisedCoverage === 0.8 && c.backtest.intervalCoverage >= 0 && c.backtest.intervalCoverage <= 1), f?.comparison);
+    let w = 50;
+    const paseo = Array.from({ length: 120 }, () => (w += 3 * azar()));
+    const p = (await call("forecast", { data: paseo.join("\n") })).o;
+    check("forecast: paseo aleatorio \u2192 \u00ABning\u00FAn modelo bate al ingenuo\u00BB, sin inventar estaci\u00F3n", p?.step === "index" && p.season === 1 && /No model beats the naive/.test(p.verdict), p?.verdict);
+    const d0 = Date.UTC(2025, 0, 1), dias: string[] = [], v: number[] = [];
+    const FEST = new Set(["2025-01-01", "2025-01-06", "2025-04-18", "2025-05-01", "2025-08-15", "2025-10-12", "2025-11-01", "2025-12-06", "2025-12-08", "2025-12-25"]);
+    for (let i = 0; i < 330; i++) {
+        const dia = new Date(d0 + i * 86400000), iso = dia.toISOString().slice(0, 10), dw = dia.getUTCDay();
+        dias.push(iso);
+        v.push((FEST.has(iso) ? 30 : dw === 0 || dw === 6 ? 60 : 100) + 3 * azar());
+    }
+    const fd = (await call("forecast", { values: v, dates: dias, holidayCalendar: "ES", horizon: 14 })).o;
+    check("forecast: diaria + festivos del BOE \u2192 estaci\u00F3n 7, efecto aditivo \u2248 \u221270 y el 8-dic (futuro) previsto como festivo", fd?.step === "day" && fd.season === 7 && fd.model.holidayEffect?.type === "additive" && cerca(fd.model.holidayEffect.value, -70, 6)
+        && fd.forecast.find((x: any) => x.date === "2025-12-08")?.holiday === true, { efecto: fd?.model?.holidayEffect, f: fd?.forecast?.slice(0, 3) });
+    const mal = await call("forecast", { values: v, dates: dias, holidayCalendar: "ES-XX" });
+    check("forecast: regi\u00F3n desconocida \u2192 error que lista las v\u00E1lidas", mal.isError && /ES-MD/.test(mal.text), mal.text);
+    const mensF = (await call("forecast", { values: mens, dates: fechas, holidays: ["2026-01-06"] })).o;
+    check("forecast: festivos con una serie mensual \u2192 se ignoran y se avisa", mensF?.warnings?.some((x: any) => x.code === "calendario.solo-diario"), mensF?.warnings);
+    const ambos = await call("forecast", { values: [1, 2, 3, 4, 5, 6, 7, 8], data: "1\n2" });
+    check("forecast: data y values a la vez \u2192 error claro", ambos.isError && /either data or values/.test(ambos.text), ambos.text);
+    const fuentes = ["forecast.service.ts", "forecast-modelos.ts", "forecast-backtest.ts", "forecast-calendario.ts"]
+        .map((x) => readFileSync(join(here, "..", "..", "src", "app", "services", x), "utf8")).join("\n");
+    const usados = [...new Set([...fuentes.matchAll(/['"]((?:hw|arima|datos|bt|calendario)\.[a-z0-9-]+)['"]/g)].map((m) => m[1]))];
+    const { AVISO } = await import("../src/forecast.mts");
+    const faltan = usados.filter((u) => !(u in AVISO));
+    check(`forecast: los ${usados.length} avisos del motor tienen su frase en inglés`, usados.length >= 6 && faltan.length === 0, faltan);
+    const m = (await call("llm_memory", { model: "qwen3-8b", precision: "q4", gpu: "rtx5060" })).o;
+    check("llm_memory: Qwen3 8B en q4 a contexto completo \u2192 4,29 + 5,63 GiB (+10 %), NO cabe en 8 GiB; cabe con ~21.700 tokens", m?.memory?.weightsGiB === 4.29 && m.memory.kvCacheGiB === 5.63 && m.memory.kvCacheBytesPerToken === 147456 && m.gpu.fits === false
+        && cerca(m.gpu.maxContextThatFits, 21713, 5), m?.memory);
+    check("llm_memory: techo de velocidad = ancho de banda / bytes de pesos (448 GB/s \u2192 ~97 tokens/s)", cerca(m?.decodeTokensPerSecondCeiling, 97.2, 0.2), m?.decodeTokensPerSecondCeiling);
+    const moe = (await call("llm_memory", { model: "qwen3-235b-a22b", precision: "q4", gpu: "h100sxm", gpuCount: 2, context: 8192 })).o;
+    check("llm_memory: MoE \u2192 los 235.000 M en memoria, pero el techo de velocidad sale de los 22.000 M activos", moe?.model?.activeParametersPerToken === 22000000000 && moe.gpu.fits === true && cerca(moe.decodeTokensPerSecondCeiling, 3350000000000 / (22000000000 * 4.5 / 8), 1) && moe.notes.some((n: string) => /Mixture of experts/.test(n)), moe?.gpu);
+    const propio = (await call("llm_memory", { architecture: { parameters: 1000000000, layers: 16, kvHeads: 4, headDim: 64 }, context: 4096, gpuMemoryGiB: 4 })).o;
+    check("llm_memory: un modelo cualquiera desde su config.json", propio?.memory?.kvCacheBytesPerToken === 2 * 16 * 4 * 64 * 2 && propio.gpu.fits === true, propio?.memory);
+    const pares = [[0.97, true], [0.95, true], [0.93, true], [0.9, true], [0.88, false], [0.86, true], [0.8, false], [0.75, true], [0.7, false], [0.6, false]]
+        .map(([cosine, same]) => ({ cosine, same }));
+    const c = (await call("semantic_cache_threshold", { pairs: pares })).o;
+    check("semantic_cache_threshold: sugiere el umbral m\u00E1s bajo sin equivocados (0,89: por debajo entra el 0,88 \u00ABdistinta\u00BB)", c?.suggested?.threshold === 0.89 && c.suggested.wrongAmongHits === 0 && c.suggested.hitRate === 0.4, c?.suggested);
+    const enlace = /#cache=([A-Za-z0-9_-]+)$/.exec(c?.archsim?.link ?? "")?.[1];
+    const json = enlace ? JSON.parse(Buffer.from(enlace, "base64url").toString("utf8")) : null;
+    check("semantic_cache_threshold: el enlace a archsim lleva la curva en el formato v1 que lee (base64url)", json?.v === 1 && json.n === 10 && json.elegido === 0.89 && json.umbral.length === 50 && json.aciertos.length === 50, json);
+    const pocos = (await call("semantic_cache_threshold", { pairs: pares, maxWrong: 0, chosen: 0.8 })).o;
+    check("semantic_cache_threshold: \u00ABchosen\u00BB se eval\u00FAa y viaja; con pocos pares, avisa", pocos?.chosen?.threshold === 0.8 && pocos.archsim.threshold === 0.8 && pocos.notes.some((n: string) => /Only 10 pairs/.test(n)), pocos);
 }
 const { probarHuerfano, CONTROL_ROTO } = await import("./huerfano.mjs");
 const control = await probarHuerfano("node", CONTROL_ROTO);

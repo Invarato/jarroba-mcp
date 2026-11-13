@@ -29,6 +29,12 @@ interface Artefactos {
 }
 let artefactos: Promise<Artefactos> | null = null;
 let artefactosListos = false;
+export async function comoGzip(b: ArrayBuffer): Promise<ArrayBuffer> {
+    const u = new Uint8Array(b, 0, Math.min(2, b.byteLength));
+    if (u[0] === 31 && u[1] === 139)
+        return b;
+    return new Response(new Blob([b]).stream().pipeThrough(new CompressionStream("gzip"))).arrayBuffer();
+}
 export function olvidarCargaDelMotor(): void { artefactos = null; artefactosListos = false; }
 @Injectable({ providedIn: "root" })
 export class PgEngineService {
@@ -36,6 +42,9 @@ export class PgEngineService {
     readonly booting = signal(false);
     private pg: unknown = null;
     private initPromise: Promise<void> | null = null;
+    protected nombreBase = "jt-dbstudio";
+    private cierre: Promise<void> | null = null;
+    private enCurso = new Set<Promise<unknown>>();
     private async cargar(): Promise<Artefactos> {
         const enFrio = !artefactosListos;
         if (enFrio)
@@ -65,11 +74,12 @@ export class PgEngineService {
                 WebAssembly.compile(pgWasm),
                 WebAssembly.compile(initWasm),
             ]);
-            const [trgm, unacc] = await Promise.all([bytes("pg_trgm.tar.gz"), bytes("unaccent.tar.gz")]);
+            const tar = (f: string) => bytes(f).then(comoGzip);
+            const [trgm, unacc, vec] = await Promise.all([tar("pg_trgm.tar.gz"), tar("unaccent.tar.gz"), tar("vector.tar.gz")]);
             const blobUrl = (b: ArrayBuffer) => URL.createObjectURL(new Blob([b], { type: "application/gzip" }));
-            const urls: Record<string, string> = { pg_trgm: blobUrl(trgm), unaccent: blobUrl(unacc) };
+            const urls: Record<string, string> = { pg_trgm: blobUrl(trgm), unaccent: blobUrl(unacc), vector: blobUrl(vec) };
             const contrib = (name: string) => ({ name, setup: async () => ({ bundlePath: new URL(urls[name]) }) });
-            const extensions = { unaccent: contrib("unaccent"), pg_trgm: contrib("pg_trgm") };
+            const extensions = { unaccent: contrib("unaccent"), pg_trgm: contrib("pg_trgm"), vector: contrib("vector") };
             artefactosListos = true;
             const fsBundle = { arrayBuffer: () => Promise.resolve(dataBuf) } as unknown as Blob;
             return { pgliteWasmModule, initdbWasmModule, fsBundle, extensions };
@@ -81,9 +91,11 @@ export class PgEngineService {
             return this.initPromise;
         this.booting.set(true);
         this.initPromise = (async () => {
+            if (this.cierre)
+                await this.cierre;
             const { PGlite } = await import("@electric-sql/pglite");
             const w = await this.cargar();
-            this.pg = await PGlite.create(esIncrustado() ? "memory://" : "idb://jt-dbstudio", {
+            this.pg = await PGlite.create(esIncrustado() ? "memory://" : `idb://${this.nombreBase}`, {
                 pgliteWasmModule: w.pgliteWasmModule,
                 initdbWasmModule: w.initdbWasmModule,
                 fsBundle: w.fsBundle,
@@ -98,10 +110,46 @@ export class PgEngineService {
         });
         return this.initPromise;
     }
+    async cerrar(): Promise<void> {
+        const abriendo = this.initPromise;
+        if (!abriendo)
+            return this.cierre ?? undefined;
+        this.initPromise = null;
+        this.ready.set(false);
+        this.cierre = (async () => {
+            try {
+                await abriendo;
+            }
+            catch {
+                return;
+            }
+            await Promise.allSettled([...this.enCurso]);
+            const pg = this.pg as {
+                close?(): Promise<void>;
+            } | null;
+            this.pg = null;
+            try {
+                await pg?.close?.();
+            }
+            catch { }
+        })();
+        try {
+            await this.cierre;
+        }
+        finally {
+            this.cierre = null;
+        }
+    }
+    private seguir<T>(p: Promise<T>): Promise<T> {
+        this.enCurso.add(p);
+        void p.finally(() => this.enCurso.delete(p)).catch(() => undefined);
+        return p;
+    }
     async warmup(): Promise<void> {
         await this.ensure();
     }
-    async exec(sql: string): Promise<PgResult[]> {
+    exec(sql: string): Promise<PgResult[]> { return this.seguir(this.execAbierta(sql)); }
+    private async execAbierta(sql: string): Promise<PgResult[]> {
         await this.ensure();
         const pg = this.pg as {
             exec(q: string): Promise<RawResult[]>;
@@ -116,7 +164,8 @@ export class PgEngineService {
             return [this.fail(e, start)];
         }
     }
-    async query(sql: string, params: unknown[] = []): Promise<PgResult> {
+    query(sql: string, params: unknown[] = []): Promise<PgResult> { return this.seguir(this.queryAbierta(sql, params)); }
+    private async queryAbierta(sql: string, params: unknown[]): Promise<PgResult> {
         await this.ensure();
         const pg = this.pg as {
             query(q: string, p?: unknown[]): Promise<RawResult>;
@@ -195,7 +244,8 @@ export class PgEngineService {
             catch { } },
         };
     }
-    async dump(): Promise<Blob> {
+    dump(): Promise<Blob> { return this.seguir(this.dumpAbierta()); }
+    private async dumpAbierta(): Promise<Blob> {
         await this.ensure();
         const pg = this.pg as {
             dumpDataDir(): Promise<Blob | File>;

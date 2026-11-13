@@ -10,12 +10,12 @@ second implementation to drift.
 
 ## Four packages, because context is not free
 
-Loading all 140 tools costs **~53,800 tokens of context** before you type anything, in a client that
+Loading all 149 tools costs **~61,100 tokens of context** before you type anything, in a client that
 loads every tool definition up front (Cursor and most others; Claude Code with Tool Search turned off).
 That is Claude Code's own count: measured with `/context` on 0.1.7 (120 tools: 41,996 tokens) and
 extrapolated with `npm run tokens`. Claude Code's **Tool Search**, on by default, only loads a definition
 when it is about to be used: there the whole catalogue costs a few hundred tokens. GitHub's official MCP
-server is the usual example of the problem; Cursor caps out around 40 tools. A catalogue of 140 is not "more
+server is the usual example of the problem; Cursor caps out around 40 tools. A catalogue of 149 is not "more
 complete", it is more expensive — and the model also *chooses* worse, because the usual failure of a
 big catalogue is not a missing tool, it is calling the one next to it.
 
@@ -26,12 +26,12 @@ So pick the one you actually want:
 | **`@jarroba/mcp-logs`** | 12 | **~5,500 tok** | Reading logs that do not fit in your context |
 | **`@jarroba/mcp-tests`** | 4 | **~1,700 tok** | Auditing tests — including your own |
 | **`@jarroba/mcp-calc`** | 5 | **~1,600 tok** | Maths with units, equations and sheets |
-| `@jarroba/mcp` | 140 | ~53,800 tok | Everything |
+| `@jarroba/mcp` | 149 | ~61,100 tok | Everything |
 
 All four come from the same source. The filter is the `JARROBA_MCP_DOMAINS` environment variable and
 each binary sets its own as a **default**, not a cage: install `mcp-logs` and add
 `JARROBA_MCP_DOMAINS=logs,core` if you want the general-purpose tools too. Domains: `core`,
-`calc`, `diagram`, `kg`, `db`, `ai`, `logs`, `queue`, `project`, `tests`, `api`, `chip`, `chem`, `access`, `archsim`, `security`, `experiments`, `payroll`.
+`calc`, `diagram`, `kg`, `db`, `ai`, `logs`, `queue`, `project`, `tests`, `api`, `chip`, `chem`, `access`, `archsim`, `security`, `experiments`, `business`, `forecast`. (`payroll`, its name in 0.3.0, still works.)
 
 ### A newer complement, not a replacement: Tool Search
 
@@ -153,15 +153,18 @@ migration breaks or changes.
 (WASM, no server), so a metric like "revenue" is computed from the **agreed** definition rather than
 a query someone invented.
 
-**AI about AI (`ai`, 6)** — deterministic and model-free, which is what makes them useful here: an
+**AI about AI (`ai`, 8)** — deterministic and model-free, which is what makes them useful here: an
 AI can review **its own** system prompt, prepare a RAG corpus, run **its own answer** through a
 claim/source check, verify the eval suite it just wrote, or audit the catalogue of an MCP server it
 is deciding whether to install — and, given the tools/list it approved earlier, catch a "rug pull" (tools
 that changed after approval) — without spending a model call. And before recommending a practice it learned in
 training, `practice_check` tells it whether that practice still holds — superseded by what, since when, how
-sure — from a dated register; given its knowledge cutoff, only what changed after it.
+sure — from a dated register; given its knowledge cutoff, only what changed after it. Two for serving: `llm_memory` says
+whether a model fits a GPU (weights by quantization, the KV cache that grows with context, the longest context that
+fits and the decode speed ceiling), and `semantic_cache_threshold` picks a semantic cache's similarity threshold from
+pairs measured with your own embedding model.
 
-**Project workshop (`project`, 10)** — simulate `make` without running it and say **why** each target
+**Project workshop (`project`, 11)** — simulate `make` without running it and say **why** each target
 rebuilds; compare a real `make` log against that prediction (a target rebuilt when the simulation
 said "cached" is the signature of an **undeclared dependency**); `git check-ignore -v` without git,
 including where git and Docker **disagree** about the same file; and which Docker layers a change
@@ -170,7 +173,9 @@ time), says why each failed deploy counts as failed, and classifies the team aga
 report 2019-2024 — saying "ambiguous" when a report's table does not decide. `maven_plan` says what `mvn <command>`
 runs in a project without running Maven — reactor order, phase by phase, and where each goal comes from (packaging,
 your pom, the parent, a profile) — verified goal by goal against real `mvn` logs; `gradle_plan` reads a
-`--dry-run` output and gives each task's Maven equivalent.
+`--dry-run` output and gives each task's Maven equivalent. `code_smells` finds eight code smells in JS/TS (long
+function, long parameter list, conditional on type, message chain, large class, feature envy, duplicated code, global
+instance) with their lines, Fowler's refactoring, the pattern that resolves it and when *not* to refactor.
 
 **Chemistry and solid state (`chem`, 12)** — the textbook case for this whole server. A model invents
 chromium's electron configuration, removes electrons from the wrong orbital when ionizing, and
@@ -199,19 +204,28 @@ passed inline in `world` — there is no server-side session to keep in sync. An
 for each request allow/deny with the policies that decided it — a missing permit told apart from a
 forbid that wins.
 
-**Architecture simulation (`archsim`, 2)** — the Architecture Simulator's engine for the archsim format
+**Architecture simulation (`archsim`, 4)** — the Architecture Simulator's engine for the archsim format
 (`archsim.md`, next to `llms.txt`). `archsim_validate` checks the document; `archsim_simulate` runs it
 and returns throughput, p50/p95 **response** latency (it ends at the first queue) and **processing**
 latency, availability, bottleneck, cost per hour, per-queue lag / "full in N s" / silently lost
 messages, and the same findings as the tool's Report. Queues pull (the consumer takes what it can),
 caches cut the path, balancers split and services call all their dependencies, autoscaling takes about
 a minute to arrive. An optional timed `phase` with a peak, a DDoS or an LLM outage shows the worst of it.
+`archsim_from_terraform` turns Terraform / OpenTofu into that architecture (with each resource's cloud technology
+and price) and simulates it; `archsim_from_pipeline` reads a GitHub Actions, Azure Pipelines, GitLab CI or
+declarative Jenkins pipeline and simulates it as CI/CD: lead time, waiting for a runner, cost and DORA level.
 
 **A/B experiments (`experiments`, 3)** — where a model picks the wrong test. `abtest_analyze` uses the
 right one (z or Fisher's exact), gives intervals, the Bayesian P(variant beats control), A/B/n with
 Holm/BH correction, and always checks **sample ratio mismatch**; `abtest_sample_size` plans visitors and
 days (R's `power.prop.test`); `abtest_sequential` gives the per-look boundaries if you peek (Pocock,
 O'Brien-Fleming, Lan-DeMets spending). Checked against R/`ldbounds` reference values in the tests.
+
+**Forecasting (`forecast`, 1)** — `forecast` does what a forecaster does instead of trusting one model:
+Holt-Winters, automatic ARIMA/SARIMA and the two naive baselines are backtested with a rolling origin, and the answer
+says whether any of them actually beats the naive forecast (on a random walk none does, and it says so), how much of
+the promised interval coverage was achieved, anomalies and a likely level shift. Daily series take official holidays
+(Spain by region, other countries) or your own dates.
 
 **Security (`security`, 10)** — what an agent should check **before acting**, on the same engines as
 the web's security tools. `hidden_text_scan` finds instructions a model literally cannot see
@@ -288,6 +302,7 @@ npm run typecheck     # types for the server and its tests
 npm test              # smoke: starts the server and calls the tools (222 checks)
 npm run test:paquete  # packs, INSTALLS outside the repo, and checks all three packages (~2 min)
 npm run catalogo      # the per-domain tool counts, derived
+npm run catalogos-ejemplo  # refresh the real tools/list that /mcp-audit shows as an example (on each release)
 ```
 
 > **`npm test` and `npm run test:paquete` are not interchangeable, and that lesson cost seven tools.**

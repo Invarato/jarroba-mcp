@@ -1,3 +1,4 @@
+import { baseMinimaLagunas, ultimaBaseMinima } from "./pension-datos";
 export interface SistemaCalculo {
     id: "nuevo" | "anterior";
     meses: number;
@@ -146,4 +147,117 @@ export function calcularBaseReguladora(e: EntradaBaseReguladora): ResultadoBaseR
     const sistemas = sistemasPara(e.hechoCausante).map((s) => calcularSistema(s.id === "nuevo" ? e : { ...e, lagunasMejoradas: false }, s));
     const elegido = sistemas.reduce((a, b) => (b.baseReguladora > a.baseReguladora ? b : a));
     return { sistemas, elegido };
+}
+export interface EscenarioPension {
+    hechoCausante: string;
+    bases: Record<string, number | null>;
+    hasta?: string;
+    futuro: "ultima" | "nada";
+    lagunasMejoradas: boolean;
+    dias?: number | null;
+    ipc: {
+        indice: Record<string, number>;
+        reconstruidos?: {
+            hasta?: string | null;
+        };
+    };
+    pendientes?: string[];
+}
+export interface SimulacionPension {
+    r: ResultadoBaseReguladora;
+    referencia: string;
+    ultimoInforme: string;
+    ultimaBase: number | null;
+    lagunas: {
+        total: number;
+        al100: number;
+        al80: number;
+        al50: number;
+    };
+    mesesFuturos: number;
+    meses: number | null;
+    porcentaje: number | null;
+    pension: number | null;
+    supuestos: string[];
+    ipcSupuesto: string | null;
+    minimaSupuesta: {
+        mes: string;
+        base: number;
+    } | null;
+    desconocidos: string[];
+    pendientesEnPeriodo: number;
+    faltanDatos: boolean;
+    ipcReconstruido: boolean;
+}
+export function simularPension(e: EscenarioPension): SimulacionPension {
+    const conocidos = Object.keys(e.bases).sort();
+    const ultimoInforme = e.hasta ?? conocidos.at(-1)!;
+    const ultimaBase = [...conocidos].reverse().map((m) => e.bases[m]).find((b): b is number => typeof b === "number" && b > 0) ?? null;
+    const bases = { ...e.bases };
+    const supuestos: string[] = [];
+    let mesesFuturos = 0;
+    for (let m = mesMas(ultimoInforme, 1); m < e.hechoCausante; m = mesMas(m, 1)) {
+        bases[m] = e.futuro === "ultima" ? ultimaBase : null;
+        supuestos.push(m);
+        if (e.futuro === "ultima")
+            mesesFuturos++;
+    }
+    const indice = e.ipc.indice;
+    const ultimoIpc = Object.keys(indice).sort().at(-1)!;
+    const minima = ultimaBaseMinima();
+    let ipcSupuesto = false, minimaSupuesta = false;
+    const r = calcularBaseReguladora({
+        hechoCausante: e.hechoCausante,
+        bases,
+        supuestos: new Set(supuestos),
+        lagunasMejoradas: e.lagunasMejoradas,
+        ipc: (m) => {
+            if (indice[m] !== undefined)
+                return indice[m];
+            if (m > ultimoIpc) {
+                ipcSupuesto = true;
+                return indice[ultimoIpc];
+            }
+            return null;
+        },
+        baseMinima: (m) => {
+            const x = baseMinimaLagunas(m);
+            if (x !== null)
+                return x;
+            if (minima && m > minima.mes) {
+                minimaSupuesta = true;
+                return minima.base;
+            }
+            return null;
+        },
+    });
+    const el = r.elegido;
+    const lagunas = { total: 0, al100: 0, al80: 0, al50: 0 };
+    for (const m of el.meses)
+        if (m.laguna) {
+            lagunas.total++;
+            lagunas[m.laguna === "100" ? "al100" : m.laguna === "80" ? "al80" : "al50"]++;
+        }
+    const meses = e.dias !== undefined && e.dias !== null && e.dias >= 0 ? mesesDeDias(e.dias) + mesesFuturos : null;
+    const porcentaje = meses !== null ? porcentajePorMeses(meses, Number(e.hechoCausante.slice(0, 4))) : null;
+    const pend = new Set(e.pendientes ?? []);
+    const rec = e.ipc.reconstruidos?.hasta;
+    return {
+        r,
+        referencia: mesMas(e.hechoCausante, -25),
+        ultimoInforme,
+        ultimaBase,
+        lagunas,
+        mesesFuturos,
+        meses,
+        porcentaje,
+        pension: porcentaje !== null ? (porcentaje ? Math.round(el.baseReguladora * porcentaje) / 100 : 0) : null,
+        supuestos,
+        ipcSupuesto: ipcSupuesto ? ultimoIpc : null,
+        minimaSupuesta: minimaSupuesta && minima ? minima : null,
+        desconocidos: el.faltan.filter((x) => x.que === "base" && !pend.has(x.mes)).map((x) => x.mes).sort(),
+        pendientesEnPeriodo: el.meses.filter((m) => pend.has(m.mes)).length,
+        faltanDatos: el.faltan.some((x) => x.que === "ipc" || x.que === "base-minima"),
+        ipcReconstruido: !!rec && el.meses.some((m) => m.mes <= rec),
+    };
 }

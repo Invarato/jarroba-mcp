@@ -9,6 +9,7 @@ export interface NodeSim {
     delayMs: number;
     down: boolean;
     degraded?: boolean;
+    fallbackFrac?: number;
     queueWaitMs?: number;
     waitingAvg?: number;
     retryX?: number;

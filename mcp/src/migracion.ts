@@ -31,7 +31,7 @@ export function migracionEn(m: MigrationImpact) {
     };
 }
 import type { ComprobacionConsulta } from "../../src/app/services/query-check";
-import type { Equivalencia, TipoEscenario, Escenario } from "../../src/app/services/query-equivalence.service";
+import type { Equivalencia, TipoEscenario, Escenario } from "../../src/app/services/query-equivalence";
 import type { ImpactoCambio, Veredicto, Cambio } from "../../src/app/services/schema-breaking";
 const errorPg = (e?: {
     mensaje: string;

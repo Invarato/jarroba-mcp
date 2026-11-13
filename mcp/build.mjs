@@ -51,17 +51,24 @@ const DIFERIDOS = [
     { entrada: "src/experimentos-motores.mts", salida: "dist/experimentos-motores.mjs", topeMB: 0.5 },
     { entrada: "src/regex-redos.mts", salida: "dist/regex-redos.mjs", topeMB: 3.2 },
     { entrada: "src/k8s-esquemas.mts", salida: "dist/k8s-esquemas.mjs", topeMB: 0.7 },
-    { entrada: "src/db-motores.mts", salida: "dist/db-motores.mjs", topeMB: 1.2 },
+    { entrada: "src/db-motores.mts", salida: "dist/db-motores.mjs", topeMB: 0.1 },
     { entrada: "src/hoja-calculo.mts", salida: "dist/hoja-calculo.mjs", topeMB: 0.9 },
     { entrada: "src/tokenizadores.mts", salida: "dist/tokenizadores.mjs", topeMB: 0.5 },
     { entrada: "src/cedar.mts", salida: "dist/cedar.mjs", topeMB: 0.1 },
+    { entrada: "src/olores.mts", salida: "dist/olores.mjs", topeMB: 0.3 },
     { entrada: "src/practicas.mts", salida: "dist/practicas.mjs", topeMB: JSON.stringify(JSON.parse(readFileSync("../public/practicas.json", "utf8"))).length / 1048576 + 0.15 },
     { entrada: "src/quimica.mts", salida: "dist/quimica.mjs", topeMB: 0.3 },
+    { entrada: "src/empresa-motores.mts", salida: "dist/empresa-motores.mjs", topeMB: 0.15 },
+    { entrada: "src/archsim-import.mts", salida: "dist/archsim-import.mjs", topeMB: 0.3 },
+    { entrada: "src/forecast.mts", salida: "dist/forecast.mjs", topeMB: 0.2 },
 ];
 if (existsSync("../public/datos/manifiesto.json")) {
-    const actual = JSON.parse(readFileSync("../public/datos/manifiesto.json", "utf8")).entradas.find((e) => e.id === "quimica-constantes")?.actual;
-    if (!readFileSync("src/quimica.mts", "utf8").includes(`/datos/quimica/${actual}'`)) {
-        throw new Error(`src/quimica.mts no importa la tabla de química vigente (${actual}, según public/datos/manifiesto.json): cambia el import y TABLA_FICHERO.`);
+    const entradas = JSON.parse(readFileSync("../public/datos/manifiesto.json", "utf8")).entradas;
+    for (const [fichero, id, carpeta] of [["src/quimica.mts", "quimica-constantes", "quimica"], ["src/pension.ts", "ipc", "ipc"], ["src/empresa-motores.mts", "festivos", "festivos"], ["src/forecast.mts", "festivos", "festivos"]]) {
+        const actual = entradas.find((e) => e.id === id)?.actual;
+        if (!readFileSync(fichero, "utf8").includes(`/datos/${carpeta}/${actual}'`)) {
+            throw new Error(`${fichero} no importa la captura vigente de «${id}» (${actual}, según public/datos/manifiesto.json): cambia el import y su constante con el nombre del fichero.`);
+        }
     }
 }
 const EXTERNOS_DIFERIDOS = DIFERIDOS.map((d) => "./" + d.salida.split("/").pop());

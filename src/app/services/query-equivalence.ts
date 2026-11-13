@@ -1,6 +1,4 @@
-import { Injectable, inject } from "@angular/core";
-import { PgEngineService, PgResult } from "./pg-engine.service";
-import { SampleDataService } from "./sample-data.service";
+import type { PgResult } from "./pg-engine.service";
 import { CATALOG_QUERIES, assembleSchema, SchemaModel, TableModel } from "./schema-catalog";
 import { diffFilas } from "../shared/sql/result-compare";
 export type Run = (sql: string) => Promise<PgResult[]>;
@@ -308,15 +306,4 @@ async function reducir(uno: (s: string) => Promise<PgResult>, qa: string, qb: st
             inserts.push(`INSERT INTO ${t} (${columnas.map(ident).join(", ")}) VALUES\n  ${filas.map(f => `(${f.map(literal).join(", ")})`).join(",\n  ")};`);
     }
     return { escenario, soloA: actual.soloA, soloB: actual.soloB, contraejemplo, inserts: inserts.join("\n") };
-}
-@Injectable({ providedIn: "root" })
-export class QueryEquivalenceService {
-    private engine = inject(PgEngineService);
-    private sample = inject(SampleDataService);
-    compare(schema: string, a: string, b: string, op: Omit<OpcionesEquivalencia, "generarDatos"> = {}): Promise<Equivalencia> {
-        return this.engine.withScratch(run => compararConsultas(run, schema, a, b, {
-            ...op,
-            generarDatos: (m, n) => this.sample.generate(m, { rowsPerTable: n }),
-        }));
-    }
 }

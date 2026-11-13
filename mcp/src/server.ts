@@ -4,8 +4,10 @@ import { serveStdio } from "@modelcontextprotocol/server/stdio";
 import { z } from "zod";
 import { getMath } from "../../src/app/shared/mathjs-lazy";
 import { importArchsim, dslErrorEn } from "../../src/app/features/archsim/archsim-dsl";
+import type { ArchState } from "../../src/app/features/archsim/archsim-model";
 import { runtimeToSteady } from "../../src/app/features/archsim/archsim-runtime-sim";
 import { runtimeInsights } from "../../src/app/features/archsim/archsim-insights";
+import { memoriaLlm, umbralCache, MODELOS_LLM, GPUS_LLM } from "./ia-memoria";
 import { costBreakdown } from "../../src/app/features/archsim/archsim-cloud-catalog";
 import { measure } from "../../src/app/features/archsim/archsim-challenges";
 import { evaluarSeguro, freeVars, simbolosUnidad } from "../../src/app/services/calc-eval.service";
@@ -392,10 +394,10 @@ const DOMINIO_EN: Record<Dominio, string> = {
     diagram: "diagrams (JTD: validate, render, build incrementally; Mermaid: check it parses)",
     kg: "knowledge graphs (SPARQL/RDF query and validation)",
     db: "databases (SQL translation, schema review, docs, measured migration locks)",
-    ai: "AI-on-AI review (prompt/RAG/claim checks, MCP catalogue audit)",
+    ai: "AI-on-AI review (prompt/RAG/claim checks, MCP catalogue audit) and serving math (does an LLM fit a GPU, semantic-cache threshold)",
     logs: "log analysis (parsing, patterns, stack traces, rotation)",
     queue: "queueing and capacity math, RabbitMQ routing and Kafka partitioning",
-    project: "project build tooling (Makefile/Docker simulation and lint, DORA metrics from gh/git)",
+    project: "project build tooling (Makefile/Docker simulation and lint, DORA metrics from gh/git, Maven/Gradle plans, JS/TS code smells)",
     tests: "test-suite auditing",
     chem: "chemistry and solid-state physics",
     api: "HTTP APIs (collections, CORS, breaking-change detection)",
@@ -403,7 +405,8 @@ const DOMINIO_EN: Record<Dominio, string> = {
     access: "identity/RBAC reasoning across Azure, AWS, GCP and Kubernetes on one neutral model",
     archsim: "architecture simulation (load, queues and lag, bottlenecks, cost; the archsim format)",
     experiments: "A/B experiment statistics (analysis with the right test and SRM, sample size, sequential looks)",
-    payroll: "Spanish payroll and pensions (regulatory base and percentage of the retirement pension)",
+    business: "business in Spain (retirement pension, work calendar against the collective agreement, shift rotas against the Workers' Statute, 13-week cash forecast from a bank statement)",
+    forecast: "time-series forecasting (Holt-Winters, ARIMA, naive baselines) checked by backtest, with holidays",
     security: "security checks before acting (hidden Unicode instructions, secrets in a paste/HAR, GitHub Actions, HTTP headers, SPF/DKIM/DMARC, SAML, agent configs)",
 };
 function instructionsDe(pedidos: Dominio[] | null): string {
@@ -3522,18 +3525,11 @@ server.tool("archsim_validate", "Validate an architecture-simulation document (t
     const noConsumers = r.state.nodes.filter(n => (n.kind === "queue" || n.kind === "pubsub") && !hasOut.has(n.id)).map(archsimLabel);
     return ok({ ok: true, summary: { nodes: r.state.nodes.length, byKind, edges: r.state.edges.length, queuesWithoutConsumers: noConsumers } });
 });
-server.tool("archsim_simulate", "Simulate an architecture (archsim format) with the Architecture Simulator's engine: steady-state throughput, p50/p95 RESPONSE latency (it ends at the first queue) and PROCESSING latency, availability, bottleneck, infrastructure cost per hour, per-queue lag / \"full in N s\" / silently lost messages, per-node utilization, and the Report's findings. Optionally also runs a timed phase with a scenario (peak, DDoS, LLM outage) and reports the worst of it. Deterministic; nothing leaves the machine.", {
-    archsim: z.string().describe("The archsim document as JSON."),
-    aiReqPerSec: z.number().nonnegative().optional().describe("Requests/s entering through AI sources (nodes with no input that are not clients). Default 0."),
-    phase: z.object({
-        seconds: z.number().positive().max(3600).describe("Simulated duration of the phase."),
-        scenario: archsimScenario,
-    }).optional().describe("Timed phase after steady state (e.g. {\"seconds\":60,\"scenario\":{\"loadMult\":6}}): queues fill, autoscaling lags (~60 s by default)."),
-}, async ({ archsim, aiReqPerSec, phase }) => {
-    const r = importArchsim(archsim);
-    if (r.error || !r.state)
-        return err(`Invalid archsim document: ${r.error ? dslErrorEn(r.error) : "could not build the graph"}`);
-    const { nodes, edges } = r.state;
+function simularArchsim(state: ArchState, aiReqPerSec: number | undefined, phase?: {
+    seconds: number;
+    scenario?: z.infer<typeof archsimScenario>;
+}): Record<string, unknown> {
+    const { nodes, edges } = state;
     const byId = new Map(nodes.map(n => [n.id, n]));
     const rr = aiReqPerSec ?? 0;
     const steady = runtimeToSteady(nodes, edges, rr);
@@ -3563,6 +3559,8 @@ server.tool("archsim_simulate", "Simulate an architecture (archsim format) with 
             infraCostPerHourUsd: r2(costHr),
             llmCostPerHourUsd: r2(steady.costPerHour),
             silentlyLostPerSec: r2(steady.asyncLost),
+            ...(steady.cacheWrongPerSec > 0 ? { semanticCacheWrongPerHour: r2(steady.cacheWrongPerSec * 3600) } : {}),
+            ...(steady.fallbackPerSec > 0 ? { toFallbackRps: r2(steady.fallbackPerSec) } : {}),
             queues,
             nodes: nodes.filter(n => steady.perNode[n.id]).map(n => ({
                 node: archsimLabel(n),
@@ -3570,6 +3568,7 @@ server.tool("archsim_simulate", "Simulate an architecture (archsim format) with 
                 utilization: r2(steady.perNode[n.id].rho),
                 inRps: r2(steady.perNode[n.id].lambdaIn),
                 droppedRps: r2(steady.perNode[n.id].dropped),
+                ...(steady.perNode[n.id].fallbackFrac !== undefined ? { toFallbackShare: r2(steady.perNode[n.id].fallbackFrac!) } : {}),
             })),
         },
         findings: runtimeInsights(nodes, edges, steady, costHr).map(i => ({ severity: i.sev, key: i.key, params: i.params, title: i.title, detail: i.detail })),
@@ -3578,7 +3577,52 @@ server.tool("archsim_simulate", "Simulate an architecture (archsim format) with 
         const m = measure(nodes, edges, { seconds: phase.seconds, dt: phase.seconds > 120 ? 0.5 : 0.1, scenario: phase.scenario, reqRate: rr });
         out["phase"] = { seconds: phase.seconds, scenario: phase.scenario ?? {}, availability: r2(m.avail), legitAvailability: r2(m.legitAvail), worstP95Ms: r2(m.p95), worstQueueLagSec: m.lagSec >= 1000000000 ? "infinite" : r2(m.lagSec), messagesLostTotal: Math.round(m.lost), maxInfraCostPerHourUsd: r2(m.costHr) };
     }
-    return ok(out);
+    return out;
+}
+server.tool("archsim_simulate", "Simulate an architecture (archsim format) with the Architecture Simulator's engine: steady-state throughput, p50/p95 RESPONSE latency (it ends at the first queue) and PROCESSING latency, availability, bottleneck, infrastructure cost per hour, per-queue lag / \"full in N s\" / silently lost messages, per-node utilization, and the Report's findings. Optionally also runs a timed phase with a scenario (peak, DDoS, LLM outage) and reports the worst of it. Deterministic; nothing leaves the machine.", {
+    archsim: z.string().describe("The archsim document as JSON."),
+    aiReqPerSec: z.number().nonnegative().optional().describe("Requests/s entering through AI sources (nodes with no input that are not clients). Default 0."),
+    phase: z.object({
+        seconds: z.number().positive().max(3600).describe("Simulated duration of the phase."),
+        scenario: archsimScenario,
+    }).optional().describe("Timed phase after steady state (e.g. {\"seconds\":60,\"scenario\":{\"loadMult\":6}}): queues fill, autoscaling lags (~60 s by default)."),
+}, async ({ archsim, aiReqPerSec, phase }) => {
+    const r = importArchsim(archsim);
+    if (r.error || !r.state)
+        return err(`Invalid archsim document: ${r.error ? dslErrorEn(r.error) : "could not build the graph"}`);
+    return ok(simularArchsim(r.state, aiReqPerSec, phase));
+});
+const archsimImportMod = diferido(() => import("./archsim-import.mjs"));
+server.registerTool("archsim_from_pipeline", {
+    title: "Simulate a CI/CD pipeline from its workflow file",
+    description: "Read a CI/CD pipeline \u2014 GitHub Actions, Azure Pipelines, GitLab CI or a declarative Jenkinsfile \u2014 and simulate it with the Architecture Simulator's CI/CD engine: jobs and their dependencies (what runs in parallel stays parallel), lead time p50/p95 split into execution and WAITING FOR A RUNNER (the usual hidden culprit), runner utilization, deploys per day, cost per month and the DORA level. The file carries no durations: they are estimated per step type and flagged; pass runsPerDay and runners when you know them.",
+    inputSchema: {
+        pipeline: z.string().min(1).max(1000000).describe("The workflow file as text (.github/workflows/*.yml, azure-pipelines.yml, .gitlab-ci.yml or a Jenkinsfile)"),
+        runsPerDay: z.number().min(0).max(100000).optional().describe("How many times a day it runs (default: the trigger's typical value)"),
+        runners: z.number().int().min(1).max(10000).optional().describe("Size of the runner pool (default 10)"),
+    },
+}, async (a) => {
+    const c = await archsimImportMod();
+    if ("error" in c)
+        return c.error;
+    const r = c.m.desdePipeline(a);
+    return "error" in r ? err(r.error!) : ok(r);
+});
+server.registerTool("archsim_from_terraform", {
+    title: "Architecture from Terraform, simulated",
+    description: "Read Terraform / OpenTofu (HCL or .tf.json, several files one after another) and turn the resources that carry requests \u2014 load balancers, gateways, compute, queues, caches, databases\u2026 \u2014 into an architecture with their cloud technology and price, connected, and simulate it like archsim_simulate (throughput, latency, bottleneck, cost per hour, queues). Networking, IAM and DNS are counted, not drawn. Connections and load are DEDUCED (Terraform says dependencies, not request paths, and no traffic): each assumption comes in notes. Returns the archsim document too, to edit and pass to archsim_simulate.",
+    inputSchema: {
+        terraform: z.string().min(1).max(2000000).describe("The .tf (HCL) or .tf.json content; for a project in several files, paste them one after another"),
+        aiReqPerSec: z.number().nonnegative().optional().describe("Requests/s entering through AI sources, as in archsim_simulate. Default 0"),
+    },
+}, async ({ terraform, aiReqPerSec }) => {
+    const c = await archsimImportMod();
+    if ("error" in c)
+        return c.error;
+    const r = c.m.desdeTerraform(terraform);
+    if ("error" in r)
+        return err(r.error!);
+    return ok({ ...r.result, simulation: simularArchsim(r.state!, aiReqPerSec) });
 });
 function diferido<T>(cargar: () => Promise<T>) {
     let p: Promise<T> | null = null;
@@ -3608,6 +3652,7 @@ const hojaMod = diferido(() => import("./hoja-calculo.mjs"));
 const cedarMod = diferido(() => import("./cedar.mjs"));
 const practicasMod = diferido(() => import("./practicas.mjs"));
 const quimicaMod = diferido(() => import("./quimica.mjs"));
+const oloresMod = diferido(() => import("./olores.mjs"));
 server.tool("mermaid_validate", "Check that Mermaid code actually parses, with Mermaid's own parser (the same version the Jarroba Tools web uses), before you hand it to someone to render. Returns the detected diagram type, or the parser error with its line, column and the tokens it expected \u2014 feed that back and fix the diagram, instead of guessing. Catches what models typically get wrong: unquoted labels with parentheses, `end` used as a node id, full-width punctuation, a `%` inside a pie value, an unknown diagram keyword. Covers every diagram type Mermaid knows (flowchart, sequence, class, state, ER, gantt, pie, mindmap, gitGraph, C4, architecture\u2026). It parses only; it does not render.", { mermaid: z.string().max(500000).describe("The Mermaid source, without the ```mermaid fences") }, async ({ mermaid: fuente }) => {
     const c = await mermaidMod();
     if ("error" in c)
@@ -3839,6 +3884,104 @@ server.tool("practice_check", "Before recommending a practice you learned in tra
     const hoy = new Date().toISOString().slice(0, 10);
     return ok({ ...practicasEn(c.m.consultar(c.m.REGISTRO, topic, since, hoy)), register: `${c.m.REGISTRO.practicas.length} practices, as shipped with this version; the live one is at https://jarroba.com/tools/en/practices` });
 });
+server.tool("code_smells", "Find code smells in JavaScript or TypeScript and say where: long function, long parameter list, conditional on type (switch or if/else instanceof chain, or the same switch repeated), message chain, large class, feature envy, duplicated code and global instance (static getInstance). Each hit comes with its lines, the numbers that triggered it, Fowler's refactoring name, the design pattern that usually resolves it with a live before/after demo, and a practice entry that says when NOT to refactor \u2014 pass its id to practice_check. These are HINTS from fixed, stated thresholds, not verdicts: a long function can be a table that reads fine. Parses with Lezer, so half-pasted code still gets analysed (`syntaxErrors` says the result may fall short). Accepts a file PATH, so a big file does not have to go through your context. Nothing is executed.", {
+    code: z.string().max(2000000).optional().describe("The source, JS or TS. Alternative to `path`"),
+    path: z.string().optional().describe("Path to a .js/.ts/.jsx/.tsx/.mjs file"),
+}, async ({ code, path: ruta }) => {
+    if (!code === !ruta)
+        return err("Give either code or path, not both.");
+    let fuente = code ?? "";
+    if (ruta) {
+        const { readFile } = await import("node:fs/promises");
+        try {
+            fuente = await readFile(ruta, "utf8");
+        }
+        catch (e) {
+            return err(noSeLee(ruta, e));
+        }
+        if (fuente.length > 2000000)
+            return err(`"${ruta}" is over 2 MB: split it, or pass the part you care about as code.`);
+    }
+    const c = await oloresMod();
+    if ("error" in c)
+        return c.error;
+    const r = conPresupuesto(() => c.m.olores(fuente), 10000);
+    if ("agotado" in r)
+        return err("Analysis took over 10 s and was stopped.");
+    return ok({ ...r.valor, note: r.valor.smells.length ? undefined : "No smell over the thresholds. That is not a clean bill of health: these eight are the ones a parser can see." });
+});
+const forecastMod = diferido(() => import("./forecast.mjs"));
+server.registerTool("forecast", {
+    title: "Forecast a time series, with an honest backtest",
+    description: "Forecast a time series (sales, demand, traffic, costs\u2026) with prediction intervals \u2014 and check it the way a forecaster would instead of trusting one model: Holt-Winters, automatic ARIMA/SARIMA and the two naive baselines (last value, same period last season) are all backtested with a rolling origin, and the answer says whether any model actually beats the naive baseline (often none does: then the honest forecast is the naive one), how much of the promised interval coverage was really achieved, anomalies, and a likely level shift. Daily series can take official holidays (Spain by region and other countries) or your own dates, and their effect is estimated. Deterministic; nothing leaves the machine.",
+    inputSchema: {
+        data: z.string().max(200000).optional().describe("The series as text: one value per line, or \"date;value\" per line (YYYY-MM-DD or YYYY-MM; separator ; , or tab; a header line is skipped). Alternative to values"),
+        values: z.array(z.number()).max(100000).optional().describe("The series as numbers, oldest first. Alternative to data"),
+        dates: z.array(z.string()).max(100000).optional().describe("With values: one date per value (YYYY-MM-DD or YYYY-MM). Daily or monthly dates set the default season (7 or 12) and date the forecast"),
+        horizon: z.number().int().min(1).max(500).optional().describe("Steps to forecast. Default: one season (or 12)"),
+        season: z.number().int().min(1).max(400).optional().describe("Seasonal period: 7 for daily data with a weekly pattern, 12 for monthly, 1 for none. Default: from the dates, else 1"),
+        level: z.union([z.literal(80), z.literal(95)]).default(80).describe("Prediction interval, %"),
+        model: z.enum(["auto", "naive", "snaive", "hw", "arima"]).default("auto").describe("Model whose forecast is returned. auto = the lowest error on the backtest. All are always compared"),
+        arimaOrder: z.object({ p: z.number().int().min(0).max(5), d: z.number().int().min(0).max(2), q: z.number().int().min(0).max(5), P: z.number().int().min(0).max(2).optional(), D: z.number().int().min(0).max(1).optional(), Q: z.number().int().min(0).max(2).optional() }).optional().describe("Fixed ARIMA orders; default: chosen automatically by AICc"),
+        holidays: z.array(z.string()).max(5000).optional().describe("Your own holiday dates (YYYY-MM-DD), past and future. Daily series only"),
+        holidayCalendar: z.string().regex(/^[A-Z]{2}(-[A-Z0-9]{1,3})?$/).optional().describe("Official holidays to add: a country (\"ES\", \"PT\", \"FR\", \"DE\"\u2026) or a Spanish region (\"ES-MD\", \"ES-CT\"\u2026). Daily series only"),
+    },
+}, async (a) => {
+    if ((a.data === undefined) === (a.values === undefined))
+        return err("Give either data or values, not both.");
+    if (a.dates && a.values === undefined)
+        return err("dates goes with values (with data, put the dates in the text).");
+    const c = await forecastMod();
+    if ("error" in c)
+        return c.error;
+    const r = conPresupuesto(() => c.m.prever(a), 20000);
+    if ("agotado" in r)
+        return err("The forecast took over 20 s and was stopped: try a shorter series or a fixed arimaOrder.");
+    return "error" in r.valor ? err(r.valor.error!) : ok(r.valor);
+});
+server.registerTool("llm_memory", {
+    title: "Does this LLM fit in my GPU?",
+    description: "GPU memory needed to SERVE a language model: weights (by quantization: fp32, fp16, q8, q4), KV cache (grows with context \u00D7 batch: the part people forget) and an overhead you set; whether it fits a given GPU (or several), the longest context that fits, and the decode speed CEILING (tokens/s \u2264 bandwidth / active weight bytes \u2014 mixture-of-experts read only their active experts). Known models and GPUs by id, or any model from the numbers in its config.json. Deterministic.",
+    inputSchema: {
+        model: z.enum(MODELOS_LLM).optional().describe("A known model. Alternative to architecture"),
+        architecture: z.object({
+            name: z.string().max(80).optional(),
+            parameters: z.number().positive().describe("Total parameters (safetensors total)"),
+            activeParameters: z.number().positive().optional().describe("Parameters used per token (mixture of experts)"),
+            layers: z.number().int().positive().describe("num_hidden_layers"),
+            kvHeads: z.number().int().positive().describe("num_key_value_heads (GQA)"),
+            headDim: z.number().int().positive().describe("head_dim, or hidden_size / num_attention_heads"),
+            maxContext: z.number().int().positive().optional().describe("max_position_embeddings"),
+        }).optional().describe("Any model, from its config.json"),
+        precision: z.enum(["fp32", "fp16", "q8", "q4"]).default("fp16").describe("Weight precision"),
+        kvPrecision: z.enum(["fp16", "q8"]).default("fp16").describe("KV cache precision"),
+        context: z.number().int().min(0).max(10000000).optional().describe("Tokens per sequence. Default: the model's maximum"),
+        batch: z.number().int().min(1).max(4096).default(1).describe("Concurrent sequences"),
+        overhead: z.number().min(0).max(2).default(0.1).describe("Extra fraction over weights + KV for activations and the runtime (an assumption)"),
+        gpu: z.enum(GPUS_LLM).optional().describe("A known GPU"),
+        gpuMemoryGiB: z.number().positive().max(10000).optional().describe("Or the GPU memory in GiB (as advertised in \"GB\")"),
+        bandwidthGBs: z.number().positive().max(100000).optional().describe("Memory bandwidth in GB/s, for the speed ceiling"),
+        gpuCount: z.number().int().min(1).max(1024).default(1),
+    },
+}, async (a) => {
+    if (!a.model === !a.architecture)
+        return err("Give either model or architecture, not both.");
+    const r = memoriaLlm(a);
+    return "error" in r ? err(r.error!) : ok(r);
+});
+server.registerTool("semantic_cache_threshold", {
+    title: "Calibrate a semantic cache threshold",
+    description: "Pick the similarity threshold for a semantic cache (one that answers a new question with the stored answer of a similar one) from measured pairs: for each threshold, the hit rate and how many of those hits would serve the answer of a DIFFERENT question. Give pairs of questions with the cosine YOUR embedding model gives them (this tool runs no model: the threshold only holds for the model that will run in production) and whether they have the same answer; include near-misses (\"shipping cost\" vs \"return cost\"). Returns the suggested threshold for the wrong-answer rate you accept, the curve, and a link that loads it into the LLM gateway of the Architecture Simulator.",
+    inputSchema: {
+        pairs: z.array(z.object({
+            cosine: z.number().min(-1).max(1),
+            same: z.boolean().describe("Do both questions have the same answer?"),
+        })).min(2).max(100000),
+        maxWrong: z.number().min(0).max(1).default(0.05).describe("Highest acceptable share of wrong answers among cache hits"),
+        chosen: z.number().min(0.5).max(0.99).optional().describe("A threshold to evaluate (and send to the simulator) instead of the suggested one"),
+        embeddingModel: z.string().max(120).optional().describe("Name of the embedding model that measured the cosines (travels with the link)"),
+    },
+}, async (a) => ok(umbralCache(a)));
 const VARIANTES = z.array(z.object({
     name: z.string().max(80).optional(),
     visitors: z.number().int().min(1),
@@ -4176,6 +4319,96 @@ server.registerTool("pension_base", {
         improvedGaps: z.boolean().default(false).describe("Improved gap filling of DT 41.\u00AA (women, while the gender gap in pensions is above 5 %)"),
     },
 }, (a) => ok(pensionBase(a)));
+const empresaMod = diferido(() => import("./empresa-motores.mjs"));
+const FECHA = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD");
+const SEMANA = z.tuple([z.number().min(0).max(24), z.number().min(0).max(24), z.number().min(0).max(24), z.number().min(0).max(24), z.number().min(0).max(24), z.number().min(0).max(24), z.number().min(0).max(24)]).describe("Hours worked each weekday, Monday first: [8,8,8,8,8,0,0]");
+server.registerTool("work_calendar", {
+    title: "Spanish work calendar of a workplace, against the annual hours of the collective agreement",
+    description: "Build the yearly work calendar of a workplace in Spain (ET art. 34.6) and square it with the annual hours of the collective agreement, which is what people get wrong: working days and hours with that schedule, the national and regional public holidays from the BOE, the two local ones, summer hours, closures and vacation, the effective hours, and how far they are from the agreement \u2014 days to give back or minutes to add per day. Warns about weeks over 40 hours, days over 9 hours, closures beyond vacation and local holidays that are not two.",
+    inputSchema: {
+        year: z.number().int().min(2025).max(2027).describe("Year (the public holidays shipped cover 2025-2027)"),
+        region: z.string().optional().describe("Autonomous community, ISO 3166-2: ES-MD, ES-CT, ES-AN, ES-PV\u2026 (its regional holidays apply). Without it, national holidays only"),
+        weeklyHours: SEMANA,
+        localHolidays: z.array(z.object({ date: FECHA, name: z.string().max(100) })).max(4).default([])
+            .describe("The two local holidays of the municipality (ET art. 37.2): there is no single official source for them"),
+        summerHours: z.object({ from: z.string().regex(/^\d{2}-\d{2}$/), to: z.string().regex(/^\d{2}-\d{2}$/), weeklyHours: SEMANA }).optional()
+            .describe("Intensive (summer) schedule between two days of the year, MM-DD"),
+        closures: z.array(FECHA).max(60).default([]).describe("Days the workplace closes: they count as everyone's vacation"),
+        vacation: z.object({ days: z.number().int().min(0).max(60), type: z.enum(["working", "calendar"]) })
+            .default({ days: 30, type: "calendar" }).describe("Annual vacation: the legal minimum is 30 calendar days (ET art. 38)"),
+        annualHours: z.number().min(500).max(2500).optional().describe("Maximum annual hours of the collective agreement"),
+    },
+}, async (a) => {
+    const c = await empresaMod();
+    if ("error" in c)
+        return c.error;
+    if (a.region && !c.m.REGIONES_ES.includes(a.region))
+        return err(`Unknown region "${a.region}". One of: ${c.m.REGIONES_ES.join(", ")}.`);
+    return ok(c.m.workCalendar(a));
+});
+server.registerTool("shift_validate", {
+    title: "Check a shift rota against the Spanish Workers' Statute",
+    description: "Check a shift rota pasted as it comes out of a spreadsheet (people in rows, days in columns, a shift code in each cell) against the Estatuto de los Trabajadores, person by person: 12 hours between shifts (art. 34.3), at most 9 ordinary hours a day (34.3), a day and a half of uninterrupted weekly rest that can be accumulated over 14 days (37.1, the one most often broken), and night workers at most 8 hours a day on average over 15 days (36.1). Each breach comes with its rule, article and dates. The default shift codes are M 06-14, T 14-22, N 22-06, P 09-13+16-20, and L/D/V off; pass your own.",
+    inputSchema: {
+        rota: z.string().min(1).max(300000).describe("The rota as TSV or CSV: first row the dates or day numbers, then one row per person (name, then one code per day)"),
+        year: z.number().int().min(2000).max(2100),
+        month: z.number().int().min(1).max(12).describe("Month of the first column, used when the header only has day numbers"),
+        shifts: z.record(z.string().max(10), z.string().max(40)).optional()
+            .describe("Shift codes \u2192 hours: {\"M\": \"07:00-15:00\", \"N\": \"22:00-06:00\", \"P\": \"9-13+16-20\", \"L\": \"\"} (empty = off)"),
+        rules: z.object({
+            restBetweenShifts: z.number().min(0).max(24).optional(),
+            maxDailyHours: z.number().min(1).max(24).optional(),
+            weeklyRest: z.number().min(0).max(72).optional(),
+            restPeriodDays: z.number().int().min(7).max(28).optional(),
+            maxNightAverage: z.number().min(1).max(24).optional(),
+        }).optional().describe("Override the Statute defaults when the collective agreement or sector allows it (e.g. restBetweenShifts 10)"),
+        people: z.record(z.string().max(100), z.object({ weeklyHours: z.number().min(1).max(60).optional(), minor: z.boolean().optional() })).optional()
+            .describe("Per person, by the name in the rota: contracted weekly hours (to count overtime) and whether they are under 18"),
+    },
+}, async (a) => {
+    const c = await empresaMod();
+    if ("error" in c)
+        return c.error;
+    const r = c.m.shiftValidate(a);
+    return "error" in r ? err(r.error!) : ok(r);
+});
+server.registerTool("cash_forecast", {
+    title: "13-week cash forecast from a bank statement",
+    description: "Forecast the balance of a bank account week by week (13 weeks by default) from its statement \u2014 Norma 43 (the Spanish bank format) or a CSV: it detects what repeats (payroll, rent, the self-employed fee, quarterly VAT and other tax and social security payments on their legal calendar), when each comes next, folds what does not repeat into a weekly average, and says the first week the balance goes negative. Prefer `file` to `statement`: it is someone's bank statement, and read from a file it never enters the conversation. The answer has normalised descriptions and weekly totals only, not the transactions.",
+    inputSchema: {
+        file: z.string().optional().describe("Path to the statement file (Norma 43 or CSV)"),
+        statement: z.string().max(5000000).optional().describe("The statement pasted, if there is no file"),
+        startingBalance: z.number().optional().describe("Balance to start from; by default the final balance of the statement (Norma 43 carries it)"),
+        minimumBalance: z.number().optional().describe("Safety balance: also says the first week below it"),
+        includeRest: z.boolean().default(true).describe("Add the weekly average of what does not repeat"),
+        weeks: z.number().int().min(1).max(52).default(13),
+    },
+}, async (a) => {
+    const c = await empresaMod();
+    if ("error" in c)
+        return c.error;
+    let texto = a.statement;
+    if (!texto && a.file) {
+        const { readFile } = await import("node:fs/promises");
+        let b: Buffer;
+        try {
+            b = await readFile(a.file);
+        }
+        catch {
+            return err(`Could not read "${a.file}".`);
+        }
+        try {
+            texto = new TextDecoder("utf-8", { fatal: true }).decode(b);
+        }
+        catch {
+            texto = new TextDecoder("latin1").decode(b);
+        }
+    }
+    if (!texto)
+        return err("One of `file` or `statement` is required.");
+    const r = c.m.cashForecast({ ...a, statement: texto });
+    return "error" in r ? err(r.error!) : ok(r);
+});
 const dominioDe = cuadrarCatalogo(REGISTRADAS.keys());
 for (const [nombre, handle] of REGISTRADAS)
     handle.update({ annotations: anotacionesDe(nombre) });

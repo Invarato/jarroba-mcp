@@ -19,6 +19,7 @@ export class SchemaIntrospectService {
             enm: r[8].rows,
             part: r[9].rows,
             seq: r[10].rows,
+            ext: r[11].rows,
         });
     }
 }

@@ -835,17 +835,18 @@ export function buildSkin(skin: SkinId, fill: string, stroke: string, w: number,
         fillLinearGradientEndPoint: { x: 0, y: hh },
         fillLinearGradientColorStops: [0, c1, 1, c2],
     });
+    const sombra = { shadowForStrokeEnabled: false };
     switch (skin) {
         case "soft":
-            return { fill, stroke, strokeWidth: 1.5, ...grad(shade(fill, 0.28), fill), shadowColor: "black", shadowOpacity: 0.18, shadowBlur: 10, shadowOffsetY: 4 };
+            return { fill, stroke, strokeWidth: 1.5, ...grad(shade(fill, 0.28), fill), shadowColor: "black", shadowOpacity: 0.18, shadowBlur: 10, shadowOffsetY: 4, ...sombra };
         case "glass":
-            return { stroke: rgba("#ffffff", 0.85), strokeWidth: 1.5, ...grad(rgba(shade(fill, 0.5), 0.75), rgba(fill, 0.34)), shadowColor: stroke, shadowOpacity: 0.3, shadowBlur: 16, shadowOffsetY: 4 };
+            return { stroke: rgba("#ffffff", 0.85), strokeWidth: 1.5, ...grad(rgba(shade(fill, 0.5), 0.75), rgba(fill, 0.34)), shadowColor: stroke, shadowOpacity: 0.3, shadowBlur: 16, shadowOffsetY: 4, ...sombra };
         case "neon":
-            return { fill: shade(fill, -0.55), stroke, strokeWidth: 2.5, shadowColor: stroke, shadowOpacity: 0.95, shadowBlur: 16 };
+            return { fill: shade(fill, -0.55), stroke, strokeWidth: 2.5, shadowColor: stroke, shadowOpacity: 0.95, shadowBlur: 16, ...sombra };
         case "shadow":
-            return { fill, stroke, strokeWidth: 2, shadowColor: "black", shadowOpacity: 0.32, shadowBlur: 0, shadowOffsetX: 6, shadowOffsetY: 6 };
+            return { fill, stroke, strokeWidth: 2, shadowColor: "black", shadowOpacity: 0.32, shadowBlur: 0, shadowOffsetX: 6, shadowOffsetY: 6, ...sombra };
         case "ornate":
-            return { stroke: shade(stroke, -0.15), strokeWidth: 3, ...grad(shade(fill, 0.35), shade(fill, -0.08)), shadowColor: "black", shadowOpacity: 0.2, shadowBlur: 6, shadowOffsetY: 3 };
+            return { stroke: shade(stroke, -0.15), strokeWidth: 3, ...grad(shade(fill, 0.35), shade(fill, -0.08)), shadowColor: "black", shadowOpacity: 0.2, shadowBlur: 6, shadowOffsetY: 3, ...sombra };
         default:
             return { fill, stroke, strokeWidth: 2 };
     }

@@ -29,6 +29,13 @@ export interface CtxExpand {
     };
 }
 const MAX_PROFUNDIDAD = 60;
+const ORIGEN_MAKE: Record<DefVar["origen"], string> = {
+    fichero: "file",
+    "linea-de-comandos": "command line",
+    entorno: "environment",
+    automatica: "automatic",
+    "por-defecto": "default",
+};
 function diag(ctx: CtxExpand, gravedad: GravedadMk, regla: ReglaDiagMk, datos: DatosMk = {}): void {
     ctx.diags?.push({ gravedad, regla, datos, linea: ctx.linea ?? 0 });
 }
@@ -237,7 +244,7 @@ function llamarFuncion(nombre: string, resto: string, ctx: CtxExpand, prof: numb
     switch (nombre) {
         case "subst": {
             const de = ex(0);
-            return de === "" ? ex(2) : ex(2).split(de).join(ex(1));
+            return de === "" ? ex(2) + ex(1) : ex(2).split(de).join(ex(1));
         }
         case "patsubst": {
             const de = ex(0), a = ex(1);
@@ -276,8 +283,8 @@ function llamarFuncion(nombre: string, resto: string, ctx: CtxExpand, prof: numb
         }
         case "dir": return palabras(ex(0)).map(dirDe).join(" ");
         case "notdir": return palabras(ex(0)).map(baseDe).join(" ");
-        case "suffix": return palabras(ex(0)).map(w => { const b = baseDe(w); const i = b.lastIndexOf("."); return i <= 0 ? "" : b.slice(i); }).filter(x => x).join(" ");
-        case "basename": return palabras(ex(0)).map(w => { const b = baseDe(w); const i = b.lastIndexOf("."); return i <= 0 ? w : w.slice(0, w.length - (b.length - i)); }).join(" ");
+        case "suffix": return palabras(ex(0)).map(w => { const b = baseDe(w); const i = b.lastIndexOf("."); return i < 0 ? "" : b.slice(i); }).filter(x => x).join(" ");
+        case "basename": return palabras(ex(0)).map(w => { const b = baseDe(w); const i = b.lastIndexOf("."); return i < 0 ? w : w.slice(0, w.length - (b.length - i)); }).join(" ");
         case "addsuffix": {
             const s = ex(0);
             return palabras(ex(1)).map(w => w + s).join(" ");
@@ -302,20 +309,18 @@ function llamarFuncion(nombre: string, resto: string, ctx: CtxExpand, prof: numb
                     continue;
                 }
                 const re = globARegex(pt);
-                for (const f of fich)
-                    if (re.test(f) && !res.includes(f))
-                        res.push(f);
+                res.push(...fich.filter(f => re.test(f)).sort());
             }
-            return res.sort().join(" ");
+            return res.join(" ");
         }
         case "if": {
-            const cond = expandir(args[0] ?? "", ctx, p);
-            return cond.trim() !== "" ? expandir(args[1] ?? "", ctx, p) : expandir(args[2] ?? "", ctx, p);
+            const cond = expandir((args[0] ?? "").trim(), ctx, p);
+            return cond !== "" ? expandir(args[1] ?? "", ctx, p) : expandir(args[2] ?? "", ctx, p);
         }
         case "or": {
             for (const a of crudos) {
-                const v = expandir(a, ctx, p);
-                if (v.trim() !== "")
+                const v = expandir(a.trim(), ctx, p);
+                if (v !== "")
                     return v;
             }
             return "";
@@ -323,8 +328,8 @@ function llamarFuncion(nombre: string, resto: string, ctx: CtxExpand, prof: numb
         case "and": {
             let ult = "";
             for (const a of crudos) {
-                ult = expandir(a, ctx, p);
-                if (ult.trim() === "")
+                ult = expandir(a.trim(), ctx, p);
+                if (ult === "")
                     return "";
             }
             return ult;
@@ -373,7 +378,7 @@ function llamarFuncion(nombre: string, resto: string, ctx: CtxExpand, prof: numb
         }
         case "origin": {
             const d = ctx.vars.get(ex(0).trim());
-            return d ? d.origen : "undefined";
+            return d ? ORIGEN_MAKE[d.origen] : "undefined";
         }
         case "shell": {
             const cmd = ex(0).trim();

@@ -3,7 +3,7 @@ import { buildTemplate } from "./archsim-build";
 import { defaultAiSpec, isAiKind, AiNodeKind } from "./archsim-ai";
 import { stepRuntimeSim, RuntimeScenario, computeDeployFaults } from "./archsim-runtime-sim";
 import { costBreakdown } from "./archsim-cloud-catalog";
-export type GoalMetric = "avail" | "legitAvail" | "p95" | "lost" | "lagSec" | "costHr";
+export type GoalMetric = "avail" | "legitAvail" | "p95" | "lost" | "lagSec" | "costHr" | "llmCostHr" | "wrongHr";
 export interface Goal {
     metric: GoalMetric;
     target: number;
@@ -69,12 +69,14 @@ export interface Measured {
     lost: number;
     lagSec: number;
     costHr: number;
+    llmCostHr: number;
+    wrongHr: number;
 }
 export function measure(nodes: ArchNode[], edges: ArchEdge[], sim: ChallengeSim): Measured {
     const dt = sim.dt ?? 0.1, warm = sim.warmup ?? 20, rr = sim.reqRate ?? 0;
     const faults = computeDeployFaults(nodes, edges);
     let q: Record<string, number> = {};
-    const m: Measured = { avail: 1, legitAvail: 1, p95: 0, lost: 0, lagSec: 0, costHr: 0 };
+    const m: Measured = { avail: 1, legitAvail: 1, p95: 0, lost: 0, lagSec: 0, costHr: 0, llmCostHr: 0, wrongHr: 0 };
     let off = 0, ok = 0, loff = 0, lok = 0;
     const steps = (secs: number, scn: RuntimeScenario, measuring: boolean) => {
         for (let t = 0; t < secs - 1e-9; t += dt) {
@@ -88,6 +90,8 @@ export function measure(nodes: ArchNode[], edges: ArchEdge[], sim: ChallengeSim)
             loff += r.legitOffered * dt;
             lok += r.legitOffered * r.legitAvailability * dt;
             m.p95 = Math.max(m.p95, r.p95);
+            m.llmCostHr = Math.max(m.llmCostHr, r.costPerHour);
+            m.wrongHr = Math.max(m.wrongHr, r.cacheWrongPerSec * 3600);
             for (const qs of Object.values(r.queues))
                 m.lagSec = Math.max(m.lagSec, Number.isFinite(qs.lagSec) ? qs.lagSec : 1000000000);
             const served: Record<string, number> = {};
@@ -287,6 +291,25 @@ export const CHALLENGES: Challenge[] = [
                 n.capacity = 1000;
                 link(s, n, cache);
             }
+            return s;
+        },
+    },
+    {
+        id: "gateway-llm",
+        level: 3,
+        start: () => build([
+            { ref: "c", kind: "client", label: "Usuarios", col: 0, capacity: 30 },
+            { ref: "a", kind: "ai_agent", label: "Agente", col: 1 },
+            { ref: "r", kind: "ai_router", label: "Router LLM", col: 2, ai: { model: "claude-sonnet-5-5", tpm_limit: 600000, fallback_model: "", retry_policy: "backoff" } },
+        ], [["c", "a"], ["a", "r"]]),
+        sim: { seconds: 20 },
+        goals: [{ metric: "avail", target: 0.99 }, { metric: "llmCostHr", target: 520 }, { metric: "wrongHr", target: 2500 }],
+        reference: s => {
+            const a = byLabel(s, "Agente"), r = byLabel(s, "Router LLM");
+            const gw = addNode(s, "ai_gateway", "Gateway IA", { ai: { cache: "semantic", cache_hit: 45, cache_wrong: 4 } });
+            unlink(s, a, r);
+            link(s, a, gw);
+            link(s, gw, r);
             return s;
         },
     },

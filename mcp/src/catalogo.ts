@@ -1,4 +1,4 @@
-export type Dominio = "core" | "calc" | "api" | "diagram" | "kg" | "db" | "ai" | "logs" | "queue" | "project" | "tests" | "chem" | "chip" | "access" | "archsim" | "security" | "experiments" | "payroll";
+export type Dominio = "core" | "calc" | "api" | "diagram" | "kg" | "db" | "ai" | "logs" | "queue" | "project" | "tests" | "chem" | "chip" | "access" | "archsim" | "security" | "experiments" | "business" | "forecast";
 export const DOMINIOS: Record<Dominio, {
     titulo: string;
     tools: readonly string[];
@@ -77,7 +77,9 @@ export const DOMINIOS: Record<Dominio, {
             "claim_check",
             "eval_check",
             "mcp_catalog_audit",
-            "practice_check"
+            "practice_check",
+            "llm_memory",
+            "semantic_cache_threshold"
         ] },
     logs: { titulo: "logs", tools: [
             "log_analyze",
@@ -113,7 +115,8 @@ export const DOMINIOS: Record<Dominio, {
             "make_log_diff",
             "dora_metrics",
             "maven_plan",
-            "gradle_plan"
+            "gradle_plan",
+            "code_smells"
         ] },
     tests: { titulo: "auditor\u00EDa de tests", tools: [
             "test_audit",
@@ -157,7 +160,9 @@ export const DOMINIOS: Record<Dominio, {
         ] },
     archsim: { titulo: "simulaci\u00F3n de arquitecturas (carga, colas, coste)", tools: [
             "archsim_validate",
-            "archsim_simulate"
+            "archsim_simulate",
+            "archsim_from_pipeline",
+            "archsim_from_terraform"
         ] },
     security: { titulo: "seguridad: lo que un agente debe mirar ANTES de actuar", tools: [
             "hidden_text_scan",
@@ -176,7 +181,13 @@ export const DOMINIOS: Record<Dominio, {
             "abtest_sample_size",
             "abtest_sequential"
         ] },
-    payroll: { titulo: "n\u00F3minas y pensiones (Espa\u00F1a)", tools: ["pension_base"] },
+    business: { titulo: "empresa en Espa\u00F1a: pensi\u00F3n, calendario laboral, cuadrantes y tesorer\u00EDa", tools: [
+            "pension_base",
+            "work_calendar",
+            "shift_validate",
+            "cash_forecast"
+        ] },
+    forecast: { titulo: "previsi\u00F3n de series temporales con backtest", tools: ["forecast"] },
 };
 export const NO_SOLO_LECTURA = new Set(["diagram_render", "diagram_new", "diagram_add"]);
 export const DESTRUCTIVAS = new Set(["diagram_render"]);
@@ -197,6 +208,7 @@ export const MUNDO_ABIERTO = new Set([
     "test_diff_audit",
     "spreadsheet_audit",
     "diagram_render",
+    "cash_forecast",
 ]);
 export function mapaDeDominios(): Map<string, Dominio> {
     const m = new Map<string, Dominio>();
@@ -242,7 +254,8 @@ export function dominiosPedidos(env = process.env["JARROBA_MCP_DOMAINS"]): Domin
     if (!bruto)
         return null;
     const validos = Object.keys(DOMINIOS) as Dominio[];
-    const pedidos = bruto.split(/[,\s]+/).filter(Boolean);
+    const ALIAS: Record<string, Dominio> = { payroll: "business" };
+    const pedidos = [...new Set(bruto.split(/[,\s]+/).filter(Boolean).map((d) => ALIAS[d] ?? d))];
     const malos = pedidos.filter((d) => !validos.includes(d as Dominio));
     if (malos.length) {
         throw new Error(`[jarroba-mcp] dominio desconocido en JARROBA_MCP_DOMAINS: ${malos.join(", ")}.\n` +

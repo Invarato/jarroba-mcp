@@ -1,5 +1,11 @@
 import { ArchNode, ArchEdge } from "./archsim-model";
 import { AiNodeKind, isAiKind, modelProfile, AI_CATALOG } from "./archsim-ai";
+function gwHit(n: ArchNode): number | null {
+    if (n.kind !== "ai_gateway")
+        return null;
+    const c = String(n.ai?.["cache"] ?? "none");
+    return c === "simple" || c === "semantic" ? frac(n.ai?.["cache_hit"]) : null;
+}
 const AI_LAT: Record<AiNodeKind, number> = {
     ai_agent: 20,
     ai_planner: 20,
@@ -97,36 +103,47 @@ export function estimateDesign(allNodes: ArchNode[], edges: ArchEdge[]): AiEstim
     for (const e of edges)
         if (byId.has(e.fromId) && byId.has(e.toId))
             outAdj.get(e.fromId)!.push(e.toId);
-    const memo = new Map<string, number>();
-    const nextOf = new Map<string, string | null>();
-    const stack = new Set<string>();
-    const longest = (id: string): number => {
-        if (memo.has(id))
-            return memo.get(id)!;
-        if (stack.has(id))
-            return lat(byId.get(id)!);
-        stack.add(id);
-        let best = 0, bestChild: string | null = null;
-        for (const to of outAdj.get(id) ?? []) {
-            const v = longest(to);
-            if (v > best) {
-                best = v;
-                bestChild = to;
-            }
-        }
-        stack.delete(id);
-        nextOf.set(id, bestChild);
-        const total = lat(byId.get(id)!) + best;
-        memo.set(id, total);
-        return total;
+    const mkLongest = (cut: (n: ArchNode) => boolean) => {
+        const memo = new Map<string, number>(), next = new Map<string, string | null>(), stack = new Set<string>();
+        const f = (id: string): number => {
+            if (memo.has(id))
+                return memo.get(id)!;
+            if (stack.has(id))
+                return lat(byId.get(id)!);
+            stack.add(id);
+            let best = 0, bestChild: string | null = null;
+            if (!cut(byId.get(id)!))
+                for (const to of outAdj.get(id) ?? []) {
+                    const v = f(to);
+                    if (v > best) {
+                        best = v;
+                        bestChild = to;
+                    }
+                }
+            stack.delete(id);
+            next.set(id, bestChild);
+            const total = lat(byId.get(id)!) + best;
+            memo.set(id, total);
+            return total;
+        };
+        return { f, next };
     };
-    let p50 = 0, startId: string | null = null;
-    for (const n of nodes) {
+    const L50 = mkLongest(n => (gwHit(n) ?? 0) >= 0.5);
+    const L95 = mkLongest(n => (gwHit(n) ?? 0) > 0.95);
+    const longest = L50.f, nextOf = L50.next;
+    const hasIn = new Set<string>();
+    for (const outs of outAdj.values())
+        for (const t of outs)
+            hasIn.add(t);
+    const starts = nodes.filter(n => !hasIn.has(n.id));
+    let p50 = 0, startId: string | null = null, full = 0;
+    for (const n of starts.length ? starts : nodes) {
         const v = longest(n.id);
         if (v > p50) {
             p50 = v;
             startId = n.id;
         }
+        full = Math.max(full, L95.f(n.id));
     }
     const criticalPath: string[] = [];
     for (let id = startId; id; id = nextOf.get(id) ?? null) {
@@ -158,7 +175,7 @@ export function estimateDesign(allNodes: ArchNode[], edges: ArchEdge[]): AiEstim
         }
     }
     const routerVar = nodes.filter(n => n.kind === "ai_router").reduce((s, n) => s + modelProfile(String((n.ai ?? {})["model"] || "custom")).latencyMs, 0);
-    const p95 = Math.round(p50 + routerVar * 0.6);
+    const p95 = Math.round(Math.max(p50, full) + routerVar * 0.6);
     const hasHuman = nodes.some(n => n.kind === "ai_checkpoint");
     const routersOnPath = criticalPath.map(id => byId.get(id)!).filter(nn => nn.kind === "ai_router");
     const genMs = routersOnPath.reduce((s, nn) => s + nodeLatencyMs(nn), 0) * 0.6;

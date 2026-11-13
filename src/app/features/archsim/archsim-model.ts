@@ -1,11 +1,12 @@
 import { AI_CATALOG, AI_NODE_KINDS, AiNodeKind, isAiKind } from "./archsim-ai";
 import { CICD_CATALOG, CICD_NODE_KINDS, CicdNodeKind, isCicdKind } from "./archsim-cicd";
 import { nodeInsideRect } from "../../shared/canvas/canvas-geometry";
-export type ArchNodeKind = "client" | "attacker" | "gateway" | "lb" | "cdn" | "ratelimit" | "waf" | "service" | "worker" | "auth" | "orchestrator" | "queue" | "pubsub" | "cache" | "db" | "nosql" | "objstore" | "search" | "datalake" | "warehouse" | "lakehouse" | "etl" | "bi" | "external" | "agent" | "llm" | "tool" | "vectordb" | "embed" | "k8s" | "cloud" | "vm" | "layer" | "module" | AiNodeKind | CicdNodeKind;
-export const CONTAINER_KINDS: ArchNodeKind[] = ["k8s", "cloud", "vm", "layer"];
+export type ArchNodeKind = "client" | "attacker" | "gateway" | "lb" | "cdn" | "ratelimit" | "waf" | "service" | "worker" | "auth" | "orchestrator" | "queue" | "pubsub" | "cache" | "db" | "nosql" | "objstore" | "search" | "datalake" | "warehouse" | "lakehouse" | "etl" | "bi" | "external" | "agent" | "llm" | "tool" | "vectordb" | "embed" | "k8s" | "cloud" | "vm" | "group" | "layer" | "module" | AiNodeKind | CicdNodeKind;
+export const CONTAINER_KINDS: ArchNodeKind[] = ["k8s", "cloud", "vm", "layer", "group"];
 export function isContainer(k: ArchNodeKind): boolean { return CONTAINER_KINDS.includes(k); }
 export function isLayer(k: ArchNodeKind): boolean { return k === "layer"; }
 export function isModule(k: ArchNodeKind): boolean { return k === "module"; }
+export function isGroup(k: ArchNodeKind): boolean { return k === "group"; }
 export function isDesignNode(k: ArchNodeKind): boolean { return isContainer(k) || isModule(k) || isAiKind(k) || isCicdKind(k); }
 export interface ArchNode {
     id: string;
@@ -113,6 +114,7 @@ const C = {
     vm: "#546e7a",
     module: "#00695c",
     layer: "#607d8b",
+    group: "#78909c",
 };
 const AI_META = Object.fromEntries(AI_NODE_KINDS.map(k => [k, {
         label: AI_CATALOG[k].label,
@@ -167,6 +169,7 @@ export const CATALOG: Record<ArchNodeKind, NodeMeta> = {
     vm: { label: "Servidor / VM", group: "Contenedores", color: C.vm, hasIn: false, hasOut: false, defaults: { capacity: 0, latency: 0, jitter: 0, queue: 0, failRate: 0 } },
     module: { label: "M\u00F3dulo", group: "M\u00F3dulos", color: C.module, hasIn: true, hasOut: true, defaults: { capacity: 0, latency: 0, jitter: 0, queue: 0, failRate: 0 } },
     layer: { label: "Capa transversal", group: "Contenedores", color: C.layer, hasIn: false, hasOut: false, defaults: { capacity: 0, latency: 0, jitter: 0, queue: 0, failRate: 0 } },
+    group: { label: "Grupo", group: "Contenedores", color: C.group, hasIn: false, hasOut: false, defaults: { capacity: 0, latency: 0, jitter: 0, queue: 0, failRate: 0 } },
 };
 export const PALETTE_GROUPS: {
     group: string;
@@ -182,7 +185,7 @@ export const PALETTE_GROUPS: {
     { group: "Anal\u00EDtica", kinds: ["etl", "datalake", "lakehouse", "warehouse", "bi"] },
     { group: "Externo", kinds: ["external"] },
     { group: "IA / MCP", kinds: ["agent", "llm", "tool", "vectordb", "embed"] },
-    { group: "Contenedores", kinds: ["k8s", "cloud", "vm", "layer"] },
+    { group: "Contenedores", kinds: ["k8s", "cloud", "vm", "layer", "group"] },
 ];
 export const NODE_COST_PRICED = "2026-08";
 export const NODE_COST: Record<ArchNodeKind, number> = {
@@ -222,6 +225,7 @@ export const NODE_COST: Record<ArchNodeKind, number> = {
     vm: 0,
     module: 0,
     layer: 0,
+    group: 0,
 };
 export const LEGACY_NODE_COST: Partial<Record<ArchNodeKind, number>> = {
     waf: 40,
@@ -273,4 +277,31 @@ export function nodeInsideContainer(child: {
     h?: number;
 }, header = CONTAINER_HEADER): boolean {
     return nodeInsideRect({ x: child.x, y: child.y, w: child.w ?? NODE_W, h: child.h ?? NODE_H }, { x: cont.x, y: cont.y, w: cont.w ?? 320, h: cont.h ?? 200 }, { header, headerSide: "top" });
+}
+const WRAP_PAD = 24;
+export function frameAround(nodes: readonly {
+    x: number;
+    y: number;
+    w?: number;
+    h?: number;
+}[]): {
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+} | null {
+    if (!nodes.length)
+        return null;
+    const x0 = Math.min(...nodes.map(n => n.x - (n.w ?? NODE_W) / 2)), y0 = Math.min(...nodes.map(n => n.y - (n.h ?? NODE_H) / 2));
+    const x1 = Math.max(...nodes.map(n => n.x + (n.w ?? NODE_W) / 2)), y1 = Math.max(...nodes.map(n => n.y + (n.h ?? NODE_H) / 2));
+    const w = x1 - x0 + 2 * WRAP_PAD, h = y1 - y0 + 2 * WRAP_PAD + CONTAINER_HEADER;
+    const left = x0 - WRAP_PAD, top = y0 - WRAP_PAD - CONTAINER_HEADER;
+    return { x: left + w / 2, y: top + h / 2, w, h };
+}
+export function wrapInContainer(state: ArchState, kind: "group" | "cloud", label: string, include: (n: ArchNode) => boolean = () => true): ArchState {
+    const f = frameAround(state.nodes.filter(n => !isContainer(n.kind) && include(n)));
+    if (!f)
+        return state;
+    const frame: ArchNode = { id: "wrap", kind, label, ...f, capacity: 0, latency: 0, jitter: 0, queue: 0, failRate: 0, costHr: 0 };
+    return { nodes: [frame, ...state.nodes], edges: state.edges };
 }

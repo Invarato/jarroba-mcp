@@ -1,5 +1,3 @@
-import { Injectable, inject } from "@angular/core";
-import { PgEngineService } from "./pg-engine.service";
 import { ComprobacionConsulta, ColumnaResultado, Run, comprobarConsulta } from "./query-check";
 export type Veredicto = "rompe" | "cambia" | "amplia" | "arregla" | "fallaba" | "igual";
 export interface Cambio {
@@ -69,14 +67,4 @@ export async function compararBanco(runAntes: Run, runDespues: Run, ddlAntes: st
     }
     out.rompedor = out.consultas.some(c => c.veredicto === "rompe" || c.veredicto === "cambia");
     return out;
-}
-@Injectable({ providedIn: "root" })
-export class SchemaBreakingService {
-    private engine = inject(PgEngineService);
-    run(ddlAntes: string, ddlDespues: string, consultas: {
-        nombre: string;
-        sql: string;
-    }[]): Promise<ImpactoCambio> {
-        return this.engine.withScratch(a => this.engine.withScratch(d => compararBanco(a, d, ddlAntes, ddlDespues, consultas)));
-    }
 }

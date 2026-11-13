@@ -4,6 +4,11 @@ export interface Trozo {
     hasta: number;
     idx: number;
 }
+export interface TrozoSeccion extends Trozo {
+    ruta: string;
+    indexado: string;
+    tabla: boolean;
+}
 export interface OpcionesTroceo {
     tamano: number;
     solape: number;
@@ -117,6 +122,84 @@ export class RagRetrievalService {
         cerrar();
         return out;
     }
+    trocearPorSecciones(texto: string, op: OpcionesTroceo): TrozoSeccion[] {
+        const out: TrozoSeccion[] = [];
+        const lineas = texto.replace(/\r/g, "").split("\n");
+        const pila: string[] = [];
+        let cuerpo: string[] = [], desde = 0, pos = 0, rutaCuerpo = "";
+        const empujar = (t: string, ruta: string, a: number, b: number, tabla: boolean) => {
+            const limpio = t.trim();
+            if (!limpio)
+                return;
+            out.push({ texto: limpio, desde: a, hasta: b, idx: out.length, ruta, indexado: ruta ? `${ruta}: ${limpio}` : limpio, tabla });
+        };
+        const cerrar = () => {
+            let bloque: string[] = [], esTabla = false, ini = desde;
+            const vaciar = (fin: number) => {
+                if (!bloque.length)
+                    return;
+                const t = bloque.join("\n");
+                if (!esTabla) {
+                    for (const tr of this.trocear(t, op))
+                        empujar(tr.texto, rutaCuerpo, ini + tr.desde, ini + tr.hasta, false);
+                }
+                else if (t.length <= op.tamano || bloque.length <= 3) {
+                    empujar(t, rutaCuerpo, ini, fin, true);
+                }
+                else {
+                    const cab = bloque.slice(0, 2).join("\n"), filas = bloque.slice(2);
+                    let grupo: string[] = [];
+                    for (const f of filas) {
+                        if (grupo.length && cab.length + grupo.join("\n").length + f.length + 2 > op.tamano) {
+                            empujar(cab + "\n" + grupo.join("\n"), rutaCuerpo, ini, fin, true);
+                            grupo = [];
+                        }
+                        grupo.push(f);
+                    }
+                    if (grupo.length)
+                        empujar(cab + "\n" + grupo.join("\n"), rutaCuerpo, ini, fin, true);
+                }
+                bloque = [];
+            };
+            let p = desde;
+            for (const l of cuerpo) {
+                const t = /^\s*\|/.test(l);
+                if (bloque.length && t !== esTabla) {
+                    vaciar(p);
+                    ini = p;
+                }
+                if (!bloque.length) {
+                    esTabla = t;
+                    ini = p;
+                }
+                bloque.push(l);
+                p += l.length + 1;
+            }
+            vaciar(p);
+            cuerpo = [];
+        };
+        for (const l of lineas) {
+            const m = /^(#{1,6})\s+(.*)$/.exec(l);
+            if (m) {
+                cerrar();
+                const nivel = m[1].length;
+                pila.length = Math.min(pila.length, nivel - 1);
+                pila[nivel - 1] = m[2].trim();
+                for (let k = 0; k < nivel - 1; k++)
+                    pila[k] ??= "(sin t\u00EDtulo)";
+                rutaCuerpo = pila.join(" \u203A ");
+                desde = pos + l.length + 1;
+            }
+            else {
+                if (!cuerpo.length)
+                    desde = pos;
+                cuerpo.push(l);
+            }
+            pos += l.length + 1;
+        }
+        cerrar();
+        return out.map((t, idx) => ({ ...t, idx }));
+    }
     trocear(texto: string, { tamano, solape }: OpcionesTroceo): Trozo[] {
         const t = texto.trim();
         if (!t)
@@ -131,10 +214,13 @@ export class RagRetrievalService {
                 const ventana = t.slice(minimo, hasta);
                 const parrafo = ventana.lastIndexOf("\n\n");
                 const frase = Math.max(ventana.lastIndexOf(". "), ventana.lastIndexOf(".\n"));
+                const espacio = Math.max(ventana.lastIndexOf(" "), ventana.lastIndexOf("\n"));
                 if (parrafo > 0)
                     hasta = minimo + parrafo + 2;
                 else if (frase > 0)
                     hasta = minimo + frase + 1;
+                else if (espacio > 0)
+                    hasta = minimo + espacio;
             }
             const trozo = t.slice(desde, hasta).trim();
             if (trozo)
