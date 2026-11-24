@@ -33,13 +33,19 @@ export interface ApiColeccion {
     variables: ApiCampo[];
     peticiones: ApiPeticion[];
 }
+export type CodigoConv = "vacio-convertir" | "vacio-leer" | "json-invalido" | "json-o-yaml-ilegible" | "curl-ninguno" | "curl-sin-url" | "postman-no-objeto" | "postman-sin-item" | "insomnia-sin-resources" | "insomnia-sin-peticiones" | "har-sin-entries" | "har-solo-recursos" | "har-sin-peticiones" | "bruno-ninguna" | "openapi-no-objeto" | "openapi-sin-paths" | "curl-cabecera-sin-dos-puntos" | "curl-campo-sin-igual" | "curl-opcion-desconocida" | "curl-sobra" | "curl-sube-fichero" | "curl-sustitucion" | "curl-variables-entorno" | "curl-tuberia" | "postman-ficheros" | "postman-cuerpo-fichero" | "postman-secretas" | "postman-scripts" | "insomnia-plantillas" | "insomnia-ciclo" | "har-recursos" | "har-cache" | "har-sensible" | "bruno-no-reconocido" | "bruno-scripts-coleccion" | "bruno-scripts" | "openapi-ref-externa";
+export interface MsgConv {
+    que: CodigoConv;
+    datos?: Record<string, string | number>;
+}
+export const msg = (que: CodigoConv, datos?: MsgConv["datos"]): MsgConv => (datos ? { que, datos } : { que });
 export type ResultadoImport = {
     ok: true;
     coleccion: ApiColeccion;
-    avisos: string[];
+    avisos: MsgConv[];
 } | {
     ok: false;
-    error: string;
+    error: MsgConv;
 };
 export function cuerpoVacio(): ApiCuerpo {
     return { tipo: "ninguno" };

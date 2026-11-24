@@ -18,6 +18,7 @@ export interface FlujoManual {
     importe: number;
     fecha: string;
     repetir: "no" | "mes";
+    alPrimerDia?: boolean;
 }
 export interface Analisis {
     flujos: Flujo[];
@@ -201,6 +202,10 @@ export function prever(saldoInicial: number, inicio: string, flujos: Flujo[], ma
         }
     }
     for (const m of manuales) {
+        if (m.alPrimerDia && m.repetir === "no" && m.fecha < primero) {
+            apuntes.push({ concepto: m.concepto, importe: m.importe, fecha: primero });
+            continue;
+        }
         for (let fecha = m.fecha, k = 0; fecha <= fin && k < 200; k++) {
             if (fecha >= isoDe(d0))
                 apuntes.push({ concepto: m.concepto, importe: m.importe, fecha });

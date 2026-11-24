@@ -56,15 +56,23 @@ const DIFERIDOS = [
     { entrada: "src/tokenizadores.mts", salida: "dist/tokenizadores.mjs", topeMB: 0.5 },
     { entrada: "src/cedar.mts", salida: "dist/cedar.mjs", topeMB: 0.1 },
     { entrada: "src/olores.mts", salida: "dist/olores.mjs", topeMB: 0.3 },
+    { entrada: "src/informatica.mts", salida: "dist/informatica.mjs", topeMB: 0.1, alias: { "@angular/core": "./src/sin-angular.mjs" } },
     { entrada: "src/practicas.mts", salida: "dist/practicas.mjs", topeMB: JSON.stringify(JSON.parse(readFileSync("../public/practicas.json", "utf8"))).length / 1048576 + 0.15 },
     { entrada: "src/quimica.mts", salida: "dist/quimica.mjs", topeMB: 0.3 },
     { entrada: "src/empresa-motores.mts", salida: "dist/empresa-motores.mjs", topeMB: 0.15 },
     { entrada: "src/archsim-import.mts", salida: "dist/archsim-import.mjs", topeMB: 0.3 },
     { entrada: "src/forecast.mts", salida: "dist/forecast.mjs", topeMB: 0.2 },
+    { entrada: "src/ml-triaje.mts", salida: "dist/ml-triaje.mjs", topeMB: 0.15 },
+    { entrada: "src/sumas.mts", salida: "dist/sumas.mjs", topeMB: 0.05 },
+    { entrada: "src/cuentas.mts", salida: "dist/cuentas.mjs", topeMB: 0.05 },
+    { entrada: "src/higiene.mts", salida: "dist/higiene.mjs", topeMB: 0.2 },
+    { entrada: "src/cobros.mts", salida: "dist/cobros.mjs", topeMB: 0.08 },
+    { entrada: "src/cesta.mts", salida: "dist/cesta.mjs", topeMB: 0.05 },
+    { entrada: "src/fechas-motores.mts", salida: "dist/fechas-motores.mjs", topeMB: 0.15 },
 ];
 if (existsSync("../public/datos/manifiesto.json")) {
     const entradas = JSON.parse(readFileSync("../public/datos/manifiesto.json", "utf8")).entradas;
-    for (const [fichero, id, carpeta] of [["src/quimica.mts", "quimica-constantes", "quimica"], ["src/pension.ts", "ipc", "ipc"], ["src/empresa-motores.mts", "festivos", "festivos"], ["src/forecast.mts", "festivos", "festivos"]]) {
+    for (const [fichero, id, carpeta] of [["src/quimica.mts", "quimica-constantes", "quimica"], ["src/pension.ts", "ipc", "ipc"], ["src/empresa-motores.mts", "festivos", "festivos"], ["src/forecast.mts", "festivos", "festivos"], ["src/fechas-motores.mts", "festivos", "festivos"]]) {
         const actual = entradas.find((e) => e.id === id)?.actual;
         if (!readFileSync(fichero, "utf8").includes(`/datos/${carpeta}/${actual}'`)) {
             throw new Error(`${fichero} no importa la captura vigente de «${id}» (${actual}, según public/datos/manifiesto.json): cambia el import y su constante con el nombre del fichero.`);

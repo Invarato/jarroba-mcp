@@ -10,12 +10,12 @@ second implementation to drift.
 
 ## Four packages, because context is not free
 
-Loading all 149 tools costs **~61,100 tokens of context** before you type anything, in a client that
+Loading all 163 tools costs **~69,600 tokens of context** before you type anything, in a client that
 loads every tool definition up front (Cursor and most others; Claude Code with Tool Search turned off).
 That is Claude Code's own count: measured with `/context` on 0.1.7 (120 tools: 41,996 tokens) and
 extrapolated with `npm run tokens`. Claude Code's **Tool Search**, on by default, only loads a definition
 when it is about to be used: there the whole catalogue costs a few hundred tokens. GitHub's official MCP
-server is the usual example of the problem; Cursor caps out around 40 tools. A catalogue of 149 is not "more
+server is the usual example of the problem; Cursor caps out around 40 tools. A catalogue of 163 is not "more
 complete", it is more expensive — and the model also *chooses* worse, because the usual failure of a
 big catalogue is not a missing tool, it is calling the one next to it.
 
@@ -26,12 +26,12 @@ So pick the one you actually want:
 | **`@jarroba/mcp-logs`** | 12 | **~5,500 tok** | Reading logs that do not fit in your context |
 | **`@jarroba/mcp-tests`** | 4 | **~1,700 tok** | Auditing tests — including your own |
 | **`@jarroba/mcp-calc`** | 5 | **~1,600 tok** | Maths with units, equations and sheets |
-| `@jarroba/mcp` | 149 | ~61,100 tok | Everything |
+| `@jarroba/mcp` | 163 | ~69,600 tok | Everything |
 
 All four come from the same source. The filter is the `JARROBA_MCP_DOMAINS` environment variable and
 each binary sets its own as a **default**, not a cage: install `mcp-logs` and add
 `JARROBA_MCP_DOMAINS=logs,core` if you want the general-purpose tools too. Domains: `core`,
-`calc`, `diagram`, `kg`, `db`, `ai`, `logs`, `queue`, `project`, `tests`, `api`, `chip`, `chem`, `access`, `archsim`, `security`, `experiments`, `business`, `forecast`. (`payroll`, its name in 0.3.0, still works.)
+`calc`, `diagram`, `kg`, `db`, `ai`, `logs`, `queue`, `project`, `tests`, `api`, `chip`, `chem`, `access`, `archsim`, `security`, `experiments`, `business`, `forecast`, `dates`, `cs`, `ml`. (`payroll`, its name in 0.3.0, still works.)
 
 ### A newer complement, not a replacement: Tool Search
 
@@ -153,7 +153,7 @@ migration breaks or changes.
 (WASM, no server), so a metric like "revenue" is computed from the **agreed** definition rather than
 a query someone invented.
 
-**AI about AI (`ai`, 8)** — deterministic and model-free, which is what makes them useful here: an
+**AI about AI (`ai`, 9)** — deterministic and model-free, which is what makes them useful here: an
 AI can review **its own** system prompt, prepare a RAG corpus, run **its own answer** through a
 claim/source check, verify the eval suite it just wrote, or audit the catalogue of an MCP server it
 is deciding whether to install — and, given the tools/list it approved earlier, catch a "rug pull" (tools
@@ -162,7 +162,9 @@ training, `practice_check` tells it whether that practice still holds — supers
 sure — from a dated register; given its knowledge cutoff, only what changed after it. Two for serving: `llm_memory` says
 whether a model fits a GPU (weights by quantization, the KV cache that grows with context, the longest context that
 fits and the decode speed ceiling), and `semantic_cache_threshold` picks a semantic cache's similarity threshold from
-pairs measured with your own embedding model.
+pairs measured with your own embedding model. And `arithmetic_check` recalculates every operation written with "=" in a
+text (an email, an invoice, its own draft) and says which are wrong and what they should say, with real-life percentages
+("200 + 21 % = 242") and decimal comma or point.
 
 **Project workshop (`project`, 11)** — simulate `make` without running it and say **why** each target
 rebuilds; compare a real `make` log against that prediction (a target rebuilt when the simulation
@@ -221,13 +223,44 @@ Holm/BH correction, and always checks **sample ratio mismatch**; `abtest_sample_
 days (R's `power.prop.test`); `abtest_sequential` gives the per-look boundaries if you peek (Pocock,
 O'Brien-Fleming, Lan-DeMets spending). Checked against R/`ldbounds` reference values in the tests.
 
+**Business in Spain (`business`, 6)** — `pension_base` (retirement pension base under both systems while they coexist, the higher wins),
+`work_calendar` (a workplace's yearly calendar against the collective agreement's annual hours), `shift_validate` (a rota
+against the Workers' Statute rests and limits) and `cash_forecast` (13-week cash forecast from a bank statement). For
+receivables, `late_payment_interest` computes Ley 3/2004 interest stretch by stretch at each half-year's official rate
+(shipped back to 2003) plus the 40 € collection costs, for one invoice or a whole ledger, and `receivables_aging` gives
+aging by days past due, who to chase first, DSO (simple and countback), the average collection period and the invoices
+agreed beyond the legal 60 days. Both read the invoices CSV of any accounting program by path.
+
 **Forecasting (`forecast`, 1)** — `forecast` does what a forecaster does instead of trusting one model:
 Holt-Winters, automatic ARIMA/SARIMA and the two naive baselines are backtested with a rolling origin, and the answer
 says whether any of them actually beats the naive forecast (on a random walk none does, and it says so), how much of
 the promised interval coverage was achieved, anomalies and a likely level shift. Daily series take official holidays
 (Spain by region, other countries) or your own dates.
 
-**Security (`security`, 10)** — what an agent should check **before acting**, on the same engines as
+**Dates (`dates`, 2)** — `business_days` counts working days between two dates, or moves N working days, with the
+official holidays of Spain by region (BOE, including the ones moved to Monday), Germany by Land, France, the UK,
+Portugal, Mexico and the US, and names every day it skipped. `legal_deadline` gives the last day of a Spanish
+administrative (Ley 39/2015) or court (LEC/LOPJ, with August and 24 December – 6 January non-business since LO 1/2025)
+deadline, the extension when it falls on a non-business day, the 15:00 next-day margin and the articles applied. Built
+after measuring: models count fine, but miss moved regional holidays and the 2025 court-holiday reform.
+
+**CS coursework (`cs`, 5)** — the operating-systems and automata exercises of a degree, solved the way the
+textbook does and checked against its published solutions. `os_schedule` gives the Gantt chart and per-process times
+for FCFS, SJF, SRTF, Round Robin, HRRN, priority and feedback (Stallings table 9.5, Silberschatz ch. 5), stating the
+tie-breaking rules that books leave unsaid. `os_page_replace` runs FIFO, LRU, OPT and CLOCK and counts faults both ways
+in use (with and without the cold start). `os_banker` does the banker's algorithm, a request, or deadlock detection
+(Silberschatz ch. 7), with every Work-vs-Need check. `automata_from_regex` builds the Thompson NFA, the DFA by subsets
+and the minimal DFA as tables and tests words; `cyk_parse` fills the CYK table for a CNF grammar. Each answer links to
+the web tool that replays it step by step.
+
+**ML triage and market baskets (`ml`, 2)** — `ml_triage` looks at a CSV before anyone trains on it: binary classification or regression,
+class imbalance, constant and identifier columns, gaps, high-cardinality categories and flagrant leaks (a column that
+alone predicts the target), then scores linear, tree, random-forest and gradient-boosting models with seeded k-fold
+cross-validation next to the baseline (majority class or mean) and says plainly when none beats it. Reads the file by
+path, so the data never enters the conversation. `market_basket` finds the items bought together and the rules A → B
+with support, confidence and lift (Apriori), from one basket per line or the long format a shop exports (order, product).
+
+**Security (`security`, 11)** — what an agent should check **before acting**, on the same engines as
 the web's security tools. `hidden_text_scan` finds instructions a model literally cannot see
 (invisible Unicode tag characters, variation-selector and bit encodings, bidi controls, look-alike
 letters) and decodes them; `paste_check` finds the secrets in a log or HAR before it goes into a
@@ -242,12 +275,15 @@ NetworkPolicies (only the pairs that connect, with their ports) and explains why
 them — the official schema of your Kubernetes version (1.33–1.37: unknown fields with the one you meant, wrong
 types, removed APIs) and Pod Security Standards per workload and namespace. And `jwt_decode` (in `core`) now also flags what makes a token dangerous to
 accept: alg none, no exp, kid injection, a key carried in the header, and — given your key — algorithm
-confusion and short HMAC secrets. Static analysis of what you pass: nothing
+confusion and short HMAC secrets. `document_hygiene` checks a .docx or .xlsx before it leaves the organisation: tracked
+changes the "No Markup" view only hides, comments, very hidden sheets, pivot caches that outlive their source, hidden rows
+with data and author metadata. Static analysis of what you pass: nothing
 is fetched, nothing is run.
 
-**General purpose (`core`, 32)** — CIDR/subnetting, token counting with the real tokenizer (OpenAI's, plus Qwen3 and Mistral run locally, and a measured
+**General purpose (`core`, 33)** — CIDR/subnetting, token counting with the real tokenizer (OpenAI's, plus Qwen3 and Mistral run locally, and a measured
 estimate for Claude), hashes, JWT
-decoding, regex (and a static ReDoS check, `regex_redos_check`), spreadsheet formula audit (`spreadsheet_audit`: recalculates an .xlsx/.ods and flags stale values and cycles), a CSV diff by key of any size (`csv_diff`: which rows are missing, extra or changed, and in which columns), timestamps, cron, colors, WCAG contrast, chmod, JSON diff, units (kB vs KiB),
+decoding, CRCs and checksums (`checksum`: the reveng catalogue, Adler-32, Fletcher-16, custom parameters, and which CRC
+gives a value you have — also with the bytes swapped, as Modbus sends it), regex (and a static ReDoS check, `regex_redos_check`), spreadsheet formula audit (`spreadsheet_audit`: recalculates an .xlsx/.ods and flags stale values and cycles), a CSV diff by key of any size (`csv_diff`: which rows are missing, extra or changed, and in which columns), timestamps, cron, colors, WCAG contrast, chmod, JSON diff, units (kB vs KiB),
 Hamming, IEEE-754, number bases, a programmer's calculator, semver, format conversion, Unicode, and
 `json_schema_validate` (a JSON document against a real JSON Schema, draft 2020-12/2019-09/07, with
 every error's JSON Pointer — the check for your own structured output).

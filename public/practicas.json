@@ -2098,8 +2098,8 @@
    ],
    "estado": "vigente",
    "porque": {
-    "es": "Es el método por defecto desde PostgreSQL 14 y el que recomienda el proyecto para autenticación con contraseña.",
-    "en": "It is the default since PostgreSQL 14 and the method the project recommends for password authentication."
+    "es": "Es el método por defecto desde PostgreSQL 14 y el que recomienda el proyecto para autenticación con contraseña. Las contraseñas MD5 se marcaron como obsoletas en PostgreSQL 18 y PostgreSQL 19 (19-11-2026) avisa tras cada autenticación con MD5.",
+    "en": "It is the default since PostgreSQL 14 and the method the project recommends for password authentication. MD5 passwords were deprecated in PostgreSQL 18 and PostgreSQL 19 (2026-11-19) warns after each MD5 authentication."
    },
    "certeza": "documentado",
    "evidencia": [
@@ -2129,6 +2129,15 @@
      "consultado": "2026-10-06",
      "primaria": true,
      "cita": "If you require PostgreSQL password-based authentication, use SCRAM authentication."
+    },
+    {
+     "tipo": "web",
+     "url": "https://www.postgresql.org/docs/release/19.0/",
+     "titulo": "PostgreSQL 19 release notes (2026-11-19)",
+     "fecha": "2026-11-19",
+     "consultado": "2026-11-23",
+     "primaria": true,
+     "cita": "MD5 passwords were marked as deprecated in PostgreSQL 18."
     }
    ],
    "historia": [
@@ -2159,9 +2168,23 @@
       "es": "Valor por defecto desde PostgreSQL 14.",
       "en": "Default since PostgreSQL 14."
      }
+    },
+    {
+     "fecha": "2026-11-19",
+     "precision": "dia",
+     "registrado": "2026-11-23",
+     "estado": "vigente",
+     "certeza": "documentado",
+     "evidencia": [
+      3
+     ],
+     "nota": {
+      "es": "PostgreSQL 19 avisa tras una autenticación con MD5; las contraseñas MD5 están obsoletas desde PostgreSQL 18.",
+      "en": "PostgreSQL 19 warns after MD5 authentication; MD5 passwords have been deprecated since PostgreSQL 18."
+     }
     }
    ],
-   "revisado": "2026-10-06",
+   "revisado": "2026-11-23",
    "caduca": "2027-05-04",
    "aplica": [
     {
@@ -10450,8 +10473,8 @@
      }
     }
    ],
-   "revisado": "2026-10-02",
-   "caduca": "2027-01-08",
+   "revisado": "2026-11-23",
+   "caduca": "2027-03-30",
    "recomprobar": "git grep -q \"@angular/build:application\" angular.json",
    "aplica": [
     {
@@ -14457,6 +14480,90 @@
     "migrer vers build.gradle.kts",
     "Gradle em Kotlin",
     "migrar para build.gradle.kts"
+   ]
+  },
+  {
+   "id": "cadena-de-manejadores-en-vez-de-if-por-umbrales",
+   "titulo": {
+    "es": "Encadenar manejadores en lugar de un if/else por umbrales en un solo servicio",
+    "en": "Chaining handlers instead of an if/else by thresholds in a single service"
+   },
+   "area": "desarrollo",
+   "temas": [
+    "patrones-de-diseno",
+    "cadena-de-responsabilidad",
+    "middleware",
+    "condicionales",
+    "gof"
+   ],
+   "estado": "depende",
+   "ambito": [
+    {
+     "cuando": {
+      "es": "pasos que cambian a menudo, o cuyo orden o composición se configura",
+      "en": "steps that change often, or whose order or composition is configured"
+     },
+     "estado": "vigente"
+    },
+    {
+     "cuando": {
+      "es": "pocos pasos fijos que no van a cambiar",
+      "en": "a few fixed steps that will not change"
+     },
+     "estado": "innecesaria",
+     "porque": {
+      "es": "Un if/else corto se lee de un vistazo y no necesita una clase por paso.",
+      "en": "A short if/else reads at a glance and does not need a class per step."
+     }
+    }
+   ],
+   "porque": {
+    "es": "Cada eslabón decide si resuelve la petición o la pasa al siguiente. Cuando aparece un paso nuevo, es un eslabón más y se toca solo el montaje; sin la cadena se añade una rama al servicio que ya los decide todos. Con pocos pasos fijos, el if es más simple.",
+    "en": "Each link decides whether to handle the request or pass it to the next. When a new step appears it is one more link and only the assembly changes; without the chain you add a branch to the service that already decides everything. With a few fixed steps, the if is simpler."
+   },
+   "certeza": "medido",
+   "evidencia": [
+    {
+     "tipo": "web",
+     "url": "https://expressjs.com/en/guide/using-middleware.html",
+     "titulo": "Express, Using middleware",
+     "consultado": "2026-11-23",
+     "primaria": true,
+     "cita": "The next middleware function in the application’s request-response cycle, commonly named next"
+    },
+    {
+     "tipo": "medida",
+     "fecha": "2026-11-11",
+     "descripcion": {
+      "es": "En un ejemplo ejecutable (aprobación de gastos por importe), un nuevo nivel de aprobación es un eslabón nuevo y ninguna clase tocada, solo el montaje de la cadena. Sin el patrón gana una rama el servicio que ya decidía todos los niveles.",
+      "en": "In a runnable example (expense approval by amount), a new approval level is one new link and no class touched, only the chain assembly. Without the pattern the service that already decided every level gains a branch."
+     },
+     "herramienta": "/patterns?pattern=chain-of-responsibility"
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2026-11-11",
+     "precision": "dia",
+     "registrado": "2026-11-23",
+     "estado": "depende",
+     "certeza": "medido",
+     "evidencia": [
+      1
+     ],
+     "nota": {
+      "es": "Un ejemplo ejecutable mide que con cadena un nivel nuevo es un eslabón y ninguna clase tocada, y sin ella una rama más en el servicio.",
+      "en": "A runnable example measures that with a chain a new level is one link and no class touched, and without it one more branch in the service."
+     }
+    }
+   ],
+   "revisado": "2026-11-23",
+   "caduca": "2027-05-23",
+   "consultas": [
+    "chain of responsibility handlers",
+    "approval by amount if else",
+    "middleware pipeline pattern",
+    "cadena de aprobaciones"
    ]
   },
   {
@@ -24816,8 +24923,8 @@
     },
     {
      "tipo": "web",
-     "url": "https://github.com/mdn/browser-compat-data/blob/main/javascript/builtins/Temporal.json",
-     "titulo": "browser-compat-data — Temporal (MDN)",
+     "url": "https://web.archive.org/web/20261026145000/https://github.com/mdn/browser-compat-data/blob/main/javascript/builtins/Temporal.json",
+     "titulo": "browser-compat-data — Temporal (MDN) (copia archivada: la página actual ya no lo dice)",
      "consultado": "2026-10-07",
      "primaria": false,
      "cita": "\"version_added\": \"preview\""
@@ -29337,6 +29444,91 @@
    ]
   },
   {
+   "id": "iterador-propio-para-recorrer-una-estructura",
+   "titulo": {
+    "es": "Dar a tu propia estructura un iterador en lugar de dejar que los clientes recorran su interior",
+    "en": "Giving your own data structure an iterator instead of letting clients walk its internals"
+   },
+   "area": "desarrollo",
+   "temas": [
+    "patrones-de-diseno",
+    "iterador",
+    "encapsulacion",
+    "colecciones",
+    "gof"
+   ],
+   "estado": "depende",
+   "ambito": [
+    {
+     "cuando": {
+      "es": "una estructura propia (lista enlazada, árbol, resultado paginado) que varios clientes recorren",
+      "en": "your own structure (linked list, tree, paged result) that several clients walk"
+     },
+     "estado": "vigente"
+    },
+    {
+     "cuando": {
+      "es": "una colección estándar del lenguaje",
+      "en": "a standard language collection"
+     },
+     "estado": "innecesaria",
+     "porque": {
+      "es": "El lenguaje ya trae el protocolo de iteración y las colecciones lo cumplen.",
+      "en": "The language already has the iteration protocol and its collections follow it."
+     }
+    }
+   ],
+   "porque": {
+    "es": "Un iterador separa cómo se guarda la estructura de cómo se recorre: si cambia la lista, cambian la lista y su iterador y los clientes siguen igual. Sin él, los clientes dependen de la forma interna y hay que tocarlos. Con las colecciones del lenguaje no hace falta escribirlo: el protocolo de iteración ya viene hecho.",
+    "en": "An iterator separates how the structure is stored from how it is walked: if the list changes, the list and its iterator change and clients stay the same. Without it, clients depend on the internal shape and must be touched. With the language's own collections you do not need to write one: the iteration protocol comes built in."
+   },
+   "certeza": "medido",
+   "evidencia": [
+    {
+     "tipo": "web",
+     "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Iteration_protocols",
+     "titulo": "MDN, Iteration protocols (última modificación 2026-11-02)",
+     "consultado": "2026-11-23",
+     "primaria": true,
+     "cita": "The iterator protocol defines a standard way to produce a sequence of values (either finite or infinite), and potentially a return value when all values have been generated.",
+     "fecha": "2026-11-02"
+    },
+    {
+     "tipo": "medida",
+     "fecha": "2026-11-11",
+     "descripcion": {
+      "es": "En un ejemplo ejecutable (una lista de canciones que pasa de array a lista enlazada), con iterador cambian la lista y su iterador y los clientes no. Sin él cambian también los dos clientes.",
+      "en": "In a runnable example (a playlist that moves from an array to a linked list), with an iterator the list and its iterator change and the clients do not. Without it both clients change too."
+     },
+     "herramienta": "/patterns?pattern=iterator"
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2026-11-11",
+     "precision": "dia",
+     "registrado": "2026-11-23",
+     "estado": "depende",
+     "certeza": "medido",
+     "evidencia": [
+      1
+     ],
+     "nota": {
+      "es": "Un ejemplo ejecutable mide que con iterador los clientes no cambian al cambiar la estructura, y sin él sí.",
+      "en": "A runnable example measures that with an iterator clients do not change when the structure does, and without it they do."
+     }
+    }
+   ],
+   "revisado": "2026-11-23",
+   "caduca": "2027-05-23",
+   "consultas": [
+    "iterator pattern linked list",
+    "custom iterator hasNext next",
+    "walk collection without exposing internals",
+    "recorrer una lista sin conocer su estructura"
+   ]
+  },
+  {
    "id": "jackson-2-en-spring-boot-4",
    "titulo": {
     "es": "Seguir con Jackson 2 (com.fasterxml.jackson, ObjectMapper) en aplicaciones Spring Boot 4",
@@ -32256,6 +32448,90 @@
    ]
   },
   {
+   "id": "mediador-para-coordinar-los-campos-de-un-formulario",
+   "titulo": {
+    "es": "Poner un mediador que coordine los componentes que se condicionan entre sí (campos de un formulario)",
+    "en": "Using a mediator to coordinate components that depend on each other (form fields)"
+   },
+   "area": "desarrollo",
+   "temas": [
+    "patrones-de-diseno",
+    "mediador",
+    "formularios",
+    "acoplamiento",
+    "gof"
+   ],
+   "estado": "depende",
+   "ambito": [
+    {
+     "cuando": {
+      "es": "muchos componentes que se condicionan entre sí y crecen (campos, botones, paneles)",
+      "en": "many components that depend on each other and keep growing (fields, buttons, panels)"
+     },
+     "estado": "vigente"
+    },
+    {
+     "cuando": {
+      "es": "el mediador va acumulando la lógica de todos los componentes",
+      "en": "the mediator keeps accumulating the logic of every component"
+     },
+     "estado": "antipatron",
+     "porque": {
+      "es": "Acaba siendo un objeto de Dios: difícil de leer y de probar.",
+      "en": "It ends up a God Object: hard to read and to test."
+     }
+    }
+   ],
+   "porque": {
+    "es": "Con un mediador, los campos no se conocen entre sí: al añadir uno nuevo se toca solo el formulario que los coordina. Sin él, cada campo que ya existía tiene que conocer al nuevo. El riesgo es que, con el tiempo, el mediador se convierta en un objeto que lo sabe todo.",
+    "en": "With a mediator, fields do not know each other: adding a new one touches only the form that coordinates them. Without it, every existing field has to know the new one. The risk is that over time the mediator becomes an object that knows everything."
+   },
+   "certeza": "medido",
+   "evidencia": [
+    {
+     "tipo": "web",
+     "url": "https://refactoring.guru/design-patterns/mediator",
+     "titulo": "Refactoring.Guru, Mediator",
+     "consultado": "2026-11-23",
+     "primaria": false,
+     "cita": "Over time a mediator can evolve into a God Object."
+    },
+    {
+     "tipo": "medida",
+     "fecha": "2026-11-11",
+     "descripcion": {
+      "es": "En un ejemplo ejecutable (un formulario de registro al que se añade un campo de edad), con mediador se toca solo el formulario. Sin él se tocan además todos los campos que ya existían.",
+      "en": "In a runnable example (a signup form to which an age field is added), with a mediator only the form is touched. Without it all the fields that already existed are touched as well."
+     },
+     "herramienta": "/patterns?pattern=mediator"
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2026-11-11",
+     "precision": "dia",
+     "registrado": "2026-11-23",
+     "estado": "depende",
+     "certeza": "medido",
+     "evidencia": [
+      1
+     ],
+     "nota": {
+      "es": "Un ejemplo ejecutable mide que con mediador un campo nuevo toca solo el formulario, y sin él a cada campo existente.",
+      "en": "A runnable example measures that with a mediator a new field touches only the form, and without it every existing field."
+     }
+    }
+   ],
+   "revisado": "2026-11-23",
+   "caduca": "2027-05-23",
+   "consultas": [
+    "mediator pattern form fields",
+    "god object mediator",
+    "decouple ui components",
+    "campos de formulario que dependen entre sí"
+   ]
+  },
+  {
    "id": "medir-un-intermitente-con-muestra-comparada",
    "titulo": {
     "es": "Comparar la tasa de fallos con y sin el cambio antes de culpar o absolver a un test intermitente",
@@ -33496,8 +33772,8 @@
      }
     }
    ],
-   "revisado": "2026-10-07",
-   "caduca": "2027-01-11",
+   "revisado": "2026-11-23",
+   "caduca": "2027-06-24",
    "aplica": [
     {
      "producto": "python"
@@ -38349,6 +38625,99 @@
    ]
   },
   {
+   "id": "proxy-delante-de-un-servicio-lento",
+   "titulo": {
+    "es": "Poner un proxy delante de un servicio lento para cachearlo o conectarlo solo cuando haga falta",
+    "en": "Putting a proxy in front of a slow service to cache it or connect to it only when needed"
+   },
+   "area": "desarrollo",
+   "temas": [
+    "patrones-de-diseno",
+    "proxy",
+    "cache",
+    "inicializacion-perezosa",
+    "gof"
+   ],
+   "estado": "depende",
+   "ambito": [
+    {
+     "cuando": {
+      "es": "varios clientes usan un servicio lento o caro y conviene cachearlo o conectarlo bajo demanda",
+      "en": "several clients use a slow or costly service and it pays to cache it or connect on demand"
+     },
+     "estado": "vigente"
+    },
+    {
+     "cuando": {
+      "es": "hay un solo cliente y nada que ahorrar",
+      "en": "there is one client and nothing to save"
+     },
+     "estado": "innecesaria",
+     "porque": {
+      "es": "Añade una capa y una clase sin evitar ninguna repetición.",
+      "en": "It adds a layer and a class without avoiding any repetition."
+     }
+    }
+   ],
+   "porque": {
+    "es": "Un objeto con la misma interfaz que el servicio real, que lo crea o lo consulta solo cuando hace falta, concentra en un sitio la caché o la conexión diferida. Sin él, cada cliente repite ese código de inicialización diferida. Si solo hay un cliente y nada que ahorrar, es una capa de más.",
+    "en": "An object with the same interface as the real service, which creates or queries it only when needed, puts the cache or the deferred connection in one place. Without it, every client repeats that deferred-initialization code. With a single client and nothing to save, it is one layer too many."
+   },
+   "certeza": "medido",
+   "evidencia": [
+    {
+     "tipo": "web",
+     "url": "https://refactoring.guru/design-patterns/proxy",
+     "titulo": "Refactoring.Guru, Proxy",
+     "consultado": "2026-11-23",
+     "primaria": false,
+     "cita": "All of the object’s clients would need to execute some deferred initialization code. Unfortunately, this would probably cause a lot of code duplication."
+    },
+    {
+     "tipo": "web",
+     "url": "https://martinfowler.com/eaaCatalog/lazyLoad.html",
+     "titulo": "Martin Fowler, Lazy Load (Patterns of Enterprise Application Architecture)",
+     "consultado": "2026-11-23",
+     "primaria": true,
+     "cita": "An object that doesn't contain all of the data you need but knows how to get it.",
+     "fecha": "2003"
+    },
+    {
+     "tipo": "medida",
+     "fecha": "2026-11-11",
+     "descripcion": {
+      "es": "En un ejemplo ejecutable (un widget de tiempo y un planificador de viajes que consultan el mismo servicio), añadir caducidad a la caché toca una sola clase con el proxy. Sin él hay que tocar las dos clases cliente.",
+      "en": "In a runnable example (a weather widget and a trip planner that query the same service), adding cache expiry touches a single class with the proxy. Without it you must touch both client classes."
+     },
+     "herramienta": "/patterns?pattern=proxy"
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2026-11-11",
+     "precision": "dia",
+     "registrado": "2026-11-23",
+     "estado": "depende",
+     "certeza": "medido",
+     "evidencia": [
+      2
+     ],
+     "nota": {
+      "es": "Un ejemplo ejecutable mide que con proxy un cambio de caché toca una clase, y sin él toca a los dos clientes.",
+      "en": "A runnable example measures that with a proxy a cache change touches one class, and without it both clients."
+     }
+    }
+   ],
+   "revisado": "2026-11-23",
+   "caduca": "2027-05-23",
+   "consultas": [
+    "proxy cache virtual proxy",
+    "lazy initialization wrapper",
+    "caching proxy example",
+    "envoltorio que cachea consultas"
+   ]
+  },
+  {
    "id": "proyecto-nuevo-con-angularjs",
    "titulo": {
     "es": "Empezar un proyecto nuevo con AngularJS (1.x)",
@@ -42950,8 +43319,8 @@
    "estado": "superada",
    "superadaPor": "restclient-para-http-sincrono",
    "porque": {
-    "es": "Spring lo declaró «feature complete» hace años y en septiembre de 2025 anunció su deprecación: Spring Framework 7.0 lo marca como deprecado en la documentación, 7.1 (prevista para noviembre de 2026) lo anotará @Deprecated y 8.0 lo eliminará. Su sustituto síncrono es RestClient, que reutiliza la misma infraestructura (ver restclient-para-http-sincrono).",
-    "en": "Spring declared it \"feature complete\" years ago and in September 2025 announced its deprecation: Spring Framework 7.0 marks it deprecated in the documentation, 7.1 (planned for November 2026) will annotate it @Deprecated and 8.0 will remove it. Its synchronous replacement is RestClient, which reuses the same infrastructure (see restclient-para-http-sincrono)."
+    "es": "Spring lo declaró «feature complete» hace años y en septiembre de 2025 anunció su deprecación: Spring Framework 7.0 lo marca como deprecado en la documentación, 7.1 (publicada el 19-11-2026) lo depreca formalmente y 8.0 lo eliminará. Su sustituto síncrono es RestClient, que reutiliza la misma infraestructura (ver restclient-para-http-sincrono).",
+    "en": "Spring declared it \"feature complete\" years ago and in September 2025 announced its deprecation: Spring Framework 7.0 marks it deprecated in the documentation, 7.1 (released 2026-11-19) formally deprecates it and 8.0 will remove it. Its synchronous replacement is RestClient, which reuses the same infrastructure (see restclient-para-http-sincrono)."
    },
    "certeza": "documentado",
    "evidencia": [
@@ -43026,11 +43395,12 @@
     },
     {
      "tipo": "web",
-     "url": "https://github.com/spring-projects/spring-framework/wiki/Spring-Framework-7.1-Release-Notes",
-     "titulo": "Spring Framework 7.1 Release Notes (wiki, versión aún no publicada)",
-     "consultado": "2026-10-07",
+     "url": "https://github.com/spring-projects/spring-framework/releases/tag/v7.1.0",
+     "titulo": "Spring Framework v7.1.0 (GitHub releases, 2026-11-19)",
+     "fecha": "2026-11-19",
+     "consultado": "2026-11-23",
      "primaria": true,
-     "cita": "This is a preview page for Spring Framework 7.1.0, scheduled for November 2026."
+     "cita": "released this 19 Nov 22:03"
     }
    ],
    "historia": [
@@ -43082,9 +43452,24 @@
       "es": "Spring Framework 7.0 lo da por deprecado en la documentación de referencia.",
       "en": "Spring Framework 7.0 marks it deprecated in the reference documentation."
      }
+    },
+    {
+     "fecha": "2026-11-19",
+     "precision": "dia",
+     "registrado": "2026-11-23",
+     "estado": "superada",
+     "certeza": "documentado",
+     "evidencia": [
+      8,
+      4
+     ],
+     "nota": {
+      "es": "Sale Spring Framework 7.1.0, que depreca formalmente RestTemplate.",
+      "en": "Spring Framework 7.1.0 is released and formally deprecates RestTemplate."
+     }
     }
    ],
-   "revisado": "2026-10-07",
+   "revisado": "2026-11-23",
    "caduca": "2027-03-05",
    "aplica": [
     {
@@ -46539,8 +46924,8 @@
      }
     }
    ],
-   "revisado": "2026-10-08",
-   "caduca": "2027-01-26",
+   "revisado": "2026-11-23",
+   "caduca": "2027-07-27",
    "aplica": [
     {
      "producto": "dotnet"
@@ -50562,8 +50947,8 @@
      }
     }
    ],
-   "revisado": "2026-10-06",
-   "caduca": "2027-01-10",
+   "revisado": "2026-11-23",
+   "caduca": "2027-03-10",
    "consultas": [
     "A2A vs MCP difference",
     "agent to agent protocol interoperability",
@@ -50827,8 +51212,8 @@
     },
     {
      "tipo": "web",
-     "url": "https://code.claude.com/docs/en/best-practices",
-     "titulo": "Best practices for Claude Code",
+     "url": "https://web.archive.org/web/20261005090900/https://code.claude.com/docs/en/best-practices",
+     "titulo": "Best practices for Claude Code (copia archivada: la página actual ya no lo dice)",
      "consultado": "2026-10-06",
      "primaria": true,
      "cita": "For domain knowledge or workflows that are only relevant sometimes, use skills instead. Claude loads them on demand without bloating every conversation."
@@ -50887,8 +51272,8 @@
      }
     }
    ],
-   "revisado": "2026-10-06",
-   "caduca": "2027-01-03",
+   "revisado": "2026-11-23",
+   "caduca": "2027-03-11",
    "consultas": [
     "SKILL.md format",
     "agent skills progressive disclosure",
@@ -51340,6 +51725,84 @@
    ]
   },
   {
+   "id": "agente-con-web-fetch-sobre-cualquier-url",
+   "titulo": {
+    "es": "Dejar que un agente descargue cualquier URL con web_fetch",
+    "en": "Letting an agent fetch any URL with web_fetch"
+   },
+   "area": "ia",
+   "temas": [
+    "agentes",
+    "web-fetch",
+    "exfiltracion",
+    "claude-managed-agents"
+   ],
+   "estado": "antipatron",
+   "porque": {
+    "es": "Si el agente puede abrir cualquier dirección, una instrucción inyectada puede sacar datos en la URL. En Claude Managed Agents, web_fetch solo abre URLs que ya aparecieron en la sesión (un mensaje del usuario, un resultado de búsqueda o una página anterior), y los administradores pueden limitar dominios por organización.",
+    "en": "If the agent can open any address, an injected instruction can leak data in the URL. In Claude Managed Agents, web_fetch only opens URLs that already appeared in the session (a user message, a search result or an earlier page), and admins can restrict domains per organization."
+   },
+   "certeza": "documentado",
+   "evidencia": [
+    {
+     "tipo": "web",
+     "url": "https://platform.claude.com/docs/en/release-notes/overview",
+     "titulo": "Claude Platform release notes (2026-10-07)",
+     "fecha": "2026-10-07",
+     "consultado": "2026-11-23",
+     "primaria": true,
+     "cita": "In Claude Managed Agents, the web_fetch tool now fetches only URLs that have already appeared in the session"
+    },
+    {
+     "tipo": "web",
+     "url": "https://platform.claude.com/docs/en/release-notes/overview",
+     "titulo": "Claude Platform release notes (2026-10-20)",
+     "fecha": "2026-10-20",
+     "consultado": "2026-11-23",
+     "primaria": true,
+     "cita": "In Claude Managed Agents, the web_fetch tool now follows your organization’s web fetch domain restrictions set on the Capabilities page of the Claude Console."
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2026-10-07",
+     "precision": "dia",
+     "registrado": "2026-11-23",
+     "estado": "antipatron",
+     "certeza": "documentado",
+     "evidencia": [
+      0
+     ],
+     "nota": {
+      "es": "Managed Agents limita web_fetch a las URLs que ya aparecieron en la sesión.",
+      "en": "Managed Agents limits web_fetch to URLs that already appeared in the session."
+     }
+    },
+    {
+     "fecha": "2026-10-20",
+     "precision": "dia",
+     "registrado": "2026-11-23",
+     "estado": "antipatron",
+     "certeza": "documentado",
+     "evidencia": [
+      1
+     ],
+     "nota": {
+      "es": "web_fetch respeta las restricciones de dominio de la organización.",
+      "en": "web_fetch follows the organization’s domain restrictions."
+     }
+    }
+   ],
+   "revisado": "2026-11-23",
+   "caduca": "2027-05-23",
+   "consultas": [
+    "web fetch exfiltration agent",
+    "url_not_in_prior_context",
+    "allowed domains web_fetch",
+    "agente que descarga páginas arbitrarias"
+   ]
+  },
+  {
    "id": "agente-de-codigo-con-acceso-a-los-secretos",
    "titulo": {
     "es": "Dejar que el agente de código lea los .env y credenciales del proyecto, o «protegerlos» con una línea en CLAUDE.md o un .claudeignore",
@@ -51370,8 +51833,8 @@
     },
     {
      "tipo": "web",
-     "url": "https://code.claude.com/docs/en/permissions",
-     "titulo": "Configure permissions (Claude Code docs)",
+     "url": "https://web.archive.org/web/20261008153633/https://code.claude.com/docs/en/permissions",
+     "titulo": "Configure permissions (Claude Code docs) (copia archivada: la página actual ya no lo dice)",
      "consultado": "2026-10-07",
      "primaria": true,
      "cita": "They don't apply to a command that reads files without naming them, such as grep -r pattern . run from the directory that holds the file, or to arbitrary subprocesses that read or write files indirectly, like a Python or Node script that opens files itself."
@@ -51444,8 +51907,8 @@
      }
     }
    ],
-   "revisado": "2026-10-07",
-   "caduca": "2027-01-07",
+   "revisado": "2026-11-23",
+   "caduca": "2027-03-13",
    "consultas": [
     "Claude Code read .env file",
     "does .claudeignore work",
@@ -51627,8 +52090,8 @@
     },
     {
      "tipo": "web",
-     "url": "https://code.claude.com/docs/en/best-practices",
-     "titulo": "Best practices for Claude Code (Claude Code docs)",
+     "url": "https://web.archive.org/web/20261014213940/https://code.claude.com/docs/en/best-practices",
+     "titulo": "Best practices for Claude Code (Claude Code docs) (copia archivada: la página actual ya no lo dice)",
      "consultado": "2026-10-14",
      "primaria": true,
      "cita": "After the tenth approval you're clicking through rather than reviewing."
@@ -51820,8 +52283,8 @@
      }
     }
    ],
-   "revisado": "2026-10-14",
-   "caduca": "2027-01-11",
+   "revisado": "2026-11-23",
+   "caduca": "2027-03-15",
    "consultas": [
     "dangerously-skip-permissions safe",
     "Claude Code yolo mode",
@@ -52251,8 +52714,8 @@
      }
     }
    ],
-   "revisado": "2026-10-14",
-   "caduca": "2027-01-07",
+   "revisado": "2026-11-23",
+   "caduca": "2027-03-16",
    "consultas": [
     "agent modifies tests to pass",
     "reward hacking coding agent",
@@ -52459,8 +52922,8 @@
      "github": "langchain-ai/langchain"
     }
    ],
-   "revisado": "2026-10-07",
-   "caduca": "2027-01-12",
+   "revisado": "2026-11-23",
+   "caduca": "2027-03-18",
    "consultas": [
     "LangChain 1.0 create_agent",
     "create_react_agent deprecated",
@@ -52544,7 +53007,7 @@
      "fecha": "2025-09",
      "consultado": "2026-10-06",
      "primaria": true,
-     "cita": "Pydantic AI allows you to build durable agents that can preserve their progress across transient API failures and application errors or restarts, and handle long-running, asynchronous, and human-in-the-loop workflows with production-grade reliability."
+     "cita": "Use durable execution in production when a run in flight has to survive its process stopping, through a deploy, a crash or a transient API failure"
     },
     {
      "tipo": "web",
@@ -52575,8 +53038,8 @@
      }
     }
    ],
-   "revisado": "2026-10-06",
-   "caduca": "2027-01-12",
+   "revisado": "2026-11-23",
+   "caduca": "2027-03-20",
    "consultas": [
     "durable execution agents Temporal",
     "resume agent after crash",
@@ -52669,8 +53132,8 @@
     },
     {
      "tipo": "web",
-     "url": "https://code.claude.com/docs/en/best-practices",
-     "titulo": "Best practices for Claude Code",
+     "url": "https://web.archive.org/web/20261005090900/https://code.claude.com/docs/en/best-practices",
+     "titulo": "Best practices for Claude Code (copia archivada: la página actual ya no lo dice)",
      "consultado": "2026-10-06",
      "primaria": true,
      "cita": "Bloated CLAUDE.md files cause Claude to ignore your actual instructions!"
@@ -52828,24 +53291,24 @@
     },
     {
      "tipo": "web",
-     "url": "https://code.claude.com/docs/en/best-practices",
-     "titulo": "Best practices for Claude Code (Claude Code docs)",
+     "url": "https://web.archive.org/web/20261014213940/https://code.claude.com/docs/en/best-practices",
+     "titulo": "Best practices for Claude Code (Claude Code docs) (copia archivada: la página actual ya no lo dice)",
      "consultado": "2026-10-14",
      "primaria": true,
      "cita": "Ruthlessly prune. If Claude already does something correctly without the instruction, delete it or convert it to a hook."
     },
     {
      "tipo": "web",
-     "url": "https://code.claude.com/docs/en/best-practices",
-     "titulo": "Best practices for Claude Code (Claude Code docs)",
+     "url": "https://web.archive.org/web/20261014213940/https://code.claude.com/docs/en/best-practices",
+     "titulo": "Best practices for Claude Code (Claude Code docs) (copia archivada: la página actual ya no lo dice)",
      "consultado": "2026-10-14",
      "primaria": true,
      "cita": "For each line, ask: \"Would removing this cause Claude to make mistakes?\" If not, cut it."
     },
     {
      "tipo": "web",
-     "url": "https://code.claude.com/docs/en/best-practices",
-     "titulo": "Best practices for Claude Code (Claude Code docs)",
+     "url": "https://web.archive.org/web/20261014213940/https://code.claude.com/docs/en/best-practices",
+     "titulo": "Best practices for Claude Code (Claude Code docs) (copia archivada: la página actual ya no lo dice)",
      "consultado": "2026-10-14",
      "primaria": true,
      "cita": "Run /init to generate a starter CLAUDE.md file based on your current project structure, then refine over time."
@@ -53095,8 +53558,8 @@
      }
     }
    ],
-   "revisado": "2026-10-14",
-   "caduca": "2027-01-08",
+   "revisado": "2026-11-23",
+   "caduca": "2027-03-22",
    "consultas": [
     "AGENTS.md best practices",
     "CLAUDE.md file for repo",
@@ -53339,8 +53802,8 @@
      }
     }
    ],
-   "revisado": "2026-10-06",
-   "caduca": "2027-01-13",
+   "revisado": "2026-11-23",
+   "caduca": "2027-03-23",
    "enlaces": [
     {
      "nombre": "Reglamento (UE) 2026/1744 (Digital Omnibus on AI)",
@@ -53487,8 +53950,8 @@
    ],
    "estado": "depende",
    "porque": {
-    "es": "En los modelos de razonamiento actuales esos parámetros se rechazan o se desaconsejan: desde Claude Opus 4.7 cualquier valor no predeterminado da un error 400, OpenAI pide quitarlos cuando el esfuerzo de razonamiento no es «none» y Google aconseja dejar Gemini 3 en 1,0 para evitar bucles. Donde aún se aceptan, la referencia de OpenAI pide tocar temperature o top_p, no los dos. Para que la salida sea reproducible no sirve ni temperature 0 (ver temperatura-cero-para-salidas-reproducibles).",
-    "en": "On current reasoning models these parameters are rejected or discouraged: from Claude Opus 4.7 any non-default value returns a 400 error, OpenAI asks to remove them when reasoning effort is not \"none\", and Google advises leaving Gemini 3 at 1.0 to avoid looping. Where they are still accepted, OpenAI's reference says to change temperature or top_p, not both. Not even temperature 0 makes output reproducible (see temperatura-cero-para-salidas-reproducibles)."
+    "es": "En los modelos de razonamiento actuales esos parámetros se rechazan o se desaconsejan: desde Claude Opus 4.7 cualquier valor no predeterminado da un error 400, OpenAI pide quitarlos cuando el esfuerzo de razonamiento no es «none» y GPT-6 Astra ya no admite temperature, top_p ni logprobs personalizados y Google aconsejó dejar Gemini 3 en 1,0 para evitar bucles y desde Gemini 3.6 los da por obsoletos: la API los ignora y las próximas generaciones devolverán un 400. Donde aún se aceptan, la referencia de OpenAI pide tocar temperature o top_p, no los dos. Para que la salida sea reproducible no sirve ni temperature 0 (ver temperatura-cero-para-salidas-reproducibles).",
+    "en": "On current reasoning models these parameters are rejected or discouraged: from Claude Opus 4.7 any non-default value returns a 400 error, OpenAI asks to remove them when reasoning effort is not \"none\" and GPT-6 Astra no longer supports custom temperature, top_p or logprobs, and Google advised leaving Gemini 3 at 1.0 to avoid looping and since Gemini 3.6 deprecates them: the API ignores them and future generations will return a 400. Where they are still accepted, OpenAI's reference says to change temperature or top_p, not both. Not even temperature 0 makes output reproducible (see temperatura-cero-para-salidas-reproducibles)."
    },
    "ambito": [
     {
@@ -53523,7 +53986,7 @@
      "fecha": "2025-08-05",
      "consultado": "2026-10-07",
      "primaria": true,
-     "cita": "Opus 4.1 does not allow both temperature and top_p parameters to be specified. Please use only one."
+     "cita": "On Opus 4.1, you can specify temperature or top_p, but not both."
     },
     {
      "tipo": "web",
@@ -53554,24 +54017,16 @@
     },
     {
      "tipo": "web",
-     "url": "https://platform.claude.com/docs/en/models/opus-5-5/migration-guide",
-     "titulo": "Migrating to Claude Opus 5.5 (Claude docs)",
+     "url": "https://web.archive.org/web/20260303122037/https://developers.openai.com/api/docs/guides/latest-model",
+     "titulo": "OpenAI, guía «latest model» (copia archivada del 3-3-2026; la página actual ya no lo dice así)",
      "consultado": "2026-10-07",
      "primaria": true,
-     "cita": "Setting temperature, top_p, or top_k to any non-default value on Claude Opus 4.7 and later models, including Claude Opus 5.5, returns a 400 error."
+     "cita": "The following parameters are only supported when using GPT-5.2 with reasoning effort set to none : temperature top_p logprobs"
     },
     {
      "tipo": "web",
-     "url": "https://developers.openai.com/api/docs/guides/latest-model",
-     "titulo": "Using GPT-6 (OpenAI API docs)",
-     "consultado": "2026-10-07",
-     "primaria": true,
-     "cita": "When reasoning effort is not none, remove temperature, top_p, and top_logprobs."
-    },
-    {
-     "tipo": "web",
-     "url": "https://ai.google.dev/gemini-api/docs/gemini-3",
-     "titulo": "Gemini 3 Developer Guide (Gemini API docs)",
+     "url": "https://web.archive.org/web/20260303134105/https://ai.google.dev/gemini-api/docs/gemini-3",
+     "titulo": "Google, guía de Gemini 3 (copia archivada del 3-3-2026; la página actual ya no lo dice)",
      "consultado": "2026-10-07",
      "primaria": true,
      "cita": "While previous models often benefited from tuning temperature to control creativity versus determinism, Gemini 3's reasoning capabilities are optimized for the default setting."
@@ -53610,6 +54065,32 @@
       "en": "In a character n-gram model, with 5 seeds per temperature, raising T from 0.2 to 1.5 raises both variety (distinct bigrams from 0.45 to 0.95) and invented words (from 3.6% to 43%), monotonically."
      },
      "herramienta": "/mini-llm?corpus=es&size=20000&mode=ngram&order=5&temp=1.5&seed=1&decoding=sample"
+    },
+    {
+     "tipo": "web",
+     "url": "https://developers.openai.com/api/docs/changelog",
+     "titulo": "OpenAI API changelog (2026-09-03)",
+     "fecha": "2026-09-03",
+     "consultado": "2026-11-23",
+     "primaria": true,
+     "cita": "GPT-6 Astra does not support custom temperature or top_p values or log probabilities ( logprobs )."
+    },
+    {
+     "tipo": "web",
+     "url": "https://ai.google.dev/gemini-api/docs/whats-new-gemini-3.6",
+     "titulo": "Google, novedades de Gemini 3.6 (lanzado el 2026-07-21)",
+     "fecha": "2026-07-21",
+     "consultado": "2026-11-23",
+     "primaria": true,
+     "cita": "temperature, top_p, and top_k are deprecated and ignored. In future model generations, supplying these parameters returns an HTTP 400 error."
+    },
+    {
+     "tipo": "web",
+     "url": "https://developers.openai.com/api/docs/guides/latest-model",
+     "titulo": "OpenAI, guía del modelo más reciente (consultada el 2026-11-23)",
+     "consultado": "2026-11-23",
+     "primaria": true,
+     "cita": "When migrating Chat Completions requests, omit temperature , top_p , logprobs , and top_logprobs ."
     }
    ],
    "historia": [
@@ -53620,7 +54101,7 @@
      "estado": "depende",
      "certeza": "documentado",
      "evidencia": [
-      8
+      7
      ],
      "nota": {
       "es": "DeepSeek pide para R1 temperatura entre 0,5 y 0,7 (0,6 recomendada): más baja provoca repeticiones sin fin. Bajarla a 0 en un modelo de razonamiento no lo hace más preciso.",
@@ -53634,7 +54115,7 @@
      "estado": "depende",
      "certeza": "documentado",
      "evidencia": [
-      9
+      8
      ],
      "nota": {
       "es": "Qwen3 en modo thinking: temperatura 0,6 y nada de decodificación voraz (temperatura 0), que degrada y repite.",
@@ -53685,6 +54166,34 @@
      }
     },
     {
+     "fecha": "2026-07-21",
+     "precision": "dia",
+     "registrado": "2026-11-23",
+     "estado": "depende",
+     "certeza": "documentado",
+     "evidencia": [
+      11
+     ],
+     "nota": {
+      "es": "Google da por obsoletos temperature, top_p y top_k desde Gemini 3.6: la API los ignora y las próximas generaciones devolverán un 400.",
+      "en": "Google deprecates temperature, top_p and top_k from Gemini 3.6: the API ignores them and future generations will return a 400."
+     }
+    },
+    {
+     "fecha": "2026-09-03",
+     "precision": "dia",
+     "registrado": "2026-11-23",
+     "estado": "depende",
+     "certeza": "documentado",
+     "evidencia": [
+      10
+     ],
+     "nota": {
+      "es": "GPT-6 Astra no admite temperature, top_p ni logprobs personalizados.",
+      "en": "GPT-6 Astra does not support custom temperature, top_p or logprobs."
+     }
+    },
+    {
      "fecha": "2026-10",
      "precision": "aprox",
      "registrado": "2026-10-07",
@@ -53693,8 +54202,7 @@
      "evidencia": [
       4,
       5,
-      6,
-      7
+      6
      ],
      "nota": {
       "es": "Documentado así a fecha de revisión: Anthropic lo mantiene hasta Opus 5.5, OpenAI pide quitarlos con razonamiento activo, Google dice que Gemini 3 está optimizado para el valor por defecto, y la referencia de OpenAI sigue diciendo «uno u otro, no los dos».",
@@ -53708,7 +54216,7 @@
      "estado": "depende",
      "certeza": "medido",
      "evidencia": [
-      10
+      9
      ],
      "nota": {
       "es": "Medido el mecanismo en un modelo pequeño: más temperatura, más variedad y menos coherencia.",
@@ -53716,8 +54224,8 @@
      }
     }
    ],
-   "revisado": "2026-10-07",
-   "caduca": "2027-01-07",
+   "revisado": "2026-11-23",
+   "caduca": "2027-03-25",
    "consultas": [
     "temperature top_p LLM settings",
     "temperature parameter rejected 400 error",
@@ -53834,8 +54342,8 @@
      }
     }
    ],
-   "revisado": "2026-10-07",
-   "caduca": "2027-01-07",
+   "revisado": "2026-11-23",
+   "caduca": "2027-03-27",
    "consultas": [
     "RL fine-tuning reward hacking",
     "RFT gameable reward",
@@ -53873,8 +54381,8 @@
    ],
    "estado": "depende",
    "porque": {
-    "es": "Si el alias o la actualización automática cambian el modelo, la aplicación cambia de comportamiento sin un despliegue tuyo. En producción conviene fijar la versión y migrar a propósito, con evals (ver reutilizar-el-prompt-al-cambiar-de-modelo). Ojo: en Claude, desde la generación 4.6 los ids sin fecha ya son versiones fijas, no alias.",
-    "en": "If an alias or auto-upgrade swaps the model, your app changes behaviour without a deploy of yours. In production, pin the version and migrate on purpose, with evals (see reutilizar-el-prompt-al-cambiar-de-modelo). Note: on Claude, since the 4.6 generation dateless IDs are fixed versions, not aliases."
+    "es": "Si el alias o la actualización automática cambian el modelo, la aplicación cambia de comportamiento sin un despliegue tuyo. En producción conviene fijar la versión y migrar a propósito, con evals (ver reutilizar-el-prompt-al-cambiar-de-modelo). Los plazos son reales: Anthropic retira Sonnet 4.5 el 30-11-2026 y Opus 4.5 el 22-01-2027, y OpenAI apaga whisper-1 y los gpt-4o-transcribe el 26-02-2027. Ojo: en Claude, desde la generación 4.6 los ids sin fecha ya son versiones fijas, no alias.",
+    "en": "If an alias or auto-upgrade swaps the model, your app changes behaviour without a deploy of yours. In production, pin the version and migrate on purpose, with evals (see reutilizar-el-prompt-al-cambiar-de-modelo). The deadlines are real: Anthropic retires Sonnet 4.5 on 2026-11-30 and Opus 4.5 on 2027-01-22, and OpenAI shuts down whisper-1 and the gpt-4o-transcribe models on 2027-02-26. Note: on Claude, since the 4.6 generation dateless IDs are fixed versions, not aliases."
    },
    "ambito": [
     {
@@ -53976,6 +54484,33 @@
      "consultado": "2026-10-06",
      "primaria": true,
      "cita": "For the 4.6 generation and later, the dateless ID is the canonical model ID for that release. It maps to a single, fixed model snapshot."
+    },
+    {
+     "tipo": "web",
+     "url": "https://developers.openai.com/api/docs/changelog",
+     "titulo": "OpenAI API changelog (2026-08-26)",
+     "fecha": "2026-08-26",
+     "consultado": "2026-11-23",
+     "primaria": true,
+     "cita": "These models will shut down on February 26, 2027."
+    },
+    {
+     "tipo": "web",
+     "url": "https://platform.claude.com/docs/en/release-notes/overview",
+     "titulo": "Claude Platform release notes (2026-09-30)",
+     "fecha": "2026-09-30",
+     "consultado": "2026-11-23",
+     "primaria": true,
+     "cita": "We announced the deprecation of the Claude Sonnet 4.5 model ( claude-sonnet-4-5-20250929 ), with retirement on the Claude API scheduled for November 30, 2026."
+    },
+    {
+     "tipo": "web",
+     "url": "https://platform.claude.com/docs/en/release-notes/overview",
+     "titulo": "Claude Platform release notes (2026-11-23)",
+     "fecha": "2026-11-23",
+     "consultado": "2026-11-23",
+     "primaria": true,
+     "cita": "We announced the deprecation of the Claude Opus 4.5 model ( claude-opus-4-5-20251101 and claude-opus-4-5 ), with retirement on the Claude API scheduled for January 22, 2027."
     }
    ],
    "historia": [
@@ -54025,10 +54560,52 @@
       "es": "Según la documentación vigente, la política de ciclo de vida de Microsoft retira los modelos a los 18 meses del lanzamiento (410 Gone), y los despliegues provisionados no se actualizan solos.",
       "en": "According to the current documentation, Microsoft's lifecycle policy retires models 18 months after launch (410 Gone), and provisioned deployments are not auto-upgraded."
      }
+    },
+    {
+     "fecha": "2026-08-26",
+     "precision": "dia",
+     "registrado": "2026-11-23",
+     "estado": "depende",
+     "certeza": "documentado",
+     "evidencia": [
+      8
+     ],
+     "nota": {
+      "es": "OpenAI anuncia el apagado de whisper-1 y los gpt-4o-transcribe para el 26-02-2027.",
+      "en": "OpenAI announces whisper-1 and the gpt-4o-transcribe models shut down on 2027-02-26."
+     }
+    },
+    {
+     "fecha": "2026-09-30",
+     "precision": "dia",
+     "registrado": "2026-11-23",
+     "estado": "depende",
+     "certeza": "documentado",
+     "evidencia": [
+      9
+     ],
+     "nota": {
+      "es": "Anthropic anuncia la retirada de Sonnet 4.5 para el 30-11-2026.",
+      "en": "Anthropic announces Sonnet 4.5 retirement for 2026-11-30."
+     }
+    },
+    {
+     "fecha": "2026-11-23",
+     "precision": "dia",
+     "registrado": "2026-11-23",
+     "estado": "depende",
+     "certeza": "documentado",
+     "evidencia": [
+      10
+     ],
+     "nota": {
+      "es": "Anthropic anuncia la retirada de Opus 4.5 para el 22-01-2027.",
+      "en": "Anthropic announces Opus 4.5 retirement for 2027-01-22."
+     }
     }
    ],
-   "revisado": "2026-10-06",
-   "caduca": "2027-01-04",
+   "revisado": "2026-11-23",
+   "caduca": "2027-03-28",
    "enlaces": [
     {
      "nombre": "Azure: model retirement schedule",
@@ -54195,6 +54772,108 @@
    ]
   },
   {
+   "id": "apagar-el-thinking-con-disabled-en-claude-sonnet-5-5",
+   "titulo": {
+    "es": "Apagar el thinking con thinking: disabled al pasar a Claude Sonnet 5.5",
+    "en": "Turning thinking off with thinking: disabled when moving to Claude Sonnet 5.5"
+   },
+   "area": "ia",
+   "temas": [
+    "claude",
+    "thinking",
+    "between-tools",
+    "migracion"
+   ],
+   "estado": "depende",
+   "ambito": [
+    {
+     "cuando": {
+      "es": "con Claude Sonnet 5.5",
+      "en": "with Claude Sonnet 5.5"
+     },
+     "estado": "antipatron",
+     "porque": {
+      "es": "Hay que enviar between_tools, con esfuerzo high o inferior.",
+      "en": "Send between_tools, at high effort or below."
+     }
+    },
+    {
+     "cuando": {
+      "es": "con modelos anteriores",
+      "en": "with earlier models"
+     },
+     "estado": "vigente",
+     "porque": {
+      "es": "Siguen aceptando disabled; compruébalo en la API de modelos.",
+      "en": "They still accept disabled; check it in the Models API."
+     }
+    }
+   ],
+   "porque": {
+    "es": "En Sonnet 5.5, para apagar el thinking inicial se envía thinking: {\"type\": \"between_tools\"} en lugar de \"disabled\", con esfuerzo high o inferior. La API de modelos indica qué modelos aceptan cada tipo, así que se puede comprobar en lugar de adivinarlo.",
+    "en": "On Sonnet 5.5, to turn off up-front thinking send thinking: {\"type\": \"between_tools\"} instead of \"disabled\", at high effort or below. The Models API reports which models accept each type, so you can check instead of guessing."
+   },
+   "certeza": "documentado",
+   "evidencia": [
+    {
+     "tipo": "web",
+     "url": "https://platform.claude.com/docs/en/release-notes/overview",
+     "titulo": "Claude Platform release notes (2026-09-28)",
+     "fecha": "2026-09-28",
+     "consultado": "2026-11-23",
+     "primaria": true,
+     "cita": "To turn off up-front thinking, send thinking: {\"type\": \"between_tools\"} instead of \"disabled\" , at high effort or below."
+    },
+    {
+     "tipo": "web",
+     "url": "https://platform.claude.com/docs/en/release-notes/overview",
+     "titulo": "Claude Platform release notes (2026-10-15)",
+     "fecha": "2026-10-15",
+     "consultado": "2026-11-23",
+     "primaria": true,
+     "cita": "GET /v1/models and GET /v1/models/{model_id} now report whether each model accepts thinking: {type: \"between_tools\"} , which turns off up-front thinking."
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2026-09-28",
+     "precision": "dia",
+     "registrado": "2026-11-23",
+     "estado": "depende",
+     "certeza": "documentado",
+     "evidencia": [
+      0
+     ],
+     "nota": {
+      "es": "Sonnet 5.5 pide between_tools en lugar de disabled para apagar el thinking inicial.",
+      "en": "Sonnet 5.5 asks for between_tools instead of disabled to turn off up-front thinking."
+     }
+    },
+    {
+     "fecha": "2026-10-15",
+     "precision": "dia",
+     "registrado": "2026-11-23",
+     "estado": "depende",
+     "certeza": "documentado",
+     "evidencia": [
+      1
+     ],
+     "nota": {
+      "es": "La API de modelos informa de qué modelos aceptan between_tools.",
+      "en": "The Models API reports which models accept between_tools."
+     }
+    }
+   ],
+   "revisado": "2026-11-23",
+   "caduca": "2027-05-23",
+   "consultas": [
+    "thinking disabled between_tools",
+    "turn off thinking claude",
+    "up-front thinking off",
+    "desactivar el razonamiento en claude"
+   ]
+  },
+  {
    "id": "api-de-chat-con-roles",
    "titulo": {
     "es": "Llamar al modelo con la API de chat o de mensajes, con roles (sistema, usuario, asistente)",
@@ -54217,8 +54896,8 @@
    "evidencia": [
     {
      "tipo": "web",
-     "url": "https://platform.claude.com/docs/en/api/completions/create",
-     "titulo": "Create a Text Completion (Anthropic)",
+     "url": "https://web.archive.org/web/20260929212149/https://platform.claude.com/docs/en/api/completions/create",
+     "titulo": "Create a Text Completion (Anthropic) (copia archivada: la página actual ya no lo dice)",
      "consultado": "2026-10-02",
      "primaria": true,
      "cita": "We recommend using the Messages API going forward. Future models and features will not be compatible with Text Completions."
@@ -54308,8 +54987,8 @@
    "estado": "superada",
    "superadaPor": "api-de-chat-con-roles",
    "porque": {
-    "es": "Los dos grandes proveedores la tratan como heredada: OpenAI no la actualiza desde julio de 2023 y va retirando los modelos que la usan; Anthropic avisa de que los modelos futuros no serán compatibles y su SDK de Python 1.0 la eliminó en agosto de 2026.",
-    "en": "Both major providers treat it as legacy: OpenAI has not updated it since July 2023 and keeps retiring the models behind it; Anthropic warns future models will not support it and its Python SDK 1.0 removed it in August 2026."
+    "es": "Los dos grandes proveedores la tratan como heredada: OpenAI no la actualiza desde julio de 2023 y ha retirado los modelos que la usan (gpt-3.5-turbo-instruct, babbage-002 y davinci-002 se apagaron el 28-09-2026); Anthropic avisa de que los modelos futuros no serán compatibles y su SDK de Python 1.0 la eliminó en agosto de 2026.",
+    "en": "Both major providers treat it as legacy: OpenAI has not updated it since July 2023 and has retired the models behind it (gpt-3.5-turbo-instruct, babbage-002 and davinci-002 shut down on 2026-09-28); Anthropic warns future models will not support it and its Python SDK 1.0 removed it in August 2026."
    },
    "certeza": "documentado",
    "evidencia": [
@@ -54323,8 +55002,8 @@
     },
     {
      "tipo": "web",
-     "url": "https://developers.openai.com/api/docs/deprecations",
-     "titulo": "Deprecations (OpenAI)",
+     "url": "https://web.archive.org/web/20261002233222/https://developers.openai.com/api/docs/deprecations",
+     "titulo": "Deprecations (OpenAI) (copia archivada: la página actual ya no lo dice)",
      "fecha": "2023-07-06",
      "consultado": "2026-10-02",
      "primaria": true,
@@ -54332,8 +55011,8 @@
     },
     {
      "tipo": "web",
-     "url": "https://platform.claude.com/docs/en/api/completions/create",
-     "titulo": "Create a Text Completion (Anthropic)",
+     "url": "https://web.archive.org/web/20260929212149/https://platform.claude.com/docs/en/api/completions/create",
+     "titulo": "Create a Text Completion (Anthropic) (copia archivada: la página actual ya no lo dice)",
      "consultado": "2026-10-02",
      "primaria": true,
      "cita": "The Text Completions API is a legacy API. We recommend using the Messages API going forward. Future models and features will not be compatible with Text Completions."
@@ -54344,7 +55023,7 @@
      "titulo": "Completions API (OpenAI, guía)",
      "consultado": "2026-10-02",
      "primaria": true,
-     "cita": "gpt-3.5-turbo-instruct, babbage-002, and davinci-002 have a scheduled shutdown date of September 28, 2026."
+     "cita": "gpt-3.5-turbo-instruct, babbage-002, and davinci-002 were shut down on September 28, 2026."
     },
     {
      "tipo": "web",
@@ -54357,8 +55036,8 @@
     },
     {
      "tipo": "web",
-     "url": "https://developers.openai.com/api/docs/deprecations",
-     "titulo": "Deprecations (OpenAI)",
+     "url": "https://web.archive.org/web/20261002233222/https://developers.openai.com/api/docs/deprecations",
+     "titulo": "Deprecations (OpenAI) (copia archivada: la página actual ya no lo dice)",
      "fecha": "2025-09-26",
      "consultado": "2026-10-02",
      "primaria": true,
@@ -54375,8 +55054,8 @@
     },
     {
      "tipo": "web",
-     "url": "https://developers.openai.com/api/docs/deprecations",
-     "titulo": "Deprecations (OpenAI) — 2023-03-20: Codex models",
+     "url": "https://web.archive.org/web/20261008055010/https://developers.openai.com/api/docs/deprecations",
+     "titulo": "Deprecations (OpenAI) — 2023-03-20: Codex models (copia archivada: la página actual ya no lo dice)",
      "fecha": "2023-03-20",
      "consultado": "2026-10-07",
      "primaria": true,
@@ -54384,8 +55063,8 @@
     },
     {
      "tipo": "web",
-     "url": "https://developers.openai.com/api/docs/deprecations",
-     "titulo": "Deprecations (OpenAI) — InstructGPT models",
+     "url": "https://web.archive.org/web/20261008055010/https://developers.openai.com/api/docs/deprecations",
+     "titulo": "Deprecations (OpenAI) — InstructGPT models (copia archivada: la página actual ya no lo dice)",
      "fecha": "2023-07-06",
      "consultado": "2026-10-07",
      "primaria": true,
@@ -54411,8 +55090,8 @@
     },
     {
      "tipo": "web",
-     "url": "https://developers.openai.com/api/docs/deprecations",
-     "titulo": "Deprecations (OpenAI API)",
+     "url": "https://web.archive.org/web/20261008055010/https://developers.openai.com/api/docs/deprecations",
+     "titulo": "Deprecations (OpenAI API) (copia archivada: la página actual ya no lo dice)",
      "consultado": "2026-10-08",
      "primaria": true,
      "cita": "Access to these models will be shut down on the dates below."
@@ -54526,8 +55205,7 @@
      "estado": "superada",
      "certeza": "documentado",
      "evidencia": [
-      5,
-      3
+      5
      ],
      "nota": {
       "es": "OpenAI anuncia el cierre de los últimos modelos de completions para el 28 de septiembre de 2026.",
@@ -54551,6 +55229,20 @@
      }
     },
     {
+     "fecha": "2026-09-28",
+     "precision": "dia",
+     "registrado": "2026-11-23",
+     "estado": "superada",
+     "certeza": "documentado",
+     "evidencia": [
+      3
+     ],
+     "nota": {
+      "es": "OpenAI apaga gpt-3.5-turbo-instruct, babbage-002 y davinci-002, los últimos modelos de la API de completions.",
+      "en": "OpenAI shuts down gpt-3.5-turbo-instruct, babbage-002 and davinci-002, the last models on the completions API."
+     }
+    },
+    {
      "fecha": "2026-10",
      "precision": "aprox",
      "registrado": "2026-10-08",
@@ -54565,7 +55257,7 @@
      }
     }
    ],
-   "revisado": "2026-10-08",
+   "revisado": "2026-11-23",
    "consultas": [
     "legacy completions API",
     "Human Assistant prompt format",
@@ -55774,8 +56466,8 @@
      }
     }
    ],
-   "revisado": "2026-10-06",
-   "caduca": "2027-01-05",
+   "revisado": "2026-11-23",
+   "caduca": "2027-04-01",
    "consultas": [
     "Azure OpenAI no api-version",
     "OpenAI client Azure endpoint v1",
@@ -55873,8 +56565,8 @@
      }
     }
    ],
-   "revisado": "2026-10-06",
-   "caduca": "2027-01-06",
+   "revisado": "2026-11-23",
+   "caduca": "2027-04-03",
    "consultas": [
     "AzureOpenAI api_version",
     "which api-version Azure OpenAI",
@@ -55950,7 +56642,7 @@
      "titulo": "Claude on Amazon Bedrock (Opus 4.6 and earlier) (Claude docs)",
      "consultado": "2026-10-06",
      "primaria": true,
-     "cita": "To invoke these models, pass an inference profile instead of the base model ID."
+     "cita": "To call these models, pass an inference profile instead of the base model ID."
     },
     {
      "tipo": "web",
@@ -56012,8 +56704,8 @@
      }
     }
    ],
-   "revisado": "2026-10-06",
-   "caduca": "2027-01-01",
+   "revisado": "2026-11-23",
+   "caduca": "2027-04-04",
    "consultas": [
     "Bedrock inference profile required",
     "on-demand throughput not supported model ID",
@@ -56135,6 +56827,84 @@
     "escalader vers un humain après plusieurs refus",
     "agente bloqueado tenta outro caminho",
     "passar a uma pessoa após vários bloqueios"
+   ]
+  },
+  {
+   "id": "bloques-de-thinking-de-claude-entre-cuentas",
+   "titulo": {
+    "es": "Guardar bloques de thinking de Claude y reenviarlos desde otra cuenta",
+    "en": "Saving Claude thinking blocks and sending them back from another account"
+   },
+   "area": "ia",
+   "temas": [
+    "claude",
+    "thinking",
+    "cuentas",
+    "privacidad"
+   ],
+   "estado": "antipatron",
+   "porque": {
+    "es": "Los bloques de thinking de Sonnet 5.5, Fable 5.2 y Mythos 5.2 solo valen en la cuenta que los produjo o en una vinculada a ella. Si otra cuenta los reenvía, la API los descarta antes de que los vea el modelo y la petición tiene éxito: se pierde el razonamiento sin ningún error que lo avise.",
+    "en": "Thinking blocks from Sonnet 5.5, Fable 5.2 and Mythos 5.2 only work in the account that produced them or one linked to it. If another account sends them back, the API drops them before the model sees them and the request succeeds: the reasoning is lost with no error to tell you."
+   },
+   "certeza": "documentado",
+   "evidencia": [
+    {
+     "tipo": "web",
+     "url": "https://platform.claude.com/docs/en/release-notes/overview",
+     "titulo": "Claude Platform release notes (2026-09-28)",
+     "fecha": "2026-09-28",
+     "consultado": "2026-11-23",
+     "primaria": true,
+     "cita": "Thinking blocks that Claude Sonnet 5.5 produces work only in the account that produced them, or in an account linked to it."
+    },
+    {
+     "tipo": "web",
+     "url": "https://platform.claude.com/docs/en/release-notes/overview",
+     "titulo": "Claude Platform release notes (2026-11-09)",
+     "fecha": "2026-11-09",
+     "consultado": "2026-11-23",
+     "primaria": true,
+     "cita": "Thinking blocks that Claude Fable 5.2 and Claude Mythos 5.2 produce work only in the account that produced them, or in an account linked to it."
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2026-09-28",
+     "precision": "dia",
+     "registrado": "2026-11-23",
+     "estado": "antipatron",
+     "certeza": "documentado",
+     "evidencia": [
+      0
+     ],
+     "nota": {
+      "es": "Los bloques de thinking de Sonnet 5.5 quedan ligados a la cuenta que los produjo.",
+      "en": "Sonnet 5.5 thinking blocks are tied to the account that produced them."
+     }
+    },
+    {
+     "fecha": "2026-11-09",
+     "precision": "dia",
+     "registrado": "2026-11-23",
+     "estado": "antipatron",
+     "certeza": "documentado",
+     "evidencia": [
+      1
+     ],
+     "nota": {
+      "es": "Fable 5.2 y Mythos 5.2 aplican la misma regla.",
+      "en": "Fable 5.2 and Mythos 5.2 apply the same rule."
+     }
+    }
+   ],
+   "revisado": "2026-11-23",
+   "caduca": "2027-05-23",
+   "consultas": [
+    "thinking blocks dropped other account",
+    "preserved thinking linked accounts",
+    "reasoning lost silently",
+    "razonamiento descartado al cambiar de cuenta"
    ]
   },
   {
@@ -56408,8 +57178,8 @@
      }
     }
    ],
-   "revisado": "2026-10-06",
-   "caduca": "2027-01-02",
+   "revisado": "2026-11-23",
+   "caduca": "2027-04-08",
    "consultas": [
     "agent infinite loop cost",
     "max turns limit agent",
@@ -56441,8 +57211,8 @@
    ],
    "estado": "vigente",
    "porque": {
-    "es": "El prefijo cacheado se cobra a una fracción del precio (en Anthropic, la lectura de caché cuesta 0,1 veces el precio base de entrada en la mayoría de modelos, y 0,05 en Opus 5.5 y Sonnet 5.5; OpenAI habla de hasta un 95 % de descuento) y responde antes. La caché dura poco, así que sale a cuenta con llamadas seguidas.",
-    "en": "The cached prefix is billed at a fraction of the price (at Anthropic, cache reads cost 0.1 times the base input price on most models, and 0.05 on Opus 5.5 and Sonnet 5.5; OpenAI cites up to 95% off) and responds faster. The cache is short-lived, so it pays off with calls close together."
+    "es": "El prefijo cacheado se cobra a una fracción del precio (en Anthropic, la lectura de caché cuesta 0,1 veces el precio base de entrada en la mayoría de modelos, y 0,05 en Opus 5.5 y Sonnet 5.5; OpenAI habla de hasta un 95 % de descuento) y responde antes. En OpenAI se puede elegir una caché de 12 horas (la escritura cuesta 2,5 veces el precio de entrada). La caché estándar dura poco, así que sale a cuenta con llamadas seguidas.",
+    "en": "The cached prefix is billed at a fraction of the price (at Anthropic, cache reads cost 0.1 times the base input price on most models, and 0.05 on Opus 5.5 and Sonnet 5.5; OpenAI cites up to 95% off) and responds faster. On OpenAI you can choose a 12-hour cache (writes cost 2.5 times the input price). The standard cache is short-lived, so it pays off with calls close together."
    },
    "certeza": "documentado",
    "evidencia": [
@@ -56513,6 +57283,15 @@
      "consultado": "2026-10-02",
      "primaria": true,
      "cita": "Cheaper input tokens: Pay the model's reduced cached-input rate for reused tokens, discounted up to 95%."
+    },
+    {
+     "tipo": "web",
+     "url": "https://developers.openai.com/api/docs/changelog",
+     "titulo": "OpenAI API changelog (2026-10-20)",
+     "fecha": "2026-10-20",
+     "consultado": "2026-11-23",
+     "primaria": true,
+     "cita": "12-hour cache writes cost 2.5x the input token price."
     }
    ],
    "historia": [
@@ -56571,9 +57350,23 @@
       "es": "Gemini 2.5 la aplica de forma implícita, por defecto.",
       "en": "Gemini 2.5 applies it implicitly, by default."
      }
+    },
+    {
+     "fecha": "2026-10-20",
+     "precision": "dia",
+     "registrado": "2026-11-23",
+     "estado": "vigente",
+     "certeza": "documentado",
+     "evidencia": [
+      8
+     ],
+     "nota": {
+      "es": "OpenAI permite elegir caché de 12 horas, con la escritura a 2,5 veces el precio de entrada.",
+      "en": "OpenAI lets you choose a 12-hour cache, with writes at 2.5 times the input price."
+     }
     }
    ],
-   "revisado": "2026-10-02",
+   "revisado": "2026-11-23",
    "caduca": "2027-04-18",
    "enlaces": [
     {
@@ -56707,8 +57500,8 @@
      }
     }
    ],
-   "revisado": "2026-10-07",
-   "caduca": "2027-01-13",
+   "revisado": "2026-11-23",
+   "caduca": "2027-04-10",
    "consultas": [
     "semantic cache LLM",
     "GPTCache similarity threshold",
@@ -56975,8 +57768,8 @@
      }
     }
    ],
-   "revisado": "2026-10-06",
-   "caduca": "2027-01-14",
+   "revisado": "2026-11-23",
+   "caduca": "2027-04-11",
    "consultas": [
     "Azure PTU worth it",
     "provisioned throughput vs pay as you go",
@@ -57009,8 +57802,8 @@
    ],
    "estado": "depende",
    "porque": {
-    "es": "Cientos de definiciones cuestan decenas de miles de tokens, y Claude elige peor a partir de 30–50 herramientas. Con pocas herramientas pequeñas, cargarlas todas es más simple.",
-    "en": "Hundreds of definitions cost tens of thousands of tokens, and Claude picks worse beyond 30–50 tools. With a few small tools, loading them all is simpler."
+    "es": "Cientos de definiciones cuestan decenas de miles de tokens, y Claude elige peor a partir de 30–50 herramientas. Gemini lo ofrece también (tool retrieval, en preview desde el 19-11-2026). Con pocas herramientas pequeñas, cargarlas todas es más simple.",
+    "en": "Hundreds of definitions cost tens of thousands of tokens, and Claude picks worse beyond 30–50 tools. Gemini offers it too (tool retrieval, in preview since 2026-11-19). With a few small tools, loading them all is simpler."
    },
    "ambito": [
     {
@@ -57065,8 +57858,8 @@
     },
     {
      "tipo": "web",
-     "url": "https://platform.claude.com/docs/en/release-notes/overview",
-     "titulo": "Claude Platform release notes",
+     "url": "https://web.archive.org/web/20251202035650/https://platform.claude.com/docs/en/release-notes/overview",
+     "titulo": "Claude Platform release notes (copia archivada del 2-12-2025; la página actual reescribió esa entrada)",
      "fecha": "2025-11-24",
      "consultado": "2026-10-06",
      "primaria": true,
@@ -57089,6 +57882,15 @@
       "en": "The full catalogue of GitHub's MCP server (141 tools) costs 31,075 o200k tokens in definitions, about 54,000 estimated for Claude; ours (135), 28,430 and about 49,000. At the average cost, 27-28 tools already exceed 10,000 tokens."
      },
      "herramienta": "/mcp-audit"
+    },
+    {
+     "tipo": "web",
+     "url": "https://ai.google.dev/gemini-api/docs/changelog",
+     "titulo": "Gemini API release notes (2026-11-19)",
+     "fecha": "2026-11-19",
+     "consultado": "2026-11-23",
+     "primaria": true,
+     "cita": "so large tool sets no longer have to be sent in full on every request."
     }
    ],
    "historia": [
@@ -57150,10 +57952,24 @@
       "es": "Medido: con unas decenas de herramientas el coste fijo ya son miles de tokens.",
       "en": "Measured: a few dozen tools already cost thousands of tokens up front."
      }
+    },
+    {
+     "fecha": "2026-11-19",
+     "precision": "dia",
+     "registrado": "2026-11-23",
+     "estado": "depende",
+     "certeza": "documentado",
+     "evidencia": [
+      7
+     ],
+     "nota": {
+      "es": "Gemini lanza tool retrieval en preview para cargar esquemas de herramientas bajo demanda.",
+      "en": "Gemini launches tool retrieval in preview to load tool schemas on demand."
+     }
     }
    ],
-   "revisado": "2026-10-06",
-   "caduca": "2027-01-03",
+   "revisado": "2026-11-23",
+   "caduca": "2027-04-13",
    "consultas": [
     "MCP too many tools context",
     "tool search tool",
@@ -57185,8 +58001,8 @@
    ],
    "estado": "depende",
    "porque": {
-    "es": "Desde marzo de 2025 OpenAI llama a Responses su API principal y la recomienda para todo proyecto nuevo; Chat Completions queda como «el estándar anterior», con soporte indefinido. Sigue teniendo sentido si el mismo código debe hablar con las capas «compatibles con OpenAI» de otros proveedores, que imitan Chat Completions (ver sdk-de-openai-contra-otro-proveedor-en-produccion).",
-    "en": "Since March 2025 OpenAI calls Responses its primary API and recommends it for all new projects; Chat Completions is \"the previous standard\", supported indefinitely. It still makes sense if the same code must talk to other providers' \"OpenAI-compatible\" layers, which mimic Chat Completions (see sdk-de-openai-contra-otro-proveedor-en-produccion)."
+    "es": "Desde marzo de 2025 OpenAI llama a Responses su API principal y la recomienda para todo proyecto nuevo; Chat Completions queda como «el estándar anterior», con soporte indefinido. Con GPT-6 las herramientas exigen Responses. Chat Completions sigue teniendo sentido sin ellas, o si el mismo código debe hablar con las capas «compatibles con OpenAI» de otros proveedores, que imitan Chat Completions (ver sdk-de-openai-contra-otro-proveedor-en-produccion).",
+    "en": "Since March 2025 OpenAI calls Responses its primary API and recommends it for all new projects; Chat Completions is \"the previous standard\", supported indefinitely. With GPT-6, tool calling requires Responses. Chat Completions still makes sense without tools, or if the same code must talk to other providers' \"OpenAI-compatible\" layers, which mimic Chat Completions (see sdk-de-openai-contra-otro-proveedor-en-produccion)."
    },
    "ambito": [
     {
@@ -57288,6 +58104,15 @@
      "consultado": "2026-10-08",
      "primaria": true,
      "cita": "It’s also our best model for many non-chat use cases—we’ve seen early testers migrate from text-davinci-003 to gpt-3.5-turbo with only a small amount of adjustment needed to their prompts."
+    },
+    {
+     "tipo": "web",
+     "url": "https://developers.openai.com/api/docs/changelog",
+     "titulo": "OpenAI API changelog (2026-09-03)",
+     "fecha": "2026-09-03",
+     "consultado": "2026-11-24",
+     "primaria": true,
+     "cita": "Tool calling requires the Responses API. If you use tools with Chat Completions, follow the Responses migration guide ."
     }
    ],
    "historia": [
@@ -57322,6 +58147,20 @@
      }
     },
     {
+     "fecha": "2026-09-03",
+     "precision": "dia",
+     "registrado": "2026-11-24",
+     "estado": "depende",
+     "certeza": "documentado",
+     "evidencia": [
+      9
+     ],
+     "nota": {
+      "es": "Con GPT-6 Astra, las llamadas a herramientas exigen la Responses API; con Chat Completions hay que migrar.",
+      "en": "With GPT-6 Astra, tool calling requires the Responses API; with Chat Completions you must migrate."
+     }
+    },
+    {
      "fecha": "2026-10",
      "precision": "aprox",
      "registrado": "2026-10-07",
@@ -57339,8 +58178,8 @@
      }
     }
    ],
-   "revisado": "2026-10-07",
-   "caduca": "2027-01-14",
+   "revisado": "2026-11-24",
+   "caduca": "2027-04-15",
    "consultas": [
     "openai responses api vs chat completions",
     "is chat completions deprecated",
@@ -58022,6 +58861,84 @@
     "défense en profondeur prompt injection",
     "classificador prompt injection suficiente",
     "Prompt Guard defesa única"
+   ]
+  },
+  {
+   "id": "clasificar-con-la-api-de-decisiones-en-vez-de-texto-libre",
+   "titulo": {
+    "es": "Clasificar con una API de decisiones en lugar de pedir texto libre al modelo",
+    "en": "Classifying with a decisions API instead of asking the model for free text"
+   },
+   "area": "ia",
+   "temas": [
+    "clasificacion",
+    "decisions-api",
+    "openai",
+    "gemini"
+   ],
+   "estado": "vigente",
+   "porque": {
+    "es": "OpenAI (GA el 22-10-2026) y Google (11-11-2026) ofrecen una API de decisiones. La de Google la describe como decisiones binarias, categóricas o por rúbrica, calibradas, sobre texto, imágenes, audio, vídeo y PDF, con cero tokens de salida; la de OpenAI admite hasta 400 preguntas por petición y cachea la entrada compartida.",
+    "en": "OpenAI (GA 2026-10-22) and Google (2026-11-11) offer a decisions API. Google describes it as calibrated binary, categorical or rubric decisions over text, images, audio, video and PDFs with zero output tokens; OpenAI's accepts up to 400 questions per request and caches the shared input."
+   },
+   "certeza": "consenso",
+   "evidencia": [
+    {
+     "tipo": "web",
+     "url": "https://developers.openai.com/api/docs/changelog",
+     "titulo": "OpenAI API changelog (2026-10-22)",
+     "fecha": "2026-10-22",
+     "consultado": "2026-11-23",
+     "primaria": true,
+     "cita": "Each request now supports up to 400 questions, increased from 200 in public beta."
+    },
+    {
+     "tipo": "web",
+     "url": "https://ai.google.dev/gemini-api/docs/changelog",
+     "titulo": "Gemini API release notes (2026-11-11)",
+     "fecha": "2026-11-11",
+     "consultado": "2026-11-23",
+     "primaria": true,
+     "cita": "for fast, calibrated binary, categorical, and rubric decisions across text, images, audio, video, and PDFs with zero output tokens."
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2026-10-22",
+     "precision": "dia",
+     "registrado": "2026-11-23",
+     "estado": "vigente",
+     "certeza": "consenso",
+     "evidencia": [
+      0
+     ],
+     "nota": {
+      "es": "La Decisions API de OpenAI pasa a disponibilidad general.",
+      "en": "OpenAI's Decisions API becomes generally available."
+     }
+    },
+    {
+     "fecha": "2026-11-11",
+     "precision": "dia",
+     "registrado": "2026-11-23",
+     "estado": "vigente",
+     "certeza": "consenso",
+     "evidencia": [
+      1
+     ],
+     "nota": {
+      "es": "Google lanza Gemini Decision 1 y su Decisions API.",
+      "en": "Google launches Gemini Decision 1 and its Decisions API."
+     }
+    }
+   ],
+   "revisado": "2026-11-23",
+   "caduca": "2027-05-23",
+   "consultas": [
+    "decisions api classification",
+    "zero output tokens classifier",
+    "calibrated yes no decision llm",
+    "clasificar sin generar texto"
    ]
   },
   {
@@ -58892,8 +59809,8 @@
     },
     {
      "tipo": "web",
-     "url": "https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices",
-     "titulo": "Prompting best practices (Claude docs)",
+     "url": "https://web.archive.org/web/20261005180931/https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices",
+     "titulo": "Prompting best practices (Claude docs) (copia archivada: la página actual ya no lo dice)",
      "consultado": "2026-10-07",
      "primaria": true,
      "cita": "Providing context or motivation behind your instructions, such as explaining to Claude why such behavior is important, can help Claude better understand your goals and deliver more targeted responses."
@@ -59197,8 +60114,8 @@
    ],
    "estado": "depende",
    "porque": {
-    "es": "Computer use es lento, puede fallar en coordenadas y en la elección de herramientas, y es vulnerable a inyecciones en páginas e imágenes. Si hay API, una herramienta sobre ella es más rápida y fiable; computer use tiene sentido cuando no la hay o para probar interfaces.",
-    "en": "Computer use is slow, can miss coordinates and pick the wrong tool, and is exposed to injections in pages and images. If there is an API, a tool on top of it is faster and more reliable; computer use makes sense when there is none or for UI testing."
+    "es": "Computer use es lento, puede fallar en coordenadas y en la elección de herramientas, y es vulnerable a inyecciones en páginas e imágenes. Con Claude Fable 5.2 y Mythos 5.2 se usa la herramienta computer_toolset_20260801 (la anterior da un 400). Si hay API, una herramienta sobre ella es más rápida y fiable; computer use tiene sentido cuando no la hay o para probar interfaces.",
+    "en": "Computer use is slow, can miss coordinates and pick the wrong tool, and is exposed to injections in pages and images. On Claude Fable 5.2 and Mythos 5.2 the computer_toolset_20260801 toolset is used (the earlier tool returns a 400). If there is an API, a tool on top of it is faster and more reliable; computer use makes sense when there is none or for UI testing."
    },
    "ambito": [
     {
@@ -59228,7 +60145,7 @@
      "titulo": "Computer use tool (Claude docs)",
      "consultado": "2026-10-06",
      "primaria": true,
-     "cita": "Latency: The current computer use latency for human-AI interactions might be too slow compared to regular human-directed computer actions. Focus on use cases where speed isn't critical (for example, background information gathering, automated software testing) in trusted environments."
+     "cita": "Latency: Computer use latency for human-AI interactions might be too slow compared with regular human-directed computer actions."
     },
     {
      "tipo": "web",
@@ -59263,6 +60180,15 @@
      "consultado": "2026-10-06",
      "primaria": true,
      "cita": "The computer use tool is out of beta on the Claude API as the computer_toolset_20260801 toolset"
+    },
+    {
+     "tipo": "web",
+     "url": "https://platform.claude.com/docs/en/release-notes/overview",
+     "titulo": "Claude Platform release notes (2026-11-09)",
+     "fecha": "2026-11-09",
+     "consultado": "2026-11-23",
+     "primaria": true,
+     "cita": "Claude Fable 5.2 and Claude Mythos 5.2 support computer use through the computer_toolset_20260801 toolset."
     }
    ],
    "historia": [
@@ -59296,10 +60222,24 @@
       "es": "Computer use sale de beta en la API de Claude; la documentación sigue listando latencia, precisión de coordenadas y prompt injection como limitaciones.",
       "en": "Computer use leaves beta on the Claude API; the docs still list latency, coordinate accuracy and prompt injection as limitations."
      }
+    },
+    {
+     "fecha": "2026-11-09",
+     "precision": "dia",
+     "registrado": "2026-11-23",
+     "estado": "depende",
+     "certeza": "documentado",
+     "evidencia": [
+      5
+     ],
+     "nota": {
+      "es": "Fable 5.2 y Mythos 5.2 usan computer_toolset_20260801; la herramienta anterior da un 400.",
+      "en": "Fable 5.2 and Mythos 5.2 use computer_toolset_20260801; the earlier tool returns a 400."
+     }
     }
    ],
-   "revisado": "2026-10-06",
-   "caduca": "2027-01-04",
+   "revisado": "2026-11-23",
+   "caduca": "2027-04-16",
    "consultas": [
     "computer use vs API integration",
     "browser agent or direct API call",
@@ -59909,8 +60849,8 @@
      }
     }
    ],
-   "revisado": "2026-10-07",
-   "caduca": "2027-01-15",
+   "revisado": "2026-11-23",
+   "caduca": "2027-04-18",
    "consultas": [
     "reasoning_effort parameter",
     "thinking_level gemini",
@@ -60041,8 +60981,8 @@
      }
     }
    ],
-   "revisado": "2026-10-07",
-   "caduca": "2027-01-03",
+   "revisado": "2026-11-23",
+   "caduca": "2027-04-20",
    "consultas": [
     "verbosity parameter GPT-5",
     "control response length openai",
@@ -60154,8 +61094,8 @@
      }
     }
    ],
-   "revisado": "2026-10-02",
-   "caduca": "2027-01-01",
+   "revisado": "2026-11-23",
+   "caduca": "2027-04-22",
    "consultas": [
     "cache augmented generation CAG",
     "long context vs RAG",
@@ -60585,8 +61525,8 @@
      }
     }
    ],
-   "revisado": "2026-11-11",
-   "caduca": "2027-01-09",
+   "revisado": "2026-11-23",
+   "caduca": "2027-04-23",
    "consultas": [
     "tag files with @",
     "too much code confuses the llm",
@@ -61478,8 +62418,8 @@
      }
     }
    ],
-   "revisado": "2026-10-06",
-   "caduca": "2027-01-05",
+   "revisado": "2026-11-23",
+   "caduca": "2027-04-25",
    "consultas": [
     "GDPR LLM data processing agreement",
     "send personal data to ChatGPT GDPR",
@@ -61525,8 +62465,8 @@
     },
     {
      "tipo": "web",
-     "url": "https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices",
-     "titulo": "Prompting best practices (Claude docs)",
+     "url": "https://web.archive.org/web/20261005180931/https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices",
+     "titulo": "Prompting best practices (Claude docs) (copia archivada: la página actual ya no lo dice)",
      "consultado": "2026-10-06",
      "primaria": true,
      "cita": "Providing context or motivation behind your instructions, such as explaining to Claude why such behavior is important, can help Claude better understand your goals and deliver more targeted responses."
@@ -61567,8 +62507,8 @@
      }
     }
    ],
-   "revisado": "2026-10-06",
-   "caduca": "2027-01-15",
+   "revisado": "2026-11-23",
+   "caduca": "2027-04-27",
    "consultas": [
     "prompt positive instructions vs negatives",
     "tell model what to do not what not",
@@ -62321,8 +63261,8 @@
      }
     }
    ],
-   "revisado": "2026-11-11",
-   "caduca": "2027-01-10",
+   "revisado": "2026-11-23",
+   "caduca": "2027-04-29",
    "consultas": [
     "what tasks to give copilot coding agent",
     "which work to hand off to ai",
@@ -62408,8 +63348,8 @@
     },
     {
      "tipo": "web",
-     "url": "https://code.claude.com/docs/en/best-practices",
-     "titulo": "Best practices for Claude Code (Claude Code docs)",
+     "url": "https://web.archive.org/web/20261005090900/https://code.claude.com/docs/en/best-practices",
+     "titulo": "Best practices for Claude Code (Claude Code docs) (copia archivada: la página actual ya no lo dice)",
      "consultado": "2026-10-06",
      "primaria": true,
      "cita": "The most useful specs are self-contained: they name the files and interfaces involved, state what is out of scope, and end with an end-to-end verification step that proves the feature works."
@@ -62488,24 +63428,24 @@
     },
     {
      "tipo": "web",
-     "url": "https://code.claude.com/docs/en/best-practices",
-     "titulo": "Best practices for Claude Code (Claude Code docs)",
+     "url": "https://web.archive.org/web/20261014213940/https://code.claude.com/docs/en/best-practices",
+     "titulo": "Best practices for Claude Code (Claude Code docs) (copia archivada: la página actual ya no lo dice)",
      "consultado": "2026-10-14",
      "primaria": true,
      "cita": "For larger features, have Claude interview you first."
     },
     {
      "tipo": "web",
-     "url": "https://code.claude.com/docs/en/best-practices",
-     "titulo": "Best practices for Claude Code (Claude Code docs)",
+     "url": "https://web.archive.org/web/20261014213940/https://code.claude.com/docs/en/best-practices",
+     "titulo": "Best practices for Claude Code (Claude Code docs) (copia archivada: la página actual ya no lo dice)",
      "consultado": "2026-10-14",
      "primaria": true,
      "cita": "Once the spec is complete, start a fresh session to execute it."
     },
     {
      "tipo": "web",
-     "url": "https://code.claude.com/docs/en/best-practices",
-     "titulo": "Best practices for Claude Code (Claude Code docs)",
+     "url": "https://web.archive.org/web/20261014213940/https://code.claude.com/docs/en/best-practices",
+     "titulo": "Best practices for Claude Code (Claude Code docs) (copia archivada: la página actual ya no lo dice)",
      "consultado": "2026-10-14",
      "primaria": true,
      "cita": "If you could describe the diff in one sentence, skip the plan."
@@ -62634,8 +63574,8 @@
      "url": "https://github.com/github/spec-kit"
     }
    ],
-   "revisado": "2026-10-14",
-   "caduca": "2027-01-11",
+   "revisado": "2026-11-23",
+   "caduca": "2027-04-30",
    "consultas": [
     "spec-driven development AI",
     "GitHub Spec Kit",
@@ -62732,7 +63672,7 @@
      "titulo": "Claude in Amazon Bedrock (Claude docs)",
      "consultado": "2026-10-06",
      "primaria": true,
-     "cita": "Claude in Amazon Bedrock runs on AWS-managed infrastructure with zero operator access (Anthropic personnel have no access to the inference infrastructure)"
+     "cita": "Claude in Amazon Bedrock runs on AWS-managed infrastructure with zero operator access: Anthropic personnel have no access to the inference infrastructure."
     },
     {
      "tipo": "web",
@@ -62752,8 +63692,8 @@
     },
     {
      "tipo": "web",
-     "url": "https://cloud.google.com/vertex-ai/generative-ai/docs/data-governance",
-     "titulo": "Zero data retention (Google Cloud documentation)",
+     "url": "https://web.archive.org/web/20250916131216/https://cloud.google.com/vertex-ai/generative-ai/docs/data-governance",
+     "titulo": "Zero data retention (Google Cloud documentation) (copia archivada: la página actual ya no lo dice)",
      "consultado": "2026-10-06",
      "primaria": true,
      "cita": "If you are in scope for prompt logging for abuse monitoring and want zero data retention, you can request an exception for abuse monitoring."
@@ -62777,8 +63717,8 @@
      }
     }
    ],
-   "revisado": "2026-10-06",
-   "caduca": "2027-01-16",
+   "revisado": "2026-11-23",
+   "caduca": "2027-05-02",
    "consultas": [
     "does Azure OpenAI train on my data",
     "Bedrock prompts used for training",
@@ -62845,8 +63785,8 @@
     },
     {
      "tipo": "web",
-     "url": "https://ai.google.dev/gemini-api/docs/gemini-3",
-     "titulo": "Gemini 3 Developer Guide — Thought signatures (Gemini API docs)",
+     "url": "https://web.archive.org/web/20261002174810/https://ai.google.dev/gemini-api/docs/gemini-3",
+     "titulo": "Gemini 3 Developer Guide — Thought signatures (Gemini API docs) (copia archivada: la página actual ya no lo dice)",
      "consultado": "2026-10-07",
      "primaria": true,
      "cita": "If you are managing conversation history manually, you must include thought blocks with their signatures in subsequent requests to validate authenticity."
@@ -63028,12 +63968,12 @@
      "titulo": "Claude in Amazon Bedrock (Claude docs)",
      "consultado": "2026-10-06",
      "primaria": true,
-     "cita": "Regional endpoints carry a 10% pricing premium over global endpoints."
+     "cita": "Regional endpoints carry a 10 percent pricing premium over global endpoints."
     },
     {
      "tipo": "web",
-     "url": "https://platform.claude.com/docs/en/build-with-claude/claude-on-vertex-ai",
-     "titulo": "Claude on Vertex AI (Claude docs)",
+     "url": "https://web.archive.org/web/20261006201125/https://platform.claude.com/docs/en/build-with-claude/claude-on-vertex-ai",
+     "titulo": "Claude on Vertex AI (Claude docs) (copia archivada: la página actual ya no lo dice)",
      "consultado": "2026-10-06",
      "primaria": true,
      "cita": "Regional and multi-region endpoints include a 10% pricing premium over global endpoints."
@@ -63114,8 +64054,8 @@
      }
     }
    ],
-   "revisado": "2026-10-06",
-   "caduca": "2027-01-06",
+   "revisado": "2026-11-23",
+   "caduca": "2027-05-04",
    "consultas": [
     "Azure OpenAI Global Standard data residency",
     "Bedrock global inference profile",
@@ -63218,6 +64158,85 @@
     "fiabilité GPTZero Turnitin",
     "detetores de IA falsos positivos",
     "fiabilidade detetor de texto IA"
+   ]
+  },
+  {
+   "id": "editar-el-prefijo-de-una-conversacion-con-thinking",
+   "titulo": {
+    "es": "Editar el system, las herramientas o un turno anterior en mitad de una conversación con thinking",
+    "en": "Editing the system prompt, tools or an earlier turn in the middle of a conversation with thinking"
+   },
+   "area": "ia",
+   "temas": [
+    "agentes",
+    "thinking",
+    "prefijo",
+    "claude",
+    "openai"
+   ],
+   "estado": "antipatron",
+   "porque": {
+    "es": "En Claude, si el código cambia el system, las herramientas o un mensaje anterior y luego reenvía un bloque de thinking posterior, la petición da un error 400; Fable 5.2 y Mythos 5.2 lo aplican a todas las cuentas. OpenAI avisa de algo parecido: GPT-6.2 cambia cómo la Responses API conserva el razonamiento cuando se edita el prefijo de la conversación. Conviene decidir el prefijo al empezar y no tocarlo; lo que cambie, como mensaje nuevo.",
+    "en": "On Claude, if code changes the system prompt, the tools or an earlier message and then sends back a later thinking block, the request returns a 400 error; Fable 5.2 and Mythos 5.2 enforce it for every account. OpenAI warns of something similar: GPT-6.2 changes how the Responses API preserves reasoning when the conversation prefix is edited. Decide the prefix at the start and leave it alone; add anything that changes as a new message."
+   },
+   "certeza": "documentado",
+   "evidencia": [
+    {
+     "tipo": "web",
+     "url": "https://platform.claude.com/docs/en/release-notes/overview",
+     "titulo": "Claude Platform release notes (2026-11-09)",
+     "fecha": "2026-11-09",
+     "consultado": "2026-11-23",
+     "primaria": true,
+     "cita": "Claude Fable 5.2 and Claude Mythos 5.2 enforce the prefix check for every account, whatever its age."
+    },
+    {
+     "tipo": "web",
+     "url": "https://developers.openai.com/api/docs/changelog",
+     "titulo": "OpenAI API changelog (2026-11-17)",
+     "fecha": "2026-11-17",
+     "consultado": "2026-11-23",
+     "primaria": true,
+     "cita": "GPT-6.2 changes how the Responses API preserves reasoning when you edit a conversation"
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2026-11-09",
+     "precision": "dia",
+     "registrado": "2026-11-23",
+     "estado": "antipatron",
+     "certeza": "documentado",
+     "evidencia": [
+      0
+     ],
+     "nota": {
+      "es": "Claude Fable 5.2 y Mythos 5.2 aplican la comprobación del prefijo a todas las cuentas.",
+      "en": "Claude Fable 5.2 and Mythos 5.2 enforce the prefix check for every account."
+     }
+    },
+    {
+     "fecha": "2026-11-17",
+     "precision": "dia",
+     "registrado": "2026-11-23",
+     "estado": "antipatron",
+     "certeza": "documentado",
+     "evidencia": [
+      1
+     ],
+     "nota": {
+      "es": "GPT-6.2 cambia cómo la Responses API conserva el razonamiento al editar el prefijo.",
+      "en": "GPT-6.2 changes how the Responses API preserves reasoning when the prefix is edited."
+     }
+    }
+   ],
+   "revisado": "2026-11-23",
+   "caduca": "2027-05-23",
+   "consultas": [
+    "prefix check thinking block 400",
+    "edit system prompt mid conversation",
+    "modificar el historial del agente",
+    "prefix_mismatch_behavior"
    ]
   },
   {
@@ -63385,12 +64404,12 @@
      "titulo": "Choosing the right model (Claude docs)",
      "consultado": "2026-10-06",
      "primaria": true,
-     "cita": "Multi-model strategies pair a lower-cost model with a frontier model so that most tokens are billed at the lower rate."
+     "cita": "Multimodel strategies pair a lower-cost model with a frontier model so that most tokens are billed at the lower rate."
     },
     {
      "tipo": "web",
-     "url": "https://platform.claude.com/docs/en/about-claude/models/optimizing-for-cost-and-intelligence",
-     "titulo": "Optimizing for cost and intelligence (Claude docs)",
+     "url": "https://web.archive.org/web/20261011225643/https://platform.claude.com/docs/en/about-claude/models/optimizing-for-cost-and-intelligence",
+     "titulo": "Optimizing for cost and intelligence (Claude docs) (copia archivada: la página actual ya no lo dice)",
      "consultado": "2026-10-06",
      "primaria": true,
      "cita": "When a workload lacks that mix, because its difficulty is uniform or it is one dependent chain, a single well-tuned model is usually the better choice."
@@ -63445,8 +64464,8 @@
      }
     }
    ],
-   "revisado": "2026-10-06",
-   "caduca": "2027-01-17",
+   "revisado": "2026-11-23",
+   "caduca": "2027-05-05",
    "consultas": [
     "use small model for simple tasks",
     "cut LLM cost cheaper model",
@@ -64027,12 +65046,12 @@
      "fecha": "2026-09-01",
      "consultado": "2026-10-06",
      "primaria": true,
-     "cita": "Evaluation remains important: compare model router with your current baseline to confirm that managed routing improves the outcomes that matter for your workload."
+     "cita": "Before you move production traffic, compare model router with your current model on your own prompts for quality, cost, and latency."
     },
     {
      "tipo": "web",
-     "url": "https://learn.microsoft.com/en-us/azure/ai-foundry/openai/concepts/model-router",
-     "titulo": "Model router (Microsoft Learn)",
+     "url": "https://web.archive.org/web/20251015180607/https://learn.microsoft.com/en-us/azure/ai-foundry/openai/concepts/model-router",
+     "titulo": "Model router (Microsoft Learn) (copia archivada: la página actual ya no lo dice)",
      "fecha": "2026-09-01",
      "consultado": "2026-10-06",
      "primaria": true,
@@ -64094,8 +65113,8 @@
      }
     }
    ],
-   "revisado": "2026-10-06",
-   "caduca": "2027-01-01",
+   "revisado": "2026-11-23",
+   "caduca": "2027-05-07",
    "consultas": [
     "LLM router cheap model first",
     "model cascade FrugalGPT",
@@ -64488,8 +65507,8 @@
      }
     }
    ],
-   "revisado": "2026-11-11",
-   "caduca": "2027-01-16",
+   "revisado": "2026-11-23",
+   "caduca": "2027-05-09",
    "ambito": [
     {
      "cuando": {
@@ -64683,8 +65702,8 @@
      }
     }
    ],
-   "revisado": "2026-10-07",
-   "caduca": "2027-01-17",
+   "revisado": "2026-11-23",
+   "caduca": "2027-05-11",
    "consultas": [
     "XML tags in prompts Claude",
     "delimiters prompt injection structure",
@@ -64778,8 +65797,8 @@
      }
     }
    ],
-   "revisado": "2026-10-06",
-   "caduca": "2027-01-18",
+   "revisado": "2026-11-23",
+   "caduca": "2027-05-12",
    "consultas": [
     "build LLM eval set before switching model",
     "prompt regression testing",
@@ -65065,8 +66084,8 @@
    ],
    "estado": "depende",
    "porque": {
-    "es": "Las pasarelas (Azure API Management, LiteLLM, Portkey…) reparten carga y cortan el tráfico a un backend caído. Pero el modelo de reserva no es el mismo: responde distinto, no reutiliza la caché de prompt y, en general, no lee el thinking del principal (en la API de Claude solo Fable 5.1 y Mythos 5.1 leen el de Opus 5.5). Solo vale si el prompt también está evaluado en el modelo de reserva. El fallback de servidor de Anthropic es solo para rechazos, y ahí Fallback credit compensa el fallo de caché.",
-    "en": "Gateways (Azure API Management, LiteLLM, Portkey…) balance load and stop sending traffic to a failing backend. But the backup model is not the same: it answers differently, cannot reuse the prompt cache and, in general, does not read the main model's thinking (on the Claude API only Fable 5.1 and Mythos 5.1 read Opus 5.5's). It only works if the prompt is also evaluated on the backup model. Anthropic's server-side fallback is only for refusals, and there Fallback credit compensates the cache miss."
+    "es": "Las pasarelas (Azure API Management, LiteLLM, Portkey…) reparten carga y cortan el tráfico a un backend caído. Pero el modelo de reserva no es el mismo: responde distinto, no reutiliza la caché de prompt y, en general, no lee el thinking del principal (en la API de Claude, Fable 5.2 y Mythos 5.2 leen el de otros modelos, pero ningún otro modelo lee el suyo). Solo vale si el prompt también está evaluado en el modelo de reserva. El fallback de servidor de Anthropic es solo para rechazos, y ahí Fallback credit compensa el fallo de caché.",
+    "en": "Gateways (Azure API Management, LiteLLM, Portkey…) balance load and stop sending traffic to a failing backend. But the backup model is not the same: it answers differently, cannot reuse the prompt cache and, in general, does not read the main model's thinking (on the Claude API, Fable 5.2 and Mythos 5.2 read other models', but no other model reads theirs). It only works if the prompt is also evaluated on the backup model. Anthropic's server-side fallback is only for refusals, and there Fallback credit compensates the cache miss."
    },
    "ambito": [
     {
@@ -65112,7 +66131,7 @@
      "titulo": "Migrating to Claude Opus 5.5 (Claude docs)",
      "consultado": "2026-10-06",
      "primaria": true,
-     "cita": "A router or fallback that moves a conversation from Claude Opus 5.5 to any other model runs those turns without them."
+     "cita": "A router or fallback can move a conversation from Claude Opus 5.5 to a model that doesn’t read Claude Opus 5.5 thinking blocks."
     },
     {
      "tipo": "web",
@@ -65136,7 +66155,7 @@
      "titulo": "Migrating to Claude Opus 5.5 (Claude docs)",
      "consultado": "2026-10-06",
      "primaria": true,
-     "cita": "On the Claude API, Claude Fable 5.1 and Claude Mythos 5.1 read Claude Opus 5.5 thinking blocks; no other model does."
+     "cita": "The API drops those blocks before that model sees them, and the request succeeds."
     },
     {
      "tipo": "web",
@@ -65146,6 +66165,15 @@
      "consultado": "2026-10-06",
      "primaria": true,
      "cita": "An opt-in fallbacks parameter (in beta on the Claude API and Claude Platform on AWS; not supported on the Message Batches API) re-runs refused requests on another model, billed at the fallback model's rates."
+    },
+    {
+     "tipo": "web",
+     "url": "https://platform.claude.com/docs/en/release-notes/overview",
+     "titulo": "Claude Platform release notes (2026-11-09)",
+     "fecha": "2026-11-09",
+     "consultado": "2026-11-23",
+     "primaria": true,
+     "cita": "Claude Fable 5.2 and Claude Mythos 5.2 read other models’ thinking blocks"
     }
    ],
    "historia": [
@@ -65180,10 +66208,24 @@
       "es": "Anthropic lanza el parámetro fallbacks, solo para peticiones rechazadas; avisa de que el thinking en general no pasa entre modelos y compensa el fallo de caché con Fallback credit.",
       "en": "Anthropic launches the fallbacks parameter, only for refused requests; it warns that thinking generally does not carry over between models and compensates the cache miss with Fallback credit."
      }
+    },
+    {
+     "fecha": "2026-11-09",
+     "precision": "dia",
+     "registrado": "2026-11-23",
+     "estado": "depende",
+     "certeza": "documentado",
+     "evidencia": [
+      6
+     ],
+     "nota": {
+      "es": "Fable 5.2 y Mythos 5.2 leen el thinking de otros modelos en la API de Claude; ningún otro modelo lee el suyo.",
+      "en": "Fable 5.2 and Mythos 5.2 read other models' thinking on the Claude API; no other model reads theirs."
+     }
     }
    ],
-   "revisado": "2026-10-06",
-   "caduca": "2027-01-02",
+   "revisado": "2026-11-23",
+   "caduca": "2027-05-14",
    "consultas": [
     "LLM gateway fallback 429",
     "LiteLLM fallback providers",
@@ -65434,8 +66476,8 @@
      }
     }
    ],
-   "revisado": "2026-10-06",
-   "caduca": "2027-01-03",
+   "revisado": "2026-11-23",
+   "caduca": "2027-05-16",
    "consultas": [
     "few-shot hurts reasoning models",
     "DeepSeek R1 few-shot prompt",
@@ -65771,8 +66813,8 @@
      }
     }
    ],
-   "revisado": "2026-10-06",
-   "caduca": "2027-01-19",
+   "revisado": "2026-11-23",
+   "caduca": "2027-05-17",
    "consultas": [
     "fine-tuning vs RAG knowledge injection",
     "fine-tune to add new facts hallucination",
@@ -66032,6 +67074,85 @@
    ]
   },
   {
+   "id": "forzar-herramienta-con-tool-choice-en-claude-sonnet-5-5",
+   "titulo": {
+    "es": "Forzar una herramienta con tool_choice (any o tool) al pasar a Claude Sonnet 5.5",
+    "en": "Forcing a tool with tool_choice (any or tool) when moving to Claude Sonnet 5.5"
+   },
+   "area": "ia",
+   "temas": [
+    "claude",
+    "tool-choice",
+    "herramientas",
+    "migracion"
+   ],
+   "estado": "depende",
+   "ambito": [
+    {
+     "cuando": {
+      "es": "con Claude Sonnet 5.5",
+      "en": "with Claude Sonnet 5.5"
+     },
+     "estado": "antipatron",
+     "porque": {
+      "es": "Devuelve 400.",
+      "en": "It returns a 400."
+     }
+    },
+    {
+     "cuando": {
+      "es": "con Claude Sonnet 5 o anteriores",
+      "en": "with Claude Sonnet 5 or earlier"
+     },
+     "estado": "vigente",
+     "porque": {
+      "es": "Es el modelo para el que se escribió el código, y la nota de versión solo marca el cambio en 5.5.",
+      "en": "This is the model the code was written for, and the release note flags the change only in 5.5."
+     }
+    }
+   ],
+   "porque": {
+    "es": "El código escrito para Claude Sonnet 5 puede romperse en Sonnet 5.5: el uso forzado de herramientas (tool_choice con los tipos any o tool) devuelve un error 400. Antes de migrar hay que revisar si se fuerza una herramienta.",
+    "en": "Code written for Claude Sonnet 5 can break on Sonnet 5.5: forced tool use (tool_choice types any and tool) returns a 400 error. Before migrating, check whether a tool is being forced."
+   },
+   "certeza": "documentado",
+   "evidencia": [
+    {
+     "tipo": "web",
+     "url": "https://platform.claude.com/docs/en/release-notes/overview",
+     "titulo": "Claude Platform release notes (2026-09-28)",
+     "fecha": "2026-09-28",
+     "consultado": "2026-11-23",
+     "primaria": true,
+     "cita": "Forced tool use ( tool_choice types any and tool ) returns a 400 error."
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2026-09-28",
+     "precision": "dia",
+     "registrado": "2026-11-23",
+     "estado": "depende",
+     "certeza": "documentado",
+     "evidencia": [
+      0
+     ],
+     "nota": {
+      "es": "Claude Sonnet 5.5 rechaza tool_choice forzado (any o tool) con un 400.",
+      "en": "Claude Sonnet 5.5 rejects forced tool_choice (any or tool) with a 400."
+     }
+    }
+   ],
+   "revisado": "2026-11-23",
+   "caduca": "2027-05-23",
+   "consultas": [
+    "tool_choice any 400 sonnet 5.5",
+    "force tool call claude",
+    "forced tool use error",
+    "obligar al modelo a llamar una herramienta"
+   ]
+  },
+  {
    "id": "framework-de-agentes-desde-el-principio",
    "titulo": {
     "es": "Empezar un agente con un framework pesado en vez de llamar a la API del modelo directamente",
@@ -66101,8 +67222,8 @@
     },
     {
      "tipo": "web",
-     "url": "https://www.anthropic.com/engineering/building-effective-agents",
-     "titulo": "Building effective agents (Anthropic Engineering)",
+     "url": "https://web.archive.org/web/20261006064611/https://www.anthropic.com/engineering/building-effective-agents",
+     "titulo": "Building effective agents (Anthropic Engineering) (copia archivada: la página actual ya no lo dice)",
      "fecha": "2024-12-19",
      "consultado": "2026-10-06",
      "primaria": true,
@@ -66118,8 +67239,8 @@
     },
     {
      "tipo": "web",
-     "url": "https://www.anthropic.com/engineering/managed-agents",
-     "titulo": "Scaling Managed Agents: Decoupling the brain from the hands (Anthropic Engineering)",
+     "url": "https://web.archive.org/web/20261012204218/https://www.anthropic.com/engineering/managed-agents",
+     "titulo": "Scaling Managed Agents: Decoupling the brain from the hands (Anthropic Engineering) (copia archivada: la página actual ya no lo dice)",
      "fecha": "2026-04-08",
      "consultado": "2026-10-06",
      "primaria": true,
@@ -66160,8 +67281,8 @@
      }
     }
    ],
-   "revisado": "2026-10-06",
-   "caduca": "2027-01-20",
+   "revisado": "2026-11-23",
+   "caduca": "2027-05-19",
    "consultas": [
     "build agent without framework",
     "direct API vs agent framework",
@@ -66176,6 +67297,61 @@
     "abstraction framework agents LangChain",
     "agente sem framework",
     "usar a API diretamente em vez de framework"
+   ]
+  },
+  {
+   "id": "gateway-sin-perfiles-de-usuario-final",
+   "titulo": {
+    "es": "Operar un gateway o revender la API sin identificar al cliente final de cada petición",
+    "en": "Running a gateway or reselling the API without identifying the end customer of each request"
+   },
+   "area": "ia",
+   "temas": [
+    "claude",
+    "user-profiles",
+    "gateway",
+    "abuso"
+   ],
+   "estado": "antipatron",
+   "porque": {
+    "es": "Con los perfiles de usuario de Anthropic se indica para qué cliente final es cada petición. Así, una acción de seguridad (restricción o bloqueo) puede aplicarse a ese cliente y no a toda la organización que opera la plataforma.",
+    "en": "With Anthropic user profiles you tell it which end customer each request is for. That way a safety enforcement action (restriction or ban) can apply to that customer instead of the whole organization that runs the platform."
+   },
+   "certeza": "documentado",
+   "evidencia": [
+    {
+     "tipo": "web",
+     "url": "https://platform.claude.com/docs/en/release-notes/overview",
+     "titulo": "Claude Platform release notes (2026-10-20)",
+     "fecha": "2026-10-20",
+     "consultado": "2026-11-23",
+     "primaria": true,
+     "cita": "so you can tell Anthropic which of your end customers each API request is for. If you operate a platform or gateway, or resell API access, a safety enforcement action can then apply to one end customer instead of your whole organization."
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2026-10-20",
+     "precision": "dia",
+     "registrado": "2026-11-23",
+     "estado": "antipatron",
+     "certeza": "documentado",
+     "evidencia": [
+      0
+     ],
+     "nota": {
+      "es": "Anthropic lanza los perfiles de usuario para plataformas y gateways.",
+      "en": "Anthropic launches user profiles for platforms and gateways."
+     }
+    }
+   ],
+   "revisado": "2026-11-23",
+   "caduca": "2027-05-23",
+   "consultas": [
+    "user_profiles end customer claude",
+    "enforcement ban one customer",
+    "identify end user api gateway",
+    "sancion afecta a toda la organizacion"
    ]
   },
   {
@@ -66797,8 +67973,8 @@
      }
     }
    ],
-   "revisado": "2026-10-06",
-   "caduca": "2027-01-04",
+   "revisado": "2026-11-23",
+   "caduca": "2027-05-21",
    "enlaces": [
     {
      "nombre": "Writing effective tools for agents",
@@ -66951,8 +68127,8 @@
      }
     }
    ],
-   "revisado": "2026-10-07",
-   "caduca": "2027-01-18",
+   "revisado": "2026-11-23",
+   "caduca": "2027-05-23",
    "consultas": [
     "AI chatbot human handoff support",
     "customer support escalation to human agent",
@@ -67444,7 +68620,7 @@
      "fecha": "2025-11-17",
      "consultado": "2026-10-06",
      "primaria": true,
-     "cita": "Use managed identity to authenticate Azure services without managing credentials."
+     "cita": "Microsoft Foundry can provision agent identities that agents use to access downstream resources without storing credentials in prompts or code."
     },
     {
      "tipo": "web",
@@ -67453,7 +68629,7 @@
      "fecha": "2025-11-17",
      "consultado": "2026-10-06",
      "primaria": true,
-     "cita": "Use Microsoft Entra ID for authentication instead of API keys. Microsoft Entra ID provides centralized identity management and advanced security features that static API keys lack."
+     "cita": "Use Microsoft Entra ID instead of API keys when the Azure service supports it. Identity-based authentication gives you centralized control over who can access AI resources and reduces reliance on stored credentials."
     },
     {
      "tipo": "web",
@@ -67489,8 +68665,8 @@
      }
     }
    ],
-   "revisado": "2026-10-06",
-   "caduca": "2027-01-21",
+   "revisado": "2026-11-23",
+   "caduca": "2027-05-24",
    "consultas": [
     "Azure OpenAI managed identity no API key",
     "Bedrock IAM role instead of access keys",
@@ -67668,8 +68844,8 @@
      }
     }
    ],
-   "revisado": "2026-10-14",
-   "caduca": "2027-01-12",
+   "revisado": "2026-11-23",
+   "caduca": "2027-05-26",
    "consultas": [
     "coding agent vector index vs grep",
     "codebase embeddings RAG for coding agent",
@@ -67764,7 +68940,7 @@
      "titulo": "Batch processing (Claude docs)",
      "consultado": "2026-10-06",
      "primaria": true,
-     "cita": "The Batches API offers significant cost savings. All usage is charged at 50% of the standard API prices."
+     "cita": "The Batches API offers significant cost savings. All usage is charged at 50 percent of the standard API prices."
     },
     {
      "tipo": "web",
@@ -67792,8 +68968,8 @@
     },
     {
      "tipo": "web",
-     "url": "https://docs.aws.amazon.com/bedrock/latest/userguide/batch-inference.html",
-     "titulo": "Process multiple prompts with batch inference (Amazon Bedrock User Guide)",
+     "url": "https://web.archive.org/web/20261010144859/https://docs.aws.amazon.com/bedrock/latest/userguide/batch-inference.html",
+     "titulo": "Process multiple prompts with batch inference (Amazon Bedrock User Guide) (copia archivada: la página actual ya no lo dice)",
      "consultado": "2026-10-06",
      "primaria": true,
      "cita": "Batch inference does not support tool calling (function calling) or structured output (response_format)."
@@ -67805,7 +68981,7 @@
      "fecha": "2024-10-08",
      "consultado": "2026-10-06",
      "primaria": true,
-     "cita": "The Message Batches API is now available in beta. Process large batches of queries asynchronously in the Claude API for 50% less cost."
+     "cita": "The Message Batches API is now available in beta. Process large batches of queries asynchronously in the Claude API for 50 percent less cost."
     }
    ],
    "historia": [
@@ -67841,8 +69017,8 @@
      }
     }
    ],
-   "revisado": "2026-10-06",
-   "caduca": "2027-01-05",
+   "revisado": "2026-11-23",
+   "caduca": "2027-05-28",
    "consultas": [
     "batch API 50% discount",
     "Claude Message Batches cost",
@@ -68291,8 +69467,8 @@
      }
     }
    ],
-   "revisado": "2026-10-07",
-   "caduca": "2027-01-19",
+   "revisado": "2026-11-23",
+   "caduca": "2027-05-30",
    "consultas": [
     "ChatGPT Apps SDK MCP server",
     "ChatGPT plugins replacement",
@@ -68357,8 +69533,8 @@
    "evidencia": [
     {
      "tipo": "web",
-     "url": "https://code.claude.com/docs/en/best-practices",
-     "titulo": "Best practices for Claude Code (Claude Code docs)",
+     "url": "https://web.archive.org/web/20261014213940/https://code.claude.com/docs/en/best-practices",
+     "titulo": "Best practices for Claude Code (Claude Code docs) (copia archivada: la página actual ya no lo dice)",
      "consultado": "2026-10-14",
      "primaria": true,
      "cita": "Correct Claude as soon as you notice it going off track."
@@ -68577,8 +69753,8 @@
      }
     }
    ],
-   "revisado": "2026-10-14",
-   "caduca": "2027-01-13",
+   "revisado": "2026-11-23",
+   "caduca": "2027-05-31",
    "consultas": [
     "stop and redirect the agent",
     "babysitting claude code",
@@ -68852,8 +70028,8 @@
      }
     }
    ],
-   "revisado": "2026-10-06",
-   "caduca": "2027-01-22",
+   "revisado": "2026-11-23",
+   "caduca": "2027-06-02",
    "consultas": [
     "does ISO 42001 certification satisfy the AI Act",
     "harmonised standards presumption of conformity AI",
@@ -69396,7 +70572,7 @@
      "fecha": "2025-11-14",
      "consultado": "2026-10-06",
      "primaria": true,
-     "cita": "We've launched structured outputs in public beta, providing guaranteed schema conformance for Claude's responses."
+     "cita": "We've launched structured outputs in beta, providing guaranteed schema conformance for Claude's responses."
     },
     {
      "tipo": "web",
@@ -69462,8 +70638,8 @@
      }
     }
    ],
-   "revisado": "2026-10-06",
-   "caduca": "2027-01-23",
+   "revisado": "2026-11-23",
+   "caduca": "2027-06-05",
    "consultas": [
     "function calling vs parsing text for tools",
     "tool use API structured tool_use block",
@@ -70002,8 +71178,8 @@
      }
     }
    ],
-   "revisado": "2026-10-02",
-   "caduca": "2027-01-09",
+   "revisado": "2026-11-23",
+   "caduca": "2027-06-07",
    "enlaces": [
     {
      "nombre": "Chroma — Context Rot",
@@ -70157,8 +71333,8 @@
      }
     }
    ],
-   "revisado": "2026-10-14",
-   "caduca": "2027-01-14",
+   "revisado": "2026-11-23",
+   "caduca": "2027-06-09",
    "consultas": [
     "skill atrophy from AI coding",
     "paradox of supervision",
@@ -70343,8 +71519,8 @@
      "matiz": "suaviza"
     }
    ],
-   "revisado": "2026-10-06",
-   "caduca": "2027-01-24",
+   "revisado": "2026-11-23",
+   "caduca": "2027-06-11",
    "enlaces": [
     {
      "nombre": "C2PA Specifications",
@@ -70738,8 +71914,8 @@
    "evidencia": [
     {
      "tipo": "web",
-     "url": "https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/quota",
-     "titulo": "Manage Azure OpenAI in Microsoft Foundry Models quota (Microsoft Learn)",
+     "url": "https://web.archive.org/web/20261012125641/https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/quota",
+     "titulo": "Manage Azure OpenAI in Microsoft Foundry Models quota (Microsoft Learn) (copia archivada: la página actual ya no lo dice)",
      "fecha": "2026-05-04",
      "consultado": "2026-10-06",
      "primaria": true,
@@ -70787,8 +71963,8 @@
      }
     }
    ],
-   "revisado": "2026-10-06",
-   "caduca": "2027-01-06",
+   "revisado": "2026-11-23",
+   "caduca": "2027-06-12",
    "consultas": [
     "high max_tokens 429 rate limit quota",
     "Azure OpenAI max_tokens tokens per minute",
@@ -70890,8 +72066,8 @@
     },
     {
      "tipo": "web",
-     "url": "https://code.claude.com/docs/en/best-practices",
-     "titulo": "Best practices for Claude Code (Claude Code docs)",
+     "url": "https://web.archive.org/web/20261014213940/https://code.claude.com/docs/en/best-practices",
+     "titulo": "Best practices for Claude Code (Claude Code docs) (copia archivada: la página actual ya no lo dice)",
      "consultado": "2026-10-14",
      "primaria": true,
      "cita": "CLI tools are the most context-efficient way to interact with external services."
@@ -70944,8 +72120,8 @@
      }
     }
    ],
-   "revisado": "2026-10-14",
-   "caduca": "2027-01-15",
+   "revisado": "2026-11-23",
+   "caduca": "2027-06-14",
    "consultas": [
     "MCP vs CLI for agents",
     "do I need an MCP server",
@@ -71145,8 +72321,8 @@
      "matiz": "endurece"
     }
    ],
-   "revisado": "2026-10-06",
-   "caduca": "2027-01-01",
+   "revisado": "2026-11-23",
+   "caduca": "2027-06-16",
    "consultas": [
     "MCP dynamic client registration deprecated",
     "RFC 7591 DCR MCP OAuth",
@@ -71243,8 +72419,8 @@
      }
     }
    ],
-   "revisado": "2026-10-06",
-   "caduca": "2027-01-02",
+   "revisado": "2026-11-23",
+   "caduca": "2027-06-18",
    "consultas": [
     "Client ID Metadata Documents MCP",
     "CIMD OAuth client_id URL",
@@ -71340,8 +72516,8 @@
      }
     }
    ],
-   "revisado": "2026-10-06",
-   "caduca": "2027-01-03",
+   "revisado": "2026-11-23",
+   "caduca": "2027-06-19",
    "consultas": [
     "MCP remote server transport",
     "Streamable HTTP MCP single endpoint",
@@ -71560,6 +72736,85 @@
     "mesurer un bot de support résolution",
     "taxa de contenção chatbot enganadora",
     "medir bot de apoio ao cliente casos resolvidos"
+   ]
+  },
+  {
+   "id": "medir-la-cache-de-prompt-con-diagnosticos",
+   "titulo": {
+    "es": "Medir si la caché de prompt acierta, con los diagnósticos de la API o el panel de caché",
+    "en": "Measuring whether the prompt cache hits, with API diagnostics or the cache dashboard"
+   },
+   "area": "ia",
+   "temas": [
+    "cache",
+    "observabilidad",
+    "coste",
+    "claude",
+    "openai"
+   ],
+   "estado": "vigente",
+   "porque": {
+    "es": "Cachear no basta: hay que saber si acierta. Claude ofrece diagnósticos de caché (ya fuera de beta desde el 23-09-2026) y OpenAI un panel con la tasa de aciertos, las lecturas por cada escritura y el desglose de tokens leídos, escritos y sin cachear.",
+    "en": "Caching is not enough: you need to know whether it hits. Claude offers cache diagnostics (out of beta since 2026-09-23) and OpenAI a dashboard with hit rate, reads per write and the breakdown of read, written and uncached tokens."
+   },
+   "certeza": "consenso",
+   "evidencia": [
+    {
+     "tipo": "web",
+     "url": "https://platform.claude.com/docs/en/release-notes/overview",
+     "titulo": "Claude Platform release notes (2026-09-23)",
+     "fecha": "2026-09-23",
+     "consultado": "2026-11-23",
+     "primaria": true,
+     "cita": "Cache diagnostics is out of beta on the Claude API and no longer requires the cache-diagnosis-2026-04-07 beta header."
+    },
+    {
+     "tipo": "web",
+     "url": "https://developers.openai.com/api/docs/changelog",
+     "titulo": "OpenAI API changelog (2026-08-20)",
+     "fecha": "2026-08-20",
+     "consultado": "2026-11-23",
+     "primaria": true,
+     "cita": "Track your cache hit rate over time, cache reads per write, and the breakdown of cache-read, cache-write, and uncached tokens"
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2026-08-20",
+     "precision": "dia",
+     "registrado": "2026-11-23",
+     "estado": "vigente",
+     "certeza": "consenso",
+     "evidencia": [
+      1
+     ],
+     "nota": {
+      "es": "OpenAI lanza el panel de caché de prompts.",
+      "en": "OpenAI releases the Prompt Caching dashboard."
+     }
+    },
+    {
+     "fecha": "2026-09-23",
+     "precision": "dia",
+     "registrado": "2026-11-23",
+     "estado": "vigente",
+     "certeza": "consenso",
+     "evidencia": [
+      0
+     ],
+     "nota": {
+      "es": "Los diagnósticos de caché de Claude salen de beta.",
+      "en": "Claude cache diagnostics leave beta."
+     }
+    }
+   ],
+   "revisado": "2026-11-23",
+   "caduca": "2027-05-23",
+   "consultas": [
+    "cache hit rate dashboard",
+    "cache diagnostics claude",
+    "prompt cache miss why",
+    "por que no acierta la cache"
    ]
   },
   {
@@ -71950,6 +73205,85 @@
     "exemples canoniques plutôt que cas limites",
     "prompt gigante demasiadas regras",
     "ficheiro de regras demasiado longo"
+   ]
+  },
+  {
+   "id": "mensajes-del-agente-con-message-threads",
+   "titulo": {
+    "es": "Mantener la conversación en el servidor con message threads en lugar de reenviar el historial",
+    "en": "Keeping the conversation on the server with message threads instead of resending the history"
+   },
+   "area": "ia",
+   "temas": [
+    "claude",
+    "message-threads",
+    "agentes",
+    "latencia"
+   ],
+   "estado": "depende",
+   "ambito": [
+    {
+     "cuando": {
+      "es": "conversaciones largas o bucles de agente, aceptando una beta",
+      "en": "long conversations or agent loops, accepting a beta"
+     },
+     "estado": "vigente",
+     "porque": {
+      "es": "Peticiones más pequeñas y menor tiempo hasta el primer token.",
+      "en": "Smaller requests and lower time to first token."
+     }
+    },
+    {
+     "cuando": {
+      "es": "la conversación debe sobrevivir a pausas de más de 5 minutos o guardarse",
+      "en": "the conversation must survive pauses over 5 minutes or be stored"
+     },
+     "estado": "antipatron",
+     "porque": {
+      "es": "El hilo caduca 5 minutos después de la última petición y se borra como máximo a la hora.",
+      "en": "The thread expires 5 minutes after the last request and is deleted within an hour at most."
+     }
+    }
+   ],
+   "porque": {
+    "es": "En conversaciones largas y bucles de agente, los message threads (beta) dejan la conversación en el servidor, así que cada petición envía solo los mensajes nuevos y baja el tiempo hasta el primer token. Un hilo caduca 5 minutos después de su última petición y se borra como máximo a la hora, así que no sirve para guardar una conversación.",
+    "en": "In long conversations and agent loops, message threads (beta) keep the conversation on the server, so each request sends only the new messages and time to first token drops. A thread expires 5 minutes after its last request and is deleted within an hour at most, so it is not a way to store a conversation."
+   },
+   "certeza": "documentado",
+   "evidencia": [
+    {
+     "tipo": "web",
+     "url": "https://platform.claude.com/docs/en/release-notes/overview",
+     "titulo": "Claude Platform release notes (2026-11-02)",
+     "fecha": "2026-11-02",
+     "consultado": "2026-11-23",
+     "primaria": true,
+     "cita": "The API keeps the conversation on the server, so each later request sends only the new messages. A thread expires 5 minutes after its last request and is deleted no more than 1 hour after its last use."
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2026-11-02",
+     "precision": "dia",
+     "registrado": "2026-11-23",
+     "estado": "depende",
+     "certeza": "documentado",
+     "evidencia": [
+      0
+     ],
+     "nota": {
+      "es": "Anthropic lanza los message threads en beta.",
+      "en": "Anthropic launches message threads in beta."
+     }
+    }
+   ],
+   "revisado": "2026-11-23",
+   "caduca": "2027-05-23",
+   "consultas": [
+    "message threads claude beta",
+    "stop resending conversation history",
+    "server side conversation state",
+    "historial en el servidor"
    ]
   },
   {
@@ -73011,8 +74345,8 @@
      }
     }
    ],
-   "revisado": "2026-10-06",
-   "caduca": "2027-01-25",
+   "revisado": "2026-11-23",
+   "caduca": "2027-06-21",
    "consultas": [
     "GGUF Q4_K_M quality loss",
     "llama.cpp quantization Q8 vs Q4 vs Q2",
@@ -73254,8 +74588,8 @@
      }
     }
    ],
-   "revisado": "2026-11-11",
-   "caduca": "2027-01-26",
+   "revisado": "2026-11-23",
+   "caduca": "2027-06-23",
    "consultas": [
     "multi-agent vs single agent coding",
     "orchestrator subagents parallel research",
@@ -73327,8 +74661,8 @@
      }
     }
    ],
-   "revisado": "2026-10-02",
-   "caduca": "2027-01-02",
+   "revisado": "2026-11-23",
+   "caduca": "2027-06-26",
    "recomprobar": "git grep -q \"factor: 1.74\" src/app/shared/factor-claude.ts",
    "consultas": [
     "count Claude tokens tiktoken",
@@ -73393,24 +74727,24 @@
    "evidencia": [
     {
      "tipo": "web",
-     "url": "https://platform.claude.com/docs/en/build-with-claude/pdf-support",
-     "titulo": "PDF support (Claude docs)",
+     "url": "https://web.archive.org/web/20261003080119/https://platform.claude.com/docs/en/build-with-claude/pdf-support",
+     "titulo": "PDF support (Claude docs) (copia archivada: la página actual ya no lo dice)",
      "consultado": "2026-10-07",
      "primaria": true,
      "cita": "The system converts each page of the document into an image. The text from each page is extracted and provided alongside each page's image."
     },
     {
      "tipo": "web",
-     "url": "https://platform.claude.com/docs/en/build-with-claude/pdf-support",
-     "titulo": "PDF support (Claude docs)",
+     "url": "https://web.archive.org/web/20261003080119/https://platform.claude.com/docs/en/build-with-claude/pdf-support",
+     "titulo": "PDF support (Claude docs) (copia archivada: la página actual ya no lo dice)",
      "consultado": "2026-10-07",
      "primaria": true,
      "cita": "Each page typically uses 1,500–3,000 tokens per page depending on content density."
     },
     {
      "tipo": "web",
-     "url": "https://platform.claude.com/docs/en/build-with-claude/pdf-support",
-     "titulo": "PDF support (Claude docs)",
+     "url": "https://web.archive.org/web/20261003080119/https://platform.claude.com/docs/en/build-with-claude/pdf-support",
+     "titulo": "PDF support (Claude docs) (copia archivada: la página actual ya no lo dice)",
      "consultado": "2026-10-07",
      "primaria": true,
      "cita": "Without citations enabled, the API falls back to basic text extraction only."
@@ -73435,8 +74769,8 @@
     },
     {
      "tipo": "web",
-     "url": "https://platform.claude.com/docs/en/build-with-claude/pdf-support",
-     "titulo": "PDF support (Claude docs)",
+     "url": "https://web.archive.org/web/20261003080119/https://platform.claude.com/docs/en/build-with-claude/pdf-support",
+     "titulo": "PDF support (Claude docs) (copia archivada: la página actual ya no lo dice)",
      "consultado": "2026-10-07",
      "primaria": true,
      "cita": "This allows users to ask for insights on visual elements of a PDF, such as charts, diagrams, and other non-textual content."
@@ -73497,8 +74831,8 @@
      }
     }
    ],
-   "revisado": "2026-10-07",
-   "caduca": "2027-01-20",
+   "revisado": "2026-11-23",
+   "caduca": "2027-06-28",
    "consultas": [
     "send PDF directly to Claude API",
     "PDF text extraction before LLM",
@@ -73703,8 +75037,8 @@
      }
     }
    ],
-   "revisado": "2026-10-07",
-   "caduca": "2027-01-21",
+   "revisado": "2026-11-23",
+   "caduca": "2027-06-30",
    "consultas": [
     "ollama num_ctx too small",
     "ollama context window 4096 truncated",
@@ -73768,20 +75102,20 @@
      "titulo": "Ollama FAQ",
      "consultado": "2026-10-07",
      "primaria": true,
-     "cita": "`OLLAMA_NUM_PARALLEL` - The maximum number of parallel requests each model will process at the same time, default 1."
+     "cita": "`OLLAMA_NUM_PARALLEL` - The maximum number of parallel requests each model will process at the same time."
     },
     {
      "tipo": "web",
-     "url": "https://github.com/ollama/ollama/blob/main/docs/faq.mdx",
-     "titulo": "Ollama FAQ",
+     "url": "https://web.archive.org/web/20261020031400/https://github.com/ollama/ollama/blob/main/docs/faq.mdx",
+     "titulo": "Ollama FAQ (copia archivada: la página actual ya no lo dice)",
      "consultado": "2026-10-07",
      "primaria": true,
      "cita": "If too many requests are sent to the server, it will respond with a 503 error indicating the server is overloaded."
     },
     {
      "tipo": "web",
-     "url": "https://github.com/ollama/ollama/blob/main/docs/faq.mdx",
-     "titulo": "Ollama FAQ",
+     "url": "https://web.archive.org/web/20261020031400/https://github.com/ollama/ollama/blob/main/docs/faq.mdx",
+     "titulo": "Ollama FAQ (copia archivada: la página actual ya no lo dice)",
      "consultado": "2026-10-07",
      "primaria": true,
      "cita": "Required RAM will scale by `OLLAMA_NUM_PARALLEL` * `OLLAMA_CONTEXT_LENGTH`."
@@ -73854,8 +75188,8 @@
      }
     }
    ],
-   "revisado": "2026-10-07",
-   "caduca": "2027-01-22",
+   "revisado": "2026-11-23",
+   "caduca": "2027-07-01",
    "consultas": [
     "ollama concurrent requests queue",
     "OLLAMA_NUM_PARALLEL production",
@@ -74005,8 +75339,8 @@
     },
     {
      "tipo": "web",
-     "url": "https://developers.openai.com/api/docs/deprecations",
-     "titulo": "Deprecations (OpenAI API docs)",
+     "url": "https://web.archive.org/web/20261006161055/https://developers.openai.com/api/docs/deprecations",
+     "titulo": "Deprecations (OpenAI API docs) (copia archivada: la página actual ya no lo dice)",
      "fecha": "2025-08-26",
      "consultado": "2026-10-06",
      "primaria": true,
@@ -74023,8 +75357,8 @@
     },
     {
      "tipo": "web",
-     "url": "https://developers.openai.com/api/docs/deprecations",
-     "titulo": "Deprecations (OpenAI API docs)",
+     "url": "https://web.archive.org/web/20261006161055/https://developers.openai.com/api/docs/deprecations",
+     "titulo": "Deprecations (OpenAI API docs) (copia archivada: la página actual ya no lo dice)",
      "fecha": "2025-03",
      "consultado": "2026-10-06",
      "primaria": true,
@@ -74652,8 +75986,8 @@
      }
     }
    ],
-   "revisado": "2026-10-14",
-   "caduca": "2027-01-16",
+   "revisado": "2026-11-23",
+   "caduca": "2027-07-03",
    "consultas": [
     "how many agents at once",
     "parallel coding agents review bottleneck",
@@ -75027,8 +76361,8 @@
      }
     }
    ],
-   "revisado": "2026-11-11",
-   "caduca": "2027-01-04",
+   "revisado": "2026-11-23",
+   "caduca": "2027-07-05",
    "consultas": [
     "gpt-5 preamble prompt progress updates",
     "agent tool call preambles",
@@ -75197,8 +76531,8 @@
     },
     {
      "tipo": "web",
-     "url": "https://platform.claude.com/docs/en/build-with-claude/structured-outputs",
-     "titulo": "Structured outputs (Anthropic)",
+     "url": "https://web.archive.org/web/20261003184101/https://platform.claude.com/docs/en/build-with-claude/structured-outputs",
+     "titulo": "Structured outputs (Anthropic) (copia archivada: la página actual ya no lo dice)",
      "consultado": "2026-10-02",
      "primaria": true,
      "cita": "Without structured outputs, Claude can generate malformed JSON responses or invalid tool inputs that break your applications. Even with careful prompting, you may encounter:"
@@ -75210,7 +76544,7 @@
      "fecha": "2025-11-14",
      "consultado": "2026-10-02",
      "primaria": true,
-     "cita": "We've launched structured outputs in public beta, providing guaranteed schema conformance for Claude's responses."
+     "cita": "We've launched structured outputs in beta, providing guaranteed schema conformance for Claude's responses."
     },
     {
      "tipo": "web",
@@ -75417,8 +76751,8 @@
      }
     }
    ],
-   "revisado": "2026-10-07",
-   "caduca": "2027-01-05",
+   "revisado": "2026-11-23",
+   "caduca": "2027-07-06",
    "consultas": [
     "are you sure prompt self-correct",
     "double check answer LLM",
@@ -76910,8 +78244,8 @@
      }
     }
    ],
-   "revisado": "2026-10-06",
-   "caduca": "2027-01-04",
+   "revisado": "2026-11-23",
+   "caduca": "2027-07-08",
    "consultas": [
     "claude prefill 400 error",
     "prefill assistant message deprecated",
@@ -77224,7 +78558,7 @@
      "titulo": "Extended thinking (Claude docs)",
      "consultado": "2026-10-06",
      "primaria": true,
-     "cita": "Extended thinking (thinking.type: \"enabled\" with budget_tokens) is deprecated on the Claude 4.6 models (requests using it still succeed)."
+     "cita": "Extended thinking ( thinking.type: \"enabled\" with budget_tokens ) is deprecated. Claude 4.7 and later models do not support it and reject requests that use it, returning a 400 error."
     },
     {
      "tipo": "web",
@@ -77242,7 +78576,7 @@
      "fecha": "2026-04-16",
      "consultado": "2026-10-06",
      "primaria": true,
-     "cita": "We've launched Claude Opus 4.7, our most capable model for complex reasoning and agentic coding, at the same $5 / $25 per MTok pricing as Opus 4.6."
+     "cita": "We've launched Claude Opus 4.7, our most capable model for complex reasoning and agentic coding, at the same $5 / $25 USD per MTok pricing as Claude Opus 4.6."
     }
    ],
    "historia": [
@@ -77292,8 +78626,8 @@
      "matiz": "endurece"
     }
    ],
-   "revisado": "2026-10-06",
-   "caduca": "2027-01-05",
+   "revisado": "2026-11-23",
+   "caduca": "2027-07-10",
    "aplica": [
     {
      "producto": "claude"
@@ -77618,8 +78952,8 @@
      }
     }
    ],
-   "revisado": "2026-10-06",
-   "caduca": "2027-01-27",
+   "revisado": "2026-11-23",
+   "caduca": "2027-07-12",
    "consultas": [
     "hybrid search bm25 embeddings",
     "contextual retrieval anthropic",
@@ -77863,8 +79197,8 @@
    ],
    "estado": "depende",
    "porque": {
-    "es": "Desde 2024 los tres grandes proveedores cachean el prefijo repetido y cobran mucho menos por él (Anthropic anunció hasta un 90 % menos de coste y un 85 % menos de latencia en prompts largos). Pero la caché dura minutos, tiene un tamaño mínimo y escribirla cuesta más que no cachear: solo gana con llamadas seguidas.",
-    "en": "Since 2024 the three major providers cache the repeated prefix and charge far less for it (Anthropic announced up to 90% lower cost and 85% lower latency on long prompts). But the cache lasts minutes, has a minimum size and writing it costs more than not caching: it only wins with calls close together."
+    "es": "Desde 2024 los tres grandes proveedores cachean el prefijo repetido y cobran mucho menos por él (Anthropic anunció hasta un 90 % menos de coste y un 85 % menos de latencia en prompts largos). Pero la caché estándar dura minutos (OpenAI ofrece una de 12 horas, con la escritura a 2,5 veces el precio de entrada), tiene un tamaño mínimo y escribirla cuesta más que no cachear: solo gana con llamadas seguidas.",
+    "en": "Since 2024 the three major providers cache the repeated prefix and charge far less for it (Anthropic announced up to 90% lower cost and 85% lower latency on long prompts). But the standard cache lasts minutes (OpenAI offers a 12-hour one, with writes at 2.5 times the input price), has a minimum size and writing it costs more than not caching: it only wins with calls close together."
    },
    "ambito": [
     {
@@ -77933,7 +79267,7 @@
      "titulo": "Prompt caching (Anthropic)",
      "consultado": "2026-10-02",
      "primaria": true,
-     "cita": "5-minute cache write tokens are 1.25 times the base input tokens price"
+     "cita": "Cache write tokens with a 5-minute TTL are 1.25 times the base input tokens price."
     },
     {
      "tipo": "web",
@@ -77952,6 +79286,15 @@
       "en": "Computed with our /embeddings simulator: with reads at 0.1×, writes at 1.25× and a 5-minute lifetime, break-even is about 20 minutes on average between calls."
      },
      "herramienta": "/embeddings?tab=rag"
+    },
+    {
+     "tipo": "web",
+     "url": "https://developers.openai.com/api/docs/changelog",
+     "titulo": "OpenAI API changelog (2026-10-20)",
+     "fecha": "2026-10-20",
+     "consultado": "2026-11-23",
+     "primaria": true,
+     "cita": "12-hour cache writes cost 2.5x the input token price."
     }
    ],
    "historia": [
@@ -78011,9 +79354,23 @@
       "es": "Medido con el modelo de /embeddings (llegadas al azar, lectura 0,1×, escritura 1,25×, vida 5 min): por debajo de ~20 min de media entre llamadas la caché compensa; por encima, encarece.",
       "en": "Measured with the /embeddings model (random arrivals, read 0.1×, write 1.25×, 5-min lifetime): below ~20 min on average between calls caching pays off; above it, it costs more."
      }
+    },
+    {
+     "fecha": "2026-10-20",
+     "precision": "dia",
+     "registrado": "2026-11-23",
+     "estado": "depende",
+     "certeza": "documentado",
+     "evidencia": [
+      7
+     ],
+     "nota": {
+      "es": "OpenAI permite elegir caché de 12 horas, con la escritura a 2,5 veces el precio de entrada.",
+      "en": "OpenAI lets you choose a 12-hour cache, with writes at 2.5 times the input price."
+     }
     }
    ],
-   "revisado": "2026-10-02",
+   "revisado": "2026-11-23",
    "caduca": "2027-04-20",
    "consultas": [
     "prompt caching cut cost",
@@ -78710,8 +80067,8 @@
      }
     }
    ],
-   "revisado": "2026-10-06",
-   "caduca": "2027-01-28",
+   "revisado": "2026-11-23",
+   "caduca": "2027-07-13",
    "consultas": [
     "429 too many requests retry",
     "exponential backoff jitter",
@@ -78800,8 +80157,8 @@
     },
     {
      "tipo": "web",
-     "url": "https://code.claude.com/docs/en/best-practices",
-     "titulo": "Best practices for Claude Code (Claude Code docs)",
+     "url": "https://web.archive.org/web/20261014213940/https://code.claude.com/docs/en/best-practices",
+     "titulo": "Best practices for Claude Code (Claude Code docs) (copia archivada: la página actual ya no lo dice)",
      "consultado": "2026-10-14",
      "primaria": true,
      "cita": "Run multiple Claude sessions in parallel to speed up development, run isolated experiments, or start complex workflows."
@@ -78875,8 +80232,8 @@
      }
     }
    ],
-   "revisado": "2026-10-14",
-   "caduca": "2027-01-08",
+   "revisado": "2026-11-23",
+   "caduca": "2027-07-15",
    "consultas": [
     "self-consistency voting llm",
     "best-of-n sampling",
@@ -78910,8 +80267,8 @@
    ],
    "estado": "depende",
    "porque": {
-    "es": "Google dice que el valor por defecto está pensado para la mayoría de los casos, pero Gemini 3 cambió los valores respecto a 2.5: al migrar puede subir el consumo de tokens en PDFs (y bajar en vídeo) y cambiar la lectura de documentos densos. La resolución se puede fijar por fichero, así que lo indicado es medir.",
-    "en": "Google says the default suits most cases, but Gemini 3 changed the values from 2.5: migrating can raise PDF token usage (and lower it for video) and change how dense documents are read. Resolution can be set per file, so the right move is to measure."
+    "es": "Google dice que el valor por defecto está pensado para la mayoría de los casos, pero Gemini 3 cambió los valores respecto a 2.5: al migrar puede subir el consumo de tokens en PDFs (y bajar en vídeo) y cambiar la lectura de documentos densos. La resolución se puede fijar por fichero, así que lo indicado es medir. La resolución por objeto también se acepta en Gemini 4.",
+    "en": "Google says the default suits most cases, but Gemini 3 changed the values from 2.5: migrating can raise PDF token usage (and lower it for video) and change how dense documents are read. Resolution can be set per file, so the right move is to measure. Per-object resolution is also accepted on Gemini 4."
    },
    "ambito": [
     {
@@ -78990,7 +80347,7 @@
      "titulo": "Media resolution (Gemini API docs)",
      "consultado": "2026-10-07",
      "primaria": true,
-     "cita": "You can configure media resolution for individual media objects (content items) within your request (Gemini 3 only)."
+     "cita": "You can configure media resolution for individual media objects (content items) within your request (Gemini 4 and Gemini 3 models)."
     }
    ],
    "historia": [
@@ -79026,8 +80383,8 @@
      }
     }
    ],
-   "revisado": "2026-10-07",
-   "caduca": "2027-01-23",
+   "revisado": "2026-11-23",
+   "caduca": "2027-07-17",
    "consultas": [
     "gemini 3 media_resolution",
     "gemini pdf token cost increase",
@@ -79175,8 +80532,8 @@
      }
     }
    ],
-   "revisado": "2026-10-07",
-   "caduca": "2027-01-24",
+   "revisado": "2026-11-23",
+   "caduca": "2027-07-19",
    "consultas": [
     "summarize long document chunks",
     "langchain map reduce summarization",
@@ -79347,7 +80704,7 @@
      "titulo": "Migrating to Claude Opus 5.5 (Claude docs)",
      "consultado": "2026-10-06",
      "primaria": true,
-     "cita": "Re-evaluate model-specific prompt instructions. Instructions tuned for Claude Opus 5's behavior may no longer be needed"
+     "cita": "Re-evaluate model-specific prompt instructions. Instructions tuned for Claude Opus 5’s behavior might no longer be needed"
     },
     {
      "tipo": "web",
@@ -79415,8 +80772,8 @@
      "url": "https://platform.openai.com/chat/edit?optimize=true"
     }
    ],
-   "revisado": "2026-10-06",
-   "caduca": "2027-01-06",
+   "revisado": "2026-11-23",
+   "caduca": "2027-07-20",
    "consultas": [
     "prompt migration between LLMs",
     "do prompts work across models",
@@ -80025,8 +81382,8 @@
      }
     }
    ],
-   "revisado": "2026-10-06",
-   "caduca": "2027-01-09",
+   "revisado": "2026-11-23",
+   "caduca": "2027-07-22",
    "consultas": [
     "persona prompting accuracy",
     "does role prompting work",
@@ -80080,7 +81437,7 @@
      "fecha": "2025-11-14",
      "consultado": "2026-10-02",
      "primaria": true,
-     "cita": "We've launched structured outputs in public beta, providing guaranteed schema conformance for Claude's responses."
+     "cita": "We've launched structured outputs in beta, providing guaranteed schema conformance for Claude's responses."
     },
     {
      "tipo": "web",
@@ -80101,8 +81458,8 @@
     },
     {
      "tipo": "web",
-     "url": "https://platform.claude.com/docs/en/build-with-claude/structured-outputs",
-     "titulo": "Structured outputs (Anthropic)",
+     "url": "https://web.archive.org/web/20261003184101/https://platform.claude.com/docs/en/build-with-claude/structured-outputs",
+     "titulo": "Structured outputs (Anthropic) (copia archivada: la página actual ya no lo dice)",
      "consultado": "2026-10-02",
      "primaria": true,
      "cita": "While structured outputs guarantee schema compliance in most cases, there are scenarios where the output may not match your schema:"
@@ -80266,7 +81623,7 @@
      "fecha": "2025-02-27",
      "consultado": "2026-10-06",
      "primaria": true,
-     "cita": "We've launched an OpenAI-compatible API endpoint, allowing you to test Claude models by changing just your API key, base URL, and model name in existing OpenAI integrations."
+     "cita": "We've launched an OpenAI-compatible API endpoint, allowing you to test Claude models by changing only your API key, base URL, and model name in existing OpenAI integrations."
     },
     {
      "tipo": "web",
@@ -80304,8 +81661,8 @@
      }
     }
    ],
-   "revisado": "2026-10-06",
-   "caduca": "2027-01-01",
+   "revisado": "2026-11-23",
+   "caduca": "2027-07-24",
    "consultas": [
     "OpenAI compatible endpoint Claude production",
     "use OpenAI SDK with Gemini",
@@ -82286,8 +83643,8 @@
      }
     }
    ],
-   "revisado": "2026-10-07",
-   "caduca": "2027-01-25",
+   "revisado": "2026-11-23",
+   "caduca": "2027-07-29",
    "consultas": [
     "DeepSeek R1 system prompt",
     "R1 no system prompt user message",
@@ -82545,8 +83902,8 @@
     },
     {
      "tipo": "web",
-     "url": "https://platform.claude.com/docs/en/release-notes/overview",
-     "titulo": "Claude Developer Platform release notes",
+     "url": "https://web.archive.org/web/20261112005922/https://platform.claude.com/docs/en/release-notes/overview",
+     "titulo": "Claude Developer Platform release notes (copia archivada: la página actual ya no lo dice)",
      "fecha": "2026-04-16",
      "consultado": "2026-11-11",
      "primaria": true,
@@ -82965,8 +84322,8 @@
      }
     }
    ],
-   "revisado": "2026-11-11",
-   "caduca": "2027-01-17",
+   "revisado": "2026-11-23",
+   "caduca": "2027-07-31",
    "consultas": [
     "test-driven development with claude code",
     "red green refactor coding agent",
@@ -83443,8 +84800,8 @@
      "matiz": "endurece"
     }
    ],
-   "revisado": "2026-10-06",
-   "caduca": "2027-01-10",
+   "revisado": "2026-11-23",
+   "caduca": "2027-08-01",
    "consultas": [
     "text-to-SQL LLM risks",
     "natural language to SQL hallucination",
@@ -83478,8 +84835,8 @@
    "estado": "superada",
    "superadaPor": "controlar-el-razonamiento-con-el-parametro-de-esfuerzo",
    "porque": {
-    "es": "thinking_budget era el control de Gemini 2.5. Con Gemini 3 Google introduce thinking_level y recomienda migrar a él «para un rendimiento más predecible»; el presupuesto sigue funcionando por compatibilidad, pero usar los dos en la misma petición da un error 400.",
-    "en": "thinking_budget was the Gemini 2.5 control. With Gemini 3 Google introduces thinking_level and recommends migrating to it \"for more predictable performance\"; the budget still works for backward compatibility, but using both in the same request returns a 400 error."
+    "es": "thinking_budget era el control de Gemini 2.5. Con Gemini 3 Google introduce thinking_level y recomienda migrar a él «para un rendimiento más predecible»; Gemini 4 (nov. 2026) añade un cuarto nivel, xhigh, junto a low, medium y high; el presupuesto sigue funcionando por compatibilidad, pero usar los dos en la misma petición da un error 400.",
+    "en": "thinking_budget was the Gemini 2.5 control. With Gemini 3 Google introduces thinking_level and recommends migrating to it \"for more predictable performance\"; Gemini 4 (Nov 2026) adds a fourth level, xhigh, alongside low, medium and high; the budget still works for backward compatibility, but using both in the same request returns a 400 error."
    },
    "certeza": "documentado",
    "evidencia": [
@@ -83503,11 +84860,20 @@
     },
     {
      "tipo": "web",
-     "url": "https://ai.google.dev/gemini-api/docs/gemini-3",
-     "titulo": "Gemini 3 Developer Guide (Gemini API docs)",
+     "url": "https://web.archive.org/web/20260303134105/https://ai.google.dev/gemini-api/docs/gemini-3",
+     "titulo": "Google, guía de Gemini 3 (copia archivada del 3-3-2026; la página actual solo pide sustituir thinking_budget por thinking_level)",
      "consultado": "2026-10-07",
      "primaria": true,
      "cita": "You cannot use both thinking_level and the legacy thinking_budget parameter in the same request. Doing so will return a 400 error."
+    },
+    {
+     "tipo": "web",
+     "url": "https://ai.google.dev/gemini-api/docs/changelog",
+     "titulo": "Gemini API release notes (2026-11-12)",
+     "fecha": "2026-11-12",
+     "consultado": "2026-11-23",
+     "primaria": true,
+     "cita": "introduces a fourth xhigh thinking level alongside low, medium, and default high"
     }
    ],
    "historia": [
@@ -83552,9 +84918,23 @@
       "es": "Documentado así a fecha de revisión: la guía de Gemini 3 llama «legacy» a thinking_budget.",
       "en": "Documented this way at review date: the Gemini 3 guide calls thinking_budget \"legacy\"."
      }
+    },
+    {
+     "fecha": "2026-11-12",
+     "precision": "dia",
+     "registrado": "2026-11-23",
+     "estado": "superada",
+     "certeza": "documentado",
+     "evidencia": [
+      3
+     ],
+     "nota": {
+      "es": "Gemini 4 Hydrogen añade el nivel de razonamiento xhigh.",
+      "en": "Gemini 4 Hydrogen adds the xhigh thinking level."
+     }
     }
    ],
-   "revisado": "2026-10-07",
+   "revisado": "2026-11-23",
    "consultas": [
     "Gemini 3 thinking_level",
     "thinking_budget deprecated Gemini",
@@ -83607,7 +84987,7 @@
      "titulo": "Semantic Conventions for GenAI agent and framework spans (OpenTelemetry)",
      "consultado": "2026-10-06",
      "primaria": true,
-     "cita": "The `gen_ai.operation.name` SHOULD be `invoke_agent`."
+     "cita": "invoke_agent when an LLM drives the control flow through tool calls"
     },
     {
      "tipo": "web",
@@ -83650,8 +85030,8 @@
      }
     }
    ],
-   "revisado": "2026-10-06",
-   "caduca": "2027-01-02",
+   "revisado": "2026-11-23",
+   "caduca": "2027-08-03",
    "enlaces": [
     {
      "nombre": "semantic-conventions-genai",
@@ -84336,8 +85716,8 @@
      }
     }
    ],
-   "revisado": "2026-10-13",
-   "caduca": "2027-01-06",
+   "revisado": "2026-11-23",
+   "caduca": "2027-08-05",
    "consultas": [
     "git worktree parallel agents",
     "Claude Code --worktree",
@@ -86781,8 +88161,8 @@
      }
     }
    ],
-   "revisado": "2026-10-08",
-   "caduca": "2027-01-27",
+   "revisado": "2026-11-23",
+   "caduca": "2027-04-06",
    "aplica": [
     {
      "producto": "terraform",
@@ -94663,8 +96043,8 @@
      "tipo": "anuncio"
     }
    ],
-   "revisado": "2026-10-08",
-   "caduca": "2027-01-28",
+   "revisado": "2026-11-23",
+   "caduca": "2027-06-04",
    "aplica": [
     {
      "producto": "apache-kafka",
@@ -98679,16 +100059,16 @@
     },
     {
      "tipo": "web",
-     "url": "https://code.claude.com/docs/en/code-review",
-     "titulo": "Claude Code Docs — Code Review",
+     "url": "https://web.archive.org/web/20261010004546/https://code.claude.com/docs/en/code-review",
+     "titulo": "Claude Code Docs — Code Review (copia archivada: la página actual ya no lo dice)",
      "consultado": "2026-10-08",
      "primaria": true,
      "cita": "The check run always completes with a neutral conclusion so it never blocks merging through branch protection rules."
     },
     {
      "tipo": "web",
-     "url": "https://github.com/github/docs/blob/main/content/copilot/concepts/agents/code-review.md",
-     "titulo": "GitHub Docs — About GitHub Copilot code review (agentic capabilities)",
+     "url": "https://web.archive.org/web/20260708064524/https://github.com/github/docs/blob/main/content/copilot/concepts/agents/code-review.md",
+     "titulo": "GitHub Docs — About GitHub Copilot code review (agentic capabilities) (copia archivada: la página actual ya no lo dice)",
      "consultado": "2026-10-08",
      "primaria": true,
      "cita": "This capability analyzes your entire repository to better understand the context of code changes."
@@ -100051,7 +101431,7 @@
      "titulo": "LangSmith docs — Trace with OpenTelemetry",
      "consultado": "2026-10-08",
      "primaria": true,
-     "cita": "LangSmith supports OpenTelemetry-based tracing, allowing you to send traces from any OpenTelemetry-compatible application."
+     "cita": "LangSmith supports OpenTelemetry-based tracing, allowing you to send traces from any OpenTelemetry-compatible agent."
     },
     {
      "tipo": "web",
@@ -100059,7 +101439,7 @@
      "titulo": "OpenInference — README (Arize)",
      "consultado": "2026-10-08",
      "primaria": true,
-     "cita": "can be used with any OpenTelemetry-compatible backend as well."
+     "cita": "and works with any OpenTelemetry-compatible backend."
     },
     {
      "tipo": "web",
@@ -100169,7 +101549,7 @@
      }
     }
    ],
-   "revisado": "2026-10-08",
+   "revisado": "2026-11-23",
    "consultas": [
     "Langfuse SDK v2 migration v3",
     "vendor lock-in LLM tracing",
@@ -100409,12 +101789,12 @@
     },
     {
      "tipo": "web",
-     "url": "https://github.com/open-telemetry/semantic-conventions-genai/blob/main/changelog.d/179.enhancement.md",
-     "titulo": "OpenTelemetry GenAI semantic conventions — fragmento de changelog #179",
+     "url": "https://github.com/open-telemetry/semantic-conventions-genai/blob/main/CHANGELOG.md",
+     "titulo": "OpenTelemetry GenAI semantic conventions — fragmento de changelog #179 (CHANGELOG actual)",
      "fecha": "2026-06-23",
      "consultado": "2026-10-08",
      "primaria": true,
-     "cita": "Add `gen_ai.prompt.version` and `gen_ai.prompt.variable` attributes to enhance prompt tracking with version support and template variable recording."
+     "cita": "Add gen_ai.prompt.version for the template version and gen_ai.prompt.variables for variables as a structured object."
     },
     {
      "tipo": "web",
@@ -100471,7 +101851,7 @@
      }
     }
    ],
-   "revisado": "2026-10-08",
+   "revisado": "2026-11-23",
    "caduca": "2027-03-18",
    "consultas": [
     "gen_ai.prompt.version attribute",
@@ -101252,8 +102632,8 @@
     },
     {
      "tipo": "web",
-     "url": "https://docs.github.com/en/actions/reference/security/secure-use",
-     "titulo": "Secure use reference (GitHub Docs)",
+     "url": "https://web.archive.org/web/20261010143946/https://docs.github.com/en/actions/reference/security/secure-use",
+     "titulo": "Secure use reference (GitHub Docs) (copia archivada: la página actual ya no lo dice)",
      "consultado": "2026-10-07",
      "primaria": true,
      "cita": "Pinning an action to a full-length commit SHA is currently the only way to use an action as an immutable release."
@@ -101363,8 +102743,8 @@
    "evidencia": [
     {
      "tipo": "web",
-     "url": "https://docs.github.com/en/actions/reference/security/secure-use",
-     "titulo": "Secure use reference (GitHub Docs)",
+     "url": "https://web.archive.org/web/20261010143946/https://docs.github.com/en/actions/reference/security/secure-use",
+     "titulo": "Secure use reference (GitHub Docs) (copia archivada: la página actual ya no lo dice)",
      "consultado": "2026-10-07",
      "primaria": true,
      "cita": "Pinning an action to a full-length commit SHA is currently the only way to use an action as an immutable release."
@@ -101988,8 +103368,8 @@
     },
     {
      "tipo": "web",
-     "url": "https://github.com/github/docs/blob/main/content/copilot/concepts/agents/about-github-agentic-workflows.md",
-     "titulo": "About GitHub Agentic Workflows (GitHub Docs)",
+     "url": "https://web.archive.org/web/20260708064731/https://github.com/github/docs/blob/main/content/copilot/concepts/agents/about-github-agentic-workflows.md",
+     "titulo": "About GitHub Agentic Workflows (GitHub Docs) (copia archivada: la página actual ya no lo dice)",
      "fecha": "2026-06-11",
      "consultado": "2026-10-08",
      "primaria": true,
@@ -101997,8 +103377,8 @@
     },
     {
      "tipo": "web",
-     "url": "https://github.com/github/docs/blob/main/content/copilot/concepts/agents/about-github-agentic-workflows.md",
-     "titulo": "About GitHub Agentic Workflows (GitHub Docs)",
+     "url": "https://web.archive.org/web/20260708064731/https://github.com/github/docs/blob/main/content/copilot/concepts/agents/about-github-agentic-workflows.md",
+     "titulo": "About GitHub Agentic Workflows (GitHub Docs) (copia archivada: la página actual ya no lo dice)",
      "fecha": "2026-06-11",
      "consultado": "2026-10-08",
      "primaria": true,
@@ -110448,6 +111828,108 @@
     "politique de mots de passe NIST",
     "regras de complexidade de palavras-passe",
     "política de palavras-passe NIST"
+   ]
+  },
+  {
+   "id": "retencion-cero-con-los-modelos-mas-capaces-de-claude",
+   "titulo": {
+    "es": "Enviar datos que exigen retención cero a los modelos Fable y Mythos de Claude",
+    "en": "Sending data that requires zero retention to Claude's Fable and Mythos models"
+   },
+   "area": "seguridad",
+   "temas": [
+    "privacidad",
+    "retencion",
+    "zdr",
+    "claude"
+   ],
+   "estado": "depende",
+   "ambito": [
+    {
+     "cuando": {
+      "es": "con Fable o Mythos 5.x por la API normal",
+      "en": "with Fable or Mythos 5.x through the regular API"
+     },
+     "estado": "antipatron",
+     "porque": {
+      "es": "Exigen 30 días de retención y no admiten ZDR salvo autorización expresa.",
+      "en": "They require 30-day retention and do not support ZDR unless expressly authorized."
+     }
+    },
+    {
+     "cuando": {
+      "es": "con una organización elegible en Enterprise Frontier Safeguards",
+      "en": "with an eligible organization on Enterprise Frontier Safeguards"
+     },
+     "estado": "vigente",
+     "porque": {
+      "es": "Es ZDR: Anthropic no conserva los mensajes y las copias cifradas van a tu bucket (beta).",
+      "en": "It is ZDR: Anthropic does not retain the messages and encrypted copies go to your bucket (beta)."
+     }
+    }
+   ],
+   "porque": {
+    "es": "Fable 5.1, Fable 5.2, Mythos 5.1 y Mythos 5.2 exigen 30 días de retención de datos y no están disponibles con retención cero (ZDR) salvo autorización expresa de Anthropic. Las organizaciones elegibles pueden usar Enterprise Frontier Safeguards (beta, 23-11-2026): Anthropic no conserva los mensajes y copias cifradas van a un bucket de tu propia nube.",
+    "en": "Fable 5.1, Fable 5.2, Mythos 5.1 and Mythos 5.2 require 30-day data retention and are not available under zero data retention (ZDR) unless Anthropic expressly authorizes it. Eligible organizations can use Enterprise Frontier Safeguards (beta, 2026-11-23): Anthropic does not retain the messages and encrypted copies go to a bucket in your own cloud."
+   },
+   "certeza": "documentado",
+   "evidencia": [
+    {
+     "tipo": "web",
+     "url": "https://platform.claude.com/docs/en/release-notes/overview",
+     "titulo": "Claude Platform release notes (2026-11-09)",
+     "fecha": "2026-11-09",
+     "consultado": "2026-11-23",
+     "primaria": true,
+     "cita": "Both models require 30-day data retention, like Claude Fable 5.1 and Claude Mythos 5.1."
+    },
+    {
+     "tipo": "web",
+     "url": "https://platform.claude.com/docs/en/release-notes/overview",
+     "titulo": "Claude Platform release notes (2026-11-23)",
+     "fecha": "2026-11-23",
+     "consultado": "2026-11-23",
+     "primaria": true,
+     "cita": "EFS is Zero Data Retention (ZDR) for eligible organizations that use Claude’s most capable models."
+    }
+   ],
+   "historia": [
+    {
+     "fecha": "2026-11-09",
+     "precision": "dia",
+     "registrado": "2026-11-23",
+     "estado": "depende",
+     "certeza": "documentado",
+     "evidencia": [
+      0
+     ],
+     "nota": {
+      "es": "Fable 5.2 y Mythos 5.2 exigen 30 días de retención, como las versiones 5.1.",
+      "en": "Fable 5.2 and Mythos 5.2 require 30-day retention, like the 5.1 versions."
+     }
+    },
+    {
+     "fecha": "2026-11-23",
+     "precision": "dia",
+     "registrado": "2026-11-23",
+     "estado": "depende",
+     "certeza": "documentado",
+     "evidencia": [
+      1
+     ],
+     "nota": {
+      "es": "Anthropic lanza Enterprise Frontier Safeguards, ZDR para sus modelos más capaces, en beta.",
+      "en": "Anthropic launches Enterprise Frontier Safeguards, ZDR for its most capable models, in beta."
+     }
+    }
+   ],
+   "revisado": "2026-11-23",
+   "caduca": "2027-05-23",
+   "consultas": [
+    "zero data retention fable mythos",
+    "ZDR not available frontier model",
+    "enterprise frontier safeguards",
+    "datos sensibles con retencion de 30 dias"
    ]
   },
   {
@@ -120034,8 +121516,8 @@
      }
     }
    ],
-   "revisado": "2026-11-12",
-   "caduca": "2026-12-01",
+   "revisado": "2026-11-23",
+   "caduca": "2027-07-25",
    "consultas": [
     "Chrome not secure warning HTTP",
     "do I need HTTPS for my site",

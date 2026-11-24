@@ -1,4 +1,4 @@
-import { ApiAuth, ApiColeccion, ApiCuerpo, ApiPeticion, ResultadoImport, campo, cuerpoVacio, authVacia, peticionVacia, partirUrl, } from "./api-ir";
+import { ApiAuth, ApiColeccion, ApiCuerpo, ApiPeticion, ResultadoImport, campo, cuerpoVacio, authVacia, peticionVacia, partirUrl, msg, MsgConv, } from "./api-ir";
 export function esInsomnia(x: unknown): boolean {
     if (!esObj(x))
         return false;
@@ -13,12 +13,12 @@ export function leerInsomnia(texto: string): ResultadoImport {
         raiz = JSON.parse(texto);
     }
     catch (e) {
-        return { ok: false, error: `No es JSON válido: ${(e as Error).message}` };
+        return { ok: false, error: msg("json-invalido", { detalle: (e as Error).message }) };
     }
     if (!esObj(raiz) || !Array.isArray(raiz["resources"])) {
-        return { ok: false, error: "No parece un export de Insomnia: le falta la lista \u00ABresources\u00BB." };
+        return { ok: false, error: msg("insomnia-sin-resources") };
     }
-    const avisos: string[] = [];
+    const avisos: MsgConv[] = [];
     const recursos = raiz["resources"].filter(esObj);
     const porId = new Map<string, Record<string, unknown>>();
     for (const r of recursos) {
@@ -38,16 +38,14 @@ export function leerInsomnia(texto: string): ResultadoImport {
             conPlantilla++;
         peticiones.push(p);
     }
-    if (conPlantilla) {
-        avisos.push(`${conPlantilla} petición(es) usan plantillas de Insomnia ({% … %}); se copian tal cual, ` +
-            `porque su valor solo existe dentro de Insomnia.`);
-    }
+    if (conPlantilla)
+        avisos.push(msg("insomnia-plantillas", { n: conPlantilla }));
     if (!peticiones.length) {
-        return { ok: false, error: "El export no contiene ninguna petici\u00F3n." };
+        return { ok: false, error: msg("insomnia-sin-peticiones") };
     }
     return { ok: true, avisos, coleccion: { nombre, variables: variablesDe(recursos), peticiones } };
 }
-function rutaDe(r: Record<string, unknown>, porId: Map<string, Record<string, unknown>>, avisos: string[]): string[] {
+function rutaDe(r: Record<string, unknown>, porId: Map<string, Record<string, unknown>>, avisos: MsgConv[]): string[] {
     const ruta: string[] = [];
     const vistos = new Set<string>();
     let actual = texto1(r["parentId"]);
@@ -68,7 +66,7 @@ function rutaDe(r: Record<string, unknown>, porId: Map<string, Record<string, un
         actual = texto1(padre["parentId"]);
     }
     if (ciclo) {
-        avisos.push(`«${texto1(r["name"])}»: la cadena de carpetas forma un ciclo; se corta donde se detectó.`);
+        avisos.push(msg("insomnia-ciclo", { nombre: texto1(r["name"]) }));
     }
     return ruta;
 }

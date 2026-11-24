@@ -3,6 +3,40 @@
 All four packages (`@jarroba/mcp`, `@jarroba/mcp-logs`, `@jarroba/mcp-tests`, `@jarroba/mcp-calc`) share one
 version number. Each release is built and published from this repository's CI, with npm provenance.
 
+## 0.3.2 — 2026-11-24
+
+- Six new tools on engines that already power the web:
+  - `checksum` (`core`): the CRCs of the reveng catalogue, Adler-32 and Fletcher-16, custom Rocksoft parameters, and which
+    algorithm gives a value you have — also with the bytes swapped, as Modbus sends it.
+  - `arithmetic_check` (`ai`): recalculates every operation written with "=" in a text and says which are wrong and what
+    they should say, with real-life percentages and decimal comma or point.
+  - `document_hygiene` (`security`): what a .docx or .xlsx still contains before it is sent out — tracked changes, comments,
+    very hidden sheets, pivot caches, hidden rows with data, metadata. Reads the file by path.
+  - `late_payment_interest` and `receivables_aging` (`business`): Spanish statutory late-payment interest (Ley 3/2004)
+    stretch by stretch at each half-year's official rate plus collection costs, and aging, DSO and average collection
+    period from an invoices CSV.
+  - `market_basket` (`ml`): frequent itemsets and association rules with lift, from baskets or order lines.
+
+- New tool `ml_triage` (new domain `ml`): a CSV triaged before training — task (binary classification or regression),
+  imbalance, constant and identifier columns, gaps, high-cardinality categories and leaks, and four models scored with
+  seeded cross-validation next to the majority-class or mean baseline, saying when none beats it. When two models'
+  mean ± std ranges overlap it recommends the simpler one (`tiesWith` names the other). Reads the file by path.
+
+- New tools `os_schedule`, `os_page_replace`, `os_banker`, `automata_from_regex` and `cyk_parse` (new domain `cs`):
+  operating-systems and automata coursework solved like the textbook — CPU scheduling Gantt charts and times (7
+  algorithms), page replacement with both fault-counting conventions, the banker's algorithm and deadlock detection,
+  regex to Thompson NFA, DFA and minimal DFA, and the CYK table — checked against the published solutions, each with a
+  link that replays it step by step.
+
+- New tools `business_days` and `legal_deadline` (new domain `dates`): working days between two dates, or N working days
+  ahead, with the official holidays of Spain by region (including the ones moved to Monday) and six more countries, naming
+  every day skipped; and the last day of a Spanish administrative (Ley 39/2015) or court (LEC/LOPJ, with the 2025 reform of
+  non-business days) deadline, with the articles applied.
+
+- `api_collection_convert` and `api_breaking_changes` answer entirely in English: conversion errors and warnings, each
+  change's detail and reason, and the Markdown report used to come out partly in Spanish. Breaking-change ids are now a
+  closed list, so a new rule cannot ship without its English id.
+
 ## 0.3.1 — 2026-11-13
 
 - New tool `forecast` (new domain `forecast`): a time series forecast with intervals, where Holt-Winters, automatic

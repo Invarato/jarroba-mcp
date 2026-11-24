@@ -1,5 +1,6 @@
 import { Injectable } from "@angular/core";
 import { MS_DIA, diaDe, isoDe } from "../shared/dias";
+import { diaSemana, diasDelMes, sumarMeses } from "./calendario-dias";
 export interface DateBetween {
     totalDays: number;
     weeks: number;
@@ -8,6 +9,7 @@ export interface DateBetween {
     months: number;
     days: number;
     totalMonths: number;
+    weekendDays: number;
 }
 export interface DateAge {
     years: number;
@@ -26,17 +28,16 @@ export { diaDe, isoDe };
 export function diaLocal(d: Date): number {
     return Math.round(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / MS_DIA);
 }
-export function diaSemana(dia: number): number {
-    return new Date(dia * MS_DIA).getUTCDay();
+export function hoyHastaFinDeAnio(ahora: Date = new Date()): {
+    desde: string;
+    hasta: string;
+} {
+    const hoy = isoDe(diaLocal(ahora));
+    const y = Number(hoy.slice(0, 4));
+    const fin = `${y}-12-31`;
+    return { desde: hoy, hasta: hoy === fin ? `${y + 1}-12-31` : fin };
 }
-const diasDelMes = (y: number, m: number) => new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
-export function sumarMeses(dia: number, meses: number): number {
-    const d = new Date(dia * MS_DIA);
-    const total = d.getUTCFullYear() * 12 + d.getUTCMonth() + meses;
-    const y = Math.floor(total / 12), m = total - y * 12;
-    const dd = Math.min(d.getUTCDate(), diasDelMes(y, m));
-    return Math.round(Date.UTC(y, m, dd) / MS_DIA);
-}
+export { diaSemana, sumarMeses } from "./calendario-dias";
 function difCalendario(a: number, b: number): {
     years: number;
     months: number;
@@ -47,6 +48,15 @@ function difCalendario(a: number, b: number): {
     if (sumarMeses(a, m) > b)
         m--;
     return { years: Math.floor(m / 12), months: m % 12, days: b - sumarMeses(a, m) };
+}
+function finesDeSemana(desde: number, n: number): number {
+    let total = Math.floor(n / 7) * 2;
+    for (let i = n - (n % 7); i < n; i++) {
+        const d = diaSemana(desde + i);
+        if (d === 0 || d === 6)
+            total++;
+    }
+    return total;
 }
 @Injectable({ providedIn: "root" })
 export class DateCalcService {
@@ -63,6 +73,7 @@ export class DateCalcService {
             remainingDays: totalDays % 7,
             ...c,
             totalMonths: c.years * 12 + c.months,
+            weekendDays: finesDeSemana(a, totalDays),
         };
     }
     age(birthStr: string, today: Date = new Date()): DateAge | null {

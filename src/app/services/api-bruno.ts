@@ -1,4 +1,4 @@
-import { ApiAuth, ApiCampo, ApiColeccion, ApiCuerpo, ApiPeticion, ResultadoImport, TipoCuerpo, campo, cuerpoVacio, authVacia, peticionVacia, partirUrl, unirUrl, } from "./api-ir";
+import { ApiAuth, ApiCampo, ApiColeccion, ApiCuerpo, ApiPeticion, ResultadoImport, TipoCuerpo, campo, cuerpoVacio, authVacia, peticionVacia, partirUrl, unirUrl, msg, MsgConv, } from "./api-ir";
 const METODOS = ["get", "post", "put", "delete", "patch", "head", "options", "trace"];
 export interface FicheroBru {
     ruta: string;
@@ -32,7 +32,7 @@ export function leerBru(texto: string, ruta: string[] = []): ApiPeticion | null 
     return p;
 }
 export function leerColeccionBru(ficheros: FicheroBru[]): ResultadoImport {
-    const avisos: string[] = [];
+    const avisos: MsgConv[] = [];
     const peticiones: ApiPeticion[] = [];
     let nombre = "Colecci\u00F3n de Bruno";
     let variables: ApiCampo[] = [];
@@ -47,29 +47,30 @@ export function leerColeccionBru(ficheros: FicheroBru[]): ResultadoImport {
             if (m["name"])
                 nombre = m["name"];
             variables = camposDe(b.get("vars:pre-request"));
-            avisarDeScripts(b, "la colecci\u00F3n", avisos);
+            avisarDeScripts(b, null, avisos);
             continue;
         }
         if (hoja === "folder.bru")
             continue;
         const p = leerBru(f.contenido, tramos);
         if (!p) {
-            avisos.push(`«${f.ruta}»: no se reconoce como petición .bru; omitido.`);
+            avisos.push(msg("bruno-no-reconocido", { ruta: f.ruta }));
             continue;
         }
-        avisarDeScripts(partirBloques(f.contenido), `«${p.nombre}»`, avisos);
+        avisarDeScripts(partirBloques(f.contenido), p.nombre, avisos);
         peticiones.push(p);
     }
     if (!peticiones.length) {
-        return { ok: false, error: "No se encontr\u00F3 ninguna petici\u00F3n .bru en los ficheros dados." };
+        return { ok: false, error: msg("bruno-ninguna") };
     }
     return { ok: true, avisos, coleccion: { nombre, variables, peticiones } };
 }
-function avisarDeScripts(bloques: Map<string, string>, quien: string, avisos: string[]): void {
+function avisarDeScripts(bloques: Map<string, string>, peticion: string | null, avisos: MsgConv[]): void {
     const conScript = ["script:pre-request", "script:post-response", "tests"]
         .filter(k => (bloques.get(k) ?? "").trim());
     if (conScript.length) {
-        avisos.push(`${quien}: lleva ${conScript.join(" y ")}. Es código JavaScript y no se traduce; queda fuera de la conversión.`);
+        const datos = { primeros: conScript.slice(0, -1).join(", "), ultimo: conScript[conScript.length - 1] };
+        avisos.push(peticion === null ? msg("bruno-scripts-coleccion", datos) : msg("bruno-scripts", { ...datos, peticion }));
     }
 }
 export function partirBloques(texto: string): Map<string, string> {

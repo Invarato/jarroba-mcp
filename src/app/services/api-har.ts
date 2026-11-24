@@ -1,4 +1,4 @@
-import { ApiCampo, ApiColeccion, ApiCuerpo, ApiPeticion, ResultadoImport, campo, cuerpoVacio, authVacia, peticionVacia, partirUrl, } from "./api-ir";
+import { ApiCampo, ApiColeccion, ApiCuerpo, ApiPeticion, ResultadoImport, campo, cuerpoVacio, authVacia, peticionVacia, partirUrl, msg, MsgConv, } from "./api-ir";
 export function esHar(x: unknown): boolean {
     if (!esObj(x))
         return false;
@@ -18,15 +18,15 @@ export function leerHar(texto: string, op: OpcionesHar = {}): ResultadoImport {
         raiz = JSON.parse(texto);
     }
     catch (e) {
-        return { ok: false, error: `No es JSON válido: ${(e as Error).message}` };
+        return { ok: false, error: msg("json-invalido", { detalle: (e as Error).message }) };
     }
     if (!esHar(raiz))
-        return { ok: false, error: "No parece un HAR: falta \u00ABlog.entries\u00BB." };
+        return { ok: false, error: msg("har-sin-entries") };
     const soloApi = op.soloApi ?? true;
     const sinCache = op.sinCache ?? false;
     const log = (raiz as Record<string, unknown>)["log"] as Record<string, unknown>;
     const entries = (log["entries"] as unknown[]).filter(esObj);
-    const avisos: string[] = [];
+    const avisos: MsgConv[] = [];
     const peticiones: ApiPeticion[] = [];
     let descartadas = 0;
     let deCache = 0;
@@ -45,16 +45,13 @@ export function leerHar(texto: string, op: OpcionesHar = {}): ResultadoImport {
         peticiones.push(unaPeticion(req, e));
     }
     if (descartadas) {
-        avisos.push(`Se dejaron fuera ${descartadas} petición(es) de recursos (imágenes, CSS, fuentes, scripts). Desactiva el filtro para verlas.`);
+        avisos.push(msg("har-recursos", { n: descartadas }));
     }
     if (deCache)
-        avisos.push(`Se dejaron fuera ${deCache} respuesta(s) servidas desde la caché del navegador.`);
-    avisos.push("Un HAR guarda las cabeceras TAL CUAL se enviaron: cookies de sesi\u00F3n, \u00ABAuthorization\u00BB y " +
-        "cuerpos de formulario. Revisa lo importado antes de compartirlo con nadie.");
+        avisos.push(msg("har-cache", { n: deCache }));
+    avisos.push(msg("har-sensible"));
     if (!peticiones.length) {
-        return { ok: false, error: descartadas
-                ? `Las ${descartadas} entradas del HAR eran recursos (imágenes, CSS…). Desactiva el filtro para importarlas.`
-                : "El HAR no contiene ninguna petici\u00F3n." };
+        return { ok: false, error: descartadas ? msg("har-solo-recursos", { n: descartadas }) : msg("har-sin-peticiones") };
     }
     return { ok: true, avisos, coleccion: { nombre: nombreDe(log), variables: [], peticiones } };
 }

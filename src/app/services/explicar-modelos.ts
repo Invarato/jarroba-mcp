@@ -1,3 +1,4 @@
+import { trocearCsv } from "../shared/dataset-ml/dataset";
 export type Tarea = "clasificacion" | "regresion";
 export type TipoModelo = "arbol" | "bosque" | "boosting" | "lineal";
 export interface Datos {
@@ -218,56 +219,70 @@ export interface Tabla {
     filas: string[][];
 }
 export function leerCsv(texto: string): Tabla | null {
-    const lineas = texto.replace(/\r/g, "").split("\n").filter(l => l.trim());
-    if (lineas.length < 3)
+    const todas = trocearCsv(texto);
+    if (todas.length < 3)
         return null;
-    const sep = [",", ";", "\t"].map(s => [s, lineas[0].split(s).length] as const).sort((a, b) => b[1] - a[1])[0][0];
-    const partir1 = (l: string) => {
-        const out: string[] = [];
-        let cur = "", comillas = false;
-        for (let i = 0; i < l.length; i++) {
-            const c = l[i];
-            if (c === "\"") {
-                if (comillas && l[i + 1] === "\"") {
-                    cur += "\"";
-                    i++;
-                }
-                else
-                    comillas = !comillas;
-            }
-            else if (c === sep && !comillas) {
-                out.push(cur.trim());
-                cur = "";
-            }
-            else
-                cur += c;
-        }
-        out.push(cur.trim());
-        return out;
-    };
-    const columnas = partir1(lineas[0]);
-    const filas = lineas.slice(1).map(partir1).filter(f => f.length === columnas.length);
+    const columnas = todas[0];
+    const filas = todas.slice(1).filter(f => f.length === columnas.length);
     return filas.length >= 2 ? { columnas, filas } : null;
 }
 const numero = (s: string) => { const t = s.replace(/\s/g, "").replace(",", "."); return t !== "" && Number.isFinite(Number(t)) ? Number(t) : NaN; };
+const SI = new Set(["1", "si", "yes", "y", "s", "true", "verdadero", "cierto", "positivo", "positive", "ja", "oui", "sim"]);
+export function clasePositiva([a, b]: readonly [
+    string,
+    string
+]): string {
+    const llano = (v: string) => v.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    if (SI.has(llano(a)) !== SI.has(llano(b)))
+        return SI.has(llano(a)) ? a : b;
+    return a.localeCompare(b, undefined, { sensitivity: "base" }) <= 0 ? b : a;
+}
 export interface Preparado extends Datos {
     categorias: (string[] | null)[];
     positiva?: string;
+    negativa?: string;
+    huecos: {
+        columna: string;
+        n: number;
+    }[];
+    quitadas: number;
+    origen: number[];
 }
-export function preparar(t: Tabla, objetivo: number, maxFilas = 2000): Preparado | null {
-    const filas = t.filas.slice(0, maxFilas);
+export type Faltan = "media" | "mediana" | "quitar" | "indicador";
+export type Codificar = "ordinal" | "onehot" | "objetivo" | "objetivo-fuga";
+export const SUAVIZADO_OBJETIVO = 10;
+export const MAX_CATEGORIAS_ONEHOT = 12;
+export function preparar(t: Tabla, objetivo: number, maxFilas = 2000, faltan: Faltan = "media", ajuste?: ReadonlySet<number>, codificar: Codificar = "ordinal"): Preparado | null {
+    let filas = t.filas.slice(0, maxFilas), origen = filas.map((_, i) => i);
     const vars = t.columnas.map((_, i) => i).filter(i => i !== objetivo);
+    const vacia = (v: string) => v.trim() === "";
     const categorias = vars.map(i => {
-        const vals = filas.map(f => f[i]);
-        return vals.every(v => !Number.isNaN(numero(v))) ? null : [...new Set(vals)].sort();
+        const vals = filas.map(f => f[i]), llenas = vals.filter(v => !vacia(v));
+        return llenas.length && llenas.every(v => !Number.isNaN(numero(v))) ? null : [...new Set(vals)].sort();
     });
+    const huecos = vars.map((i, k) => ({ columna: t.columnas[i], n: categorias[k] ? 0 : filas.filter(f => vacia(f[i])).length, k })).filter(h => h.n > 0);
+    const antes = filas.length;
+    if (faltan === "quitar" && huecos.length) {
+        const quedan = filas.map(f => huecos.every(h => !vacia(f[vars[h.k]])));
+        filas = filas.filter((_, r) => quedan[r]);
+        origen = origen.filter((_, r) => quedan[r]);
+    }
+    if (filas.some(f => vacia(f[objetivo] ?? ""))) {
+        const conY = filas.map(f => !vacia(f[objetivo] ?? ""));
+        filas = filas.filter((_, r) => conY[r]);
+        origen = origen.filter((_, r) => conY[r]);
+    }
     const yTxt = filas.map(f => f[objetivo]);
     const yNum = yTxt.map(numero);
-    let tarea: Tarea, y: number[], positiva: string | undefined;
+    let tarea: Tarea, y: number[], positiva: string | undefined, negativa: string | undefined;
     const distintos = [...new Set(yTxt)].sort();
     if (distintos.length === 2) {
         tarea = "clasificacion";
-        positiva = distintos.includes("1") && distintos.includes("0") ? "1" : distintos[1];
+        positiva = clasePositiva(distintos as [
+            string,
+            string
+        ]);
+        negativa = distintos.find(v => v !== positiva);
         y = yTxt.map(v => (v === positiva ? 1 : 0));
     }
     else if (yNum.every(v => !Number.isNaN(v))) {
@@ -276,15 +291,111 @@ export function preparar(t: Tabla, objetivo: number, maxFilas = 2000): Preparado
     }
     else
         return null;
-    const X = filas.map(f => vars.map((i, k) => (categorias[k] ? categorias[k]!.indexOf(f[i]) : numero(f[i]))));
+    const relleno = vars.map((i, k) => {
+        if (categorias[k])
+            return 0;
+        const v = filas.filter((_, r) => !ajuste || ajuste.has(origen[r])).map(f => f[i]).filter(x => !vacia(x)).map(numero).sort((a, b) => a - b);
+        if (!v.length)
+            return 0;
+        return faltan === "mediana" ? (v.length % 2 ? v[(v.length - 1) / 2] : (v[v.length / 2 - 1] + v[v.length / 2]) / 2) : v.reduce((a, b) => a + b, 0) / v.length;
+    });
+    const conIndicador = faltan === "indicador" ? huecos : [];
+    const enCaliente = vars.map((_, k) => codificar === "onehot" && !!categorias[k] && categorias[k]!.length <= MAX_CATEGORIAS_ONEHOT);
+    const columnas: string[] = [], cats: (string[] | null)[] = [];
+    vars.forEach((i, k) => {
+        if (enCaliente[k])
+            categorias[k]!.forEach(c => { columnas.push(`${t.columnas[i]}=${c || "\u2205"}`); cats.push(null); });
+        else {
+            columnas.push(t.columnas[i]);
+            cats.push(codificar === "objetivo" || codificar === "objetivo-fuga" ? null : categorias[k]);
+        }
+    });
+    const PLIEGUES = 5;
+    const porObjetivo = vars.map((i, k) => {
+        if (!categorias[k] || (codificar !== "objetivo" && codificar !== "objetivo-fuga"))
+            return null;
+        const fuga = codificar === "objetivo-fuga", enEntreno = (r: number) => fuga || !ajuste || ajuste.has(origen[r]);
+        const pliegue = (r: number) => (fuga ? 0 : origen[r] % PLIEGUES);
+        const st = new Map<string, {
+            s: number[];
+            n: number[];
+        }>(), gs = new Array(PLIEGUES).fill(0), gn = new Array(PLIEGUES).fill(0);
+        filas.forEach((f, r) => {
+            if (!enEntreno(r))
+                return;
+            const e = st.get(f[i]) ?? { s: new Array(PLIEGUES).fill(0), n: new Array(PLIEGUES).fill(0) }, q = pliegue(r);
+            e.s[q] += y[r];
+            e.n[q]++;
+            st.set(f[i], e);
+            gs[q] += y[r];
+            gn[q]++;
+        });
+        const sum = (v: number[], sin: number) => v.reduce((a, b, q) => a + (q === sin ? 0 : b), 0);
+        return (v: string, r: number) => {
+            const sin = !fuga && ajuste && ajuste.has(origen[r]) ? pliegue(r) : -1;
+            const tg = sum(gn, sin), g = tg ? sum(gs, sin) / tg : 0, e = st.get(v);
+            if (!e)
+                return g;
+            const n = sum(e.n, sin);
+            return (sum(e.s, sin) + SUAVIZADO_OBJETIVO * g) / (n + SUAVIZADO_OBJETIVO);
+        };
+    });
+    const X = filas.map((f, r) => [
+        ...vars.flatMap((i, k) => enCaliente[k] ? categorias[k]!.map(c => (f[i] === c ? 1 : 0))
+            : porObjetivo[k] ? [porObjetivo[k]!(f[i], r)]
+                : [categorias[k] ? categorias[k]!.indexOf(f[i]) : vacia(f[i]) ? relleno[k] : numero(f[i])]),
+        ...conIndicador.map(h => (vacia(f[vars[h.k]]) ? 1 : 0)),
+    ]);
     if (X.length < 10)
         return null;
-    return { columnas: vars.map(i => t.columnas[i]), X, y, tarea, categorias, positiva };
+    return {
+        columnas: [...columnas, ...conIndicador.map(h => h.columna + "_faltaba")],
+        X,
+        y,
+        tarea,
+        categorias: [...cats, ...conIndicador.map(() => null)],
+        positiva,
+        negativa,
+        huecos: huecos.map(({ columna, n }) => ({ columna, n })),
+        quitadas: antes - filas.length,
+        origen,
+    };
 }
-export type IdEjemplo = "credito" | "pisos";
+export function prepararPartido(t: Tabla, objetivo: number, maxFilas = 2000, faltan: Faltan = "media", codificar: Codificar = "ordinal"): {
+    d: Preparado;
+    train: number[];
+    test: number[];
+} | null {
+    const p = partir(Math.min(t.filas.length, maxFilas)), entreno = new Set(p.train);
+    const d = preparar(t, objetivo, maxFilas, faltan, entreno, codificar);
+    if (!d)
+        return null;
+    const pos = new Map(d.origen.map((o, i) => [o, i]));
+    const deOrigen = (os: number[]) => os.map(o => pos.get(o)).filter((i): i is number => i !== undefined);
+    return { d, train: deOrigen(p.train), test: deOrigen(p.test) };
+}
+export type IdEjemplo = "credito" | "pisos" | "fuga" | "huecos" | "postal";
 export function ejemplo(id: IdEjemplo, n = 600, semilla = 5): Tabla {
     const azar = generador(semilla), g = () => { let s = 0; for (let k = 0; k < 6; k++)
         s += azar(); return s - 3; };
+    if (id === "postal") {
+        const base = ejemplo("credito", n, semilla), otro = generador(semilla + 202);
+        return { columnas: [...base.columnas.slice(0, -1), "codigo_postal", base.columnas.at(-1)!], filas: base.filas.map(f => [...f.slice(0, -1), "CP" + String(28000 + Math.floor(otro() * 200)).padStart(5, "0"), f.at(-1)!]) };
+    }
+    if (id === "fuga" || id === "huecos") {
+        const base = ejemplo("credito", n, semilla), otro = generador(semilla + 101);
+        const columnas = id === "fuga" ? ["ingresos", "deuda", "anos_trabajo", "edad", "llamadas_cobro", "devuelve"] : base.columnas;
+        const filas = base.filas.map(f => {
+            if (id === "fuga") {
+                const devuelve = f[5] === "1";
+                return [f[0], f[1], f[2], f[3], String(devuelve ? Math.floor(azar() * 3) : 1 + Math.floor(azar() * 6)), f[5]];
+            }
+            const ingresos = Number(f[0]), falta = azar() < (ingresos < 1300 ? 0.55 : 0.07);
+            const alto = otro() < 0.03 ? 4 + 4 * otro() : 1;
+            return [falta ? "" : String(Math.round(ingresos * alto)), ...f.slice(1)];
+        });
+        return { columnas, filas };
+    }
     if (id === "credito") {
         const columnas = ["ingresos", "deuda", "anos_trabajo", "edad", "dia_nacimiento", "devuelve"];
         const filas = Array.from({ length: n }, () => {

@@ -1,4 +1,4 @@
-import { ApiCampo, ApiColeccion, ApiPeticion, ResultadoImport, campo, cuerpoVacio, authVacia, peticionVacia, partirUrl, unirUrl, } from "./api-ir";
+import { ApiCampo, ApiColeccion, ApiPeticion, ResultadoImport, campo, cuerpoVacio, authVacia, peticionVacia, partirUrl, unirUrl, msg, MsgConv, } from "./api-ir";
 export interface Token {
     texto: string;
     entrecomillado: boolean;
@@ -134,11 +134,11 @@ export interface OpcionesCurl {
 export function leerCurl(texto: string, op: OpcionesCurl = {}): ResultadoImport {
     const bruto = texto.trim();
     if (!bruto)
-        return { ok: false, error: "No hay nada que convertir." };
+        return { ok: false, error: msg("vacio-convertir") };
     const trozos = partirComandos(bruto);
     if (!trozos.length)
-        return { ok: false, error: "No se encontr\u00F3 ning\u00FAn comando curl." };
-    const avisos: string[] = [];
+        return { ok: false, error: msg("curl-ninguno") };
+    const avisos: MsgConv[] = [];
     const peticiones: ApiPeticion[] = [];
     for (const t of trozos) {
         const r = unComando(t, avisos, peticiones.length + 1);
@@ -146,7 +146,7 @@ export function leerCurl(texto: string, op: OpcionesCurl = {}): ResultadoImport 
             peticiones.push(r);
     }
     if (!peticiones.length) {
-        return { ok: false, error: "Se encontr\u00F3 un comando curl, pero sin URL: no hay petici\u00F3n que construir." };
+        return { ok: false, error: msg("curl-sin-url") };
     }
     return {
         ok: true,
@@ -188,7 +188,7 @@ function partirComandos(texto: string): string[] {
         return [texto];
     return cortes.map((ini, k) => texto.slice(ini, cortes[k + 1] ?? texto.length).trim()).filter(Boolean);
 }
-function unComando(texto: string, avisos: string[], n: number): ApiPeticion | null {
+function unComando(texto: string, avisos: MsgConv[], n: number): ApiPeticion | null {
     avisarDeLoQueNoSePuedeSaber(texto, avisos, n);
     const tk = tokenizar(texto);
     if (!tk.length)
@@ -233,7 +233,7 @@ function unComando(texto: string, avisos: string[], n: number): ApiPeticion | nu
                 }
                 const j = h.indexOf(":");
                 if (j < 0) {
-                    avisos.push(`Petición ${n}: cabecera sin «:», ignorada: «${h}».`);
+                    avisos.push(msg("curl-cabecera-sin-dos-puntos", { n, texto: h }));
                     break;
                 }
                 p.headers.push(campo(h.slice(0, j).trim(), h.slice(j + 1).trim()));
@@ -256,7 +256,7 @@ function unComando(texto: string, avisos: string[], n: number): ApiPeticion | nu
                 const f = val();
                 const j = f.indexOf("=");
                 if (j < 0) {
-                    avisos.push(`Petición ${n}: campo de formulario sin «=», ignorado: «${f}».`);
+                    avisos.push(msg("curl-campo-sin-igual", { n, texto: f }));
                     break;
                 }
                 form.push(campo(f.slice(0, j), f.slice(j + 1)));
@@ -298,13 +298,13 @@ function unComando(texto: string, avisos: string[], n: number): ApiPeticion | nu
                 break;
             default:
                 if (flag.startsWith("-")) {
-                    avisos.push(`Petición ${n}: opción «${flag}» no reconocida, ignorada.`);
+                    avisos.push(msg("curl-opcion-desconocida", { n, flag }));
                 }
                 else if (!url) {
                     url = a;
                 }
                 else {
-                    avisos.push(`Petición ${n}: «${a}» sobra (ya había URL), ignorado.`);
+                    avisos.push(msg("curl-sobra", { n, texto: a }));
                 }
         }
     }
@@ -324,7 +324,7 @@ function unComando(texto: string, avisos: string[], n: number): ApiPeticion | nu
     }
     else if (subirFichero) {
         p.cuerpo = { tipo: "binario", texto: subirFichero };
-        avisos.push(`Petición ${n}: sube el fichero «${subirFichero}»; el contenido no está en el comando.`);
+        avisos.push(msg("curl-sube-fichero", { n, fichero: subirFichero }));
     }
     else if (datos.length) {
         const junto = datos.map(d => d.valor).join("&");
@@ -358,16 +358,16 @@ function unComando(texto: string, avisos: string[], n: number): ApiPeticion | nu
     p.nombre = nombreDesdeUrl(base, p.metodo, n);
     return p;
 }
-function avisarDeLoQueNoSePuedeSaber(texto: string, avisos: string[], n: number): void {
+function avisarDeLoQueNoSePuedeSaber(texto: string, avisos: MsgConv[], n: number): void {
     const fuera = sinComillasSimples(texto);
     if (/\$\(|`[^`]*`/.test(fuera)) {
-        avisos.push(`Petición ${n}: lleva sustitución de comandos ($(…) o \`…\`). Se copia tal cual: su valor real solo existe al ejecutarla.`);
+        avisos.push(msg("curl-sustitucion", { n }));
     }
     if (/\$\{?[A-Za-z_][A-Za-z0-9_]*/.test(fuera)) {
-        avisos.push(`Petición ${n}: usa variables de entorno ($VAR). Se copian tal cual, sin resolver.`);
+        avisos.push(msg("curl-variables-entorno", { n }));
     }
     if (/(?:^|[^|])\|(?!\|)|(?:^|\s)>>?\s/.test(fuera)) {
-        avisos.push(`Petición ${n}: hay una tubería o una redirección. No forman parte de la petición y se ignoran.`);
+        avisos.push(msg("curl-tuberia", { n }));
     }
 }
 function sinComillasSimples(s: string): string {

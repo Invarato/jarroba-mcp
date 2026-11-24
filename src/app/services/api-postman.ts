@@ -1,4 +1,4 @@
-import { ApiAuth, ApiCampo, ApiColeccion, ApiCuerpo, ApiPeticion, ResultadoImport, TipoCuerpo, campo, cuerpoVacio, authVacia, peticionVacia, partirUrl, unirUrl, } from "./api-ir";
+import { ApiAuth, ApiCampo, ApiColeccion, ApiCuerpo, ApiPeticion, ResultadoImport, TipoCuerpo, campo, cuerpoVacio, authVacia, peticionVacia, partirUrl, unirUrl, msg, MsgConv, } from "./api-ir";
 export function esPostman(x: unknown): boolean {
     if (!esObjeto(x))
         return false;
@@ -13,23 +13,21 @@ export function leerPostman(texto: string): ResultadoImport {
         raiz = JSON.parse(texto);
     }
     catch (e) {
-        return { ok: false, error: `No es JSON válido: ${(e as Error).message}` };
+        return { ok: false, error: msg("json-invalido", { detalle: (e as Error).message }) };
     }
     if (!esObjeto(raiz))
-        return { ok: false, error: "El JSON no es un objeto." };
+        return { ok: false, error: msg("postman-no-objeto") };
     if (!Array.isArray(raiz["item"])) {
-        return { ok: false, error: "No parece una colecci\u00F3n de Postman: le falta la lista \u00ABitem\u00BB." };
+        return { ok: false, error: msg("postman-sin-item") };
     }
-    const avisos: string[] = [];
+    const avisos: MsgConv[] = [];
     const peticiones: ApiPeticion[] = [];
     const info = esObjeto(raiz["info"]) ? raiz["info"] : {};
     recorrer(raiz["item"], [], peticiones, avisos);
     const variables = leerVariables(raiz["variable"], avisos);
     const nScripts = contarScripts(raiz);
-    if (nScripts) {
-        avisos.push(`La colección trae ${nScripts} script(s) de Postman (pre-request / test). No se traducen: ` +
-            `son código contra el runtime de Postman (pm.*), que no existe fuera de él. Quedan fuera de la conversión.`);
-    }
+    if (nScripts)
+        avisos.push(msg("postman-scripts", { n: nScripts }));
     return {
         ok: true,
         avisos,
@@ -40,7 +38,7 @@ export function leerPostman(texto: string): ResultadoImport {
         },
     };
 }
-function recorrer(items: unknown[], ruta: string[], out: ApiPeticion[], avisos: string[]): void {
+function recorrer(items: unknown[], ruta: string[], out: ApiPeticion[], avisos: MsgConv[]): void {
     for (const it of items) {
         if (!esObjeto(it))
             continue;
@@ -54,7 +52,7 @@ function recorrer(items: unknown[], ruta: string[], out: ApiPeticion[], avisos: 
         }
     }
 }
-function unaPeticion(it: Record<string, unknown>, ruta: string[], avisos: string[]): ApiPeticion {
+function unaPeticion(it: Record<string, unknown>, ruta: string[], avisos: MsgConv[]): ApiPeticion {
     const nombre = typeof it["name"] === "string" ? it["name"] : "(sin nombre)";
     const req = it["request"];
     if (typeof req === "string") {
@@ -121,7 +119,7 @@ function leerCampos(x: unknown): ApiCampo[] {
     }
     return out;
 }
-function leerCuerpo(b: unknown, avisos: string[], peticion: string): ApiCuerpo {
+function leerCuerpo(b: unknown, avisos: MsgConv[], peticion: string): ApiCuerpo {
     if (!esObjeto(b))
         return cuerpoVacio();
     const modo = typeof b["mode"] === "string" ? b["mode"] : "";
@@ -139,7 +137,7 @@ function leerCuerpo(b: unknown, avisos: string[], peticion: string): ApiCuerpo {
             const ficheros = Array.isArray(b["formdata"])
                 ? b["formdata"].filter(f => esObjeto(f) && f["type"] === "file").length : 0;
             if (ficheros) {
-                avisos.push(`«${peticion}»: ${ficheros} campo(s) de fichero. Postman guarda la ruta local, no el contenido.`);
+                avisos.push(msg("postman-ficheros", { peticion, n: ficheros }));
             }
             return { tipo: "form-data", campos };
         }
@@ -151,7 +149,7 @@ function leerCuerpo(b: unknown, avisos: string[], peticion: string): ApiCuerpo {
         }
         case "file": {
             const src = esObjeto(b["file"]) ? valorTexto(b["file"]["src"]) : "";
-            avisos.push(`«${peticion}»: el cuerpo es un fichero (${src || "sin ruta"}); su contenido no está en el export.`);
+            avisos.push(msg("postman-cuerpo-fichero", { peticion, src }));
             return { tipo: "binario", texto: src };
         }
         default:
@@ -213,12 +211,12 @@ function leerAuth(a: unknown): ApiAuth {
         default: return authVacia();
     }
 }
-function leerVariables(v: unknown, avisos: string[]): ApiCampo[] {
+function leerVariables(v: unknown, avisos: MsgConv[]): ApiCampo[] {
     const out = leerCampos(v);
     const secretas = Array.isArray(v)
         ? v.filter(x => esObjeto(x) && x["type"] === "secret").length : 0;
     if (secretas) {
-        avisos.push(`${secretas} variable(s) marcadas como secretas en Postman viajan con su valor dentro del fichero.`);
+        avisos.push(msg("postman-secretas", { n: secretas }));
     }
     return out;
 }

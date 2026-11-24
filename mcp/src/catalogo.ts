@@ -1,4 +1,4 @@
-export type Dominio = "core" | "calc" | "api" | "diagram" | "kg" | "db" | "ai" | "logs" | "queue" | "project" | "tests" | "chem" | "chip" | "access" | "archsim" | "security" | "experiments" | "business" | "forecast";
+export type Dominio = "core" | "calc" | "api" | "diagram" | "kg" | "db" | "ai" | "logs" | "queue" | "project" | "tests" | "chem" | "chip" | "access" | "archsim" | "security" | "experiments" | "business" | "forecast" | "dates" | "cs" | "ml";
 export const DOMINIOS: Record<Dominio, {
     titulo: string;
     tools: readonly string[];
@@ -35,7 +35,8 @@ export const DOMINIOS: Record<Dominio, {
             "format_convert",
             "unicode_info",
             "json_schema_validate",
-            "csv_diff"
+            "csv_diff",
+            "checksum"
         ] },
     calc: { titulo: "c\u00E1lculo con unidades, hojas y ecuaciones", tools: [
             "calc_eval",
@@ -79,7 +80,8 @@ export const DOMINIOS: Record<Dominio, {
             "mcp_catalog_audit",
             "practice_check",
             "llm_memory",
-            "semantic_cache_threshold"
+            "semantic_cache_threshold",
+            "arithmetic_check"
         ] },
     logs: { titulo: "logs", tools: [
             "log_analyze",
@@ -174,7 +176,8 @@ export const DOMINIOS: Record<Dominio, {
             "agent_config_audit",
             "oauth_audit",
             "k8s_network_reach",
-            "k8s_manifest_check"
+            "k8s_manifest_check",
+            "document_hygiene"
         ] },
     experiments: { titulo: "experimentos A/B: an\u00E1lisis, tama\u00F1o de muestra, miradas secuenciales", tools: [
             "abtest_analyze",
@@ -185,9 +188,20 @@ export const DOMINIOS: Record<Dominio, {
             "pension_base",
             "work_calendar",
             "shift_validate",
-            "cash_forecast"
+            "cash_forecast",
+            "late_payment_interest",
+            "receivables_aging"
         ] },
     forecast: { titulo: "previsi\u00F3n de series temporales con backtest", tools: ["forecast"] },
+    dates: { titulo: "d\u00EDas laborables con festivos oficiales y plazos legales espa\u00F1oles", tools: ["business_days", "legal_deadline"] },
+    cs: { titulo: "inform\u00E1tica de carrera: planificaci\u00F3n, memoria, interbloqueo, aut\u00F3matas y CYK", tools: [
+            "os_schedule",
+            "os_page_replace",
+            "os_banker",
+            "automata_from_regex",
+            "cyk_parse"
+        ] },
+    ml: { titulo: "triaje de un CSV para aprendizaje autom\u00E1tico y cesta de la compra", tools: ["ml_triage", "market_basket"] },
 };
 export const NO_SOLO_LECTURA = new Set(["diagram_render", "diagram_new", "diagram_add"]);
 export const DESTRUCTIVAS = new Set(["diagram_render"]);
@@ -209,6 +223,13 @@ export const MUNDO_ABIERTO = new Set([
     "spreadsheet_audit",
     "diagram_render",
     "cash_forecast",
+    "ml_triage",
+    "checksum",
+    "arithmetic_check",
+    "document_hygiene",
+    "late_payment_interest",
+    "receivables_aging",
+    "market_basket",
 ]);
 export function mapaDeDominios(): Map<string, Dominio> {
     const m = new Map<string, Dominio>();

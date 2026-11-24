@@ -807,6 +807,11 @@ const ac1 = await call("api_collection_convert", { input: trampaCurl, to: "bruno
 check("api_collection_convert detecta curl", ac1.o?.detectedFormat === "curl", ac1.o?.detectedFormat);
 check("y NO parte por el \u00ABcurl\u00BB de dentro del cuerpo", ac1.o?.requests === 2, ac1.o?.requests);
 check("saca el \u00E1rbol de ficheros de Bruno", (ac1.o?.files ?? []).some((f: any) => f.path === "bruno.json"), (ac1.o?.files ?? []).map((f: any) => f.path));
+const acAviso = await call("api_collection_convert", { input: `curl https://x.com/a -H "sinDosPuntos" | jq .`, to: "curl" });
+check("api_collection_convert avisa en ingl\u00E9s", (acAviso.o?.warnings ?? []).some((w: string) => w.includes("header without")) &&
+    (acAviso.o?.warnings ?? []).every((w: string) => !/[áéíóúñ¿¡]/.test(w)), acAviso.o?.warnings);
+const acError = await call("api_collection_convert", { input: "curl -X POST", to: "curl" });
+check("api_collection_convert da el error en ingl\u00E9s", acError.isError === true && (acError.text ?? "").includes("without a URL") && !/[áéíóúñ¿¡]/.test(JSON.stringify(acError)), acError);
 const postman = JSON.stringify({
     info: { name: "Con secretos", schema: "https://schema.getpostman.com/json/collection/v2.1.0/collection.json" },
     variable: [{ key: "token", value: "sk_live_51H8xQ2eZvKYlo2C" }],
@@ -837,13 +842,14 @@ const bc1 = await call("api_breaking_changes", {
     after: espec([{ name: "nuevo", in: "query", required: true, schema: { type: "string" } }]),
 });
 check("api_breaking_changes: un par\u00E1metro OBLIGATORIO nuevo ROMPE", bc1.o?.breaking === 1 && bc1.o?.compatible === false && bc1.o.changes.some((c: any) => c.rule === "required-parameter-added" && c.severity === "breaking"), bc1.o);
+check("api_breaking_changes: detalle y porqu\u00E9 salen en ingl\u00E9s", (bc1.o?.changes ?? []).length > 0 && (bc1.o.changes as any[]).every((c: any) => !/[áéíóúñ¿¡]/.test(`${c.detail} ${c.why ?? ""}`) && c.detail.length > 10), bc1.o?.changes);
 const bc2 = await call("api_breaking_changes", {
     before: espec([]),
     after: espec([{ name: "nuevo", in: "query", schema: { type: "string" } }]),
 });
 check("y el MISMO par\u00E1metro, OPCIONAL, es compatible", bc2.o?.compatible === true && bc2.o?.breaking === 0, bc2.o);
 const bc3 = await call("api_breaking_changes", { before: espec([]), after: espec([]), format: "markdown" });
-check("api_breaking_changes sabe salir en Markdown", /^# Cambios de API/m.test(bc3.text ?? ""), (bc3.text ?? "").slice(0, 60));
+check("api_breaking_changes sabe salir en Markdown, en ingl\u00E9s", /^# API changes/m.test(bc3.text ?? "") && /\*\*Compatible\.\*\*/.test(bc3.text ?? "") && !/[áéíóúñ¿¡]/.test(bc3.text ?? ""), (bc3.text ?? "").slice(0, 60));
 const pf1 = await call("api_cors_preflight", { method: "POST", headers: { "Content-Type": "application/json" } });
 check("api_cors_preflight: un POST con JSON S\u00CD lleva preflight", pf1.o?.preflight === true, pf1.o);
 check("api_*: claves en ingl\u00E9s \u2014 nada de formatoDetectado, encontrados, hallazgos, rompe, porque\u2026", !/"(formatoDetectado|peticiones|avisos|ficheros|ruta|contenido|encontrados|hallazgos|peticion|donde|muestra|codigo|lenguaje|disponibles|cambios|rompe|regla|gravedad|operacion|deA|aB|porque|queHacer)"/.test(JSON.stringify([ac1.o, ac2.o, as1.o, cg1.o, bc1.o, pf1.o]))
@@ -1188,6 +1194,47 @@ resource "aws_ecs_task_definition" "td" {
     check("archsim_from_*: nada en espa\u00F1ol cruza la frontera (salvo nombres de jobs y recursos)", !/estimad|conexi|recursos|aviso|despliegue/i.test(JSON.stringify([p.o?.notes, p.o?.simulation, t.o?.notes, t.o?.simulation?.steady])));
 }
 {
+    const STALLINGS = "A:0:3, B:2:6, C:4:4, D:6:5, E:8:2";
+    const fines = (r: any) => (r.o?.processes ?? []).map((p: any) => p.finish).join(" ");
+    const rr1 = await call("os_schedule", { processes: STALLINGS, algorithm: "RR" });
+    check("os_schedule: RR q=1 de Stallings \u2192 finales 4 18 17 20 15 (tabla 9.5), con su enlace", fines(rr1) === "4 18 17 20 15" && /operating-systems\?tab=scheduling&alg=rr&q=1&p=/.test(rr1.o?.stepByStep), rr1.o ?? rr1.text);
+    const rr4 = await call("os_schedule", { processes: STALLINGS, algorithm: "RR", quantum: 4 });
+    check("os_schedule: RR q=4 \u2192 3 17 11 20 19 y retorno medio 10", fines(rr4) === "3 17 11 20 19" && rr4.o?.averages?.turnaround === 10, rr4.o);
+    const srt = await call("os_schedule", { processes: STALLINGS, algorithm: "SRTF" });
+    const spn = await call("os_schedule", { processes: STALLINGS, algorithm: "SJF" });
+    const fb = await call("os_schedule", { processes: STALLINGS, algorithm: "FB", fbQuantum: "2^i" });
+    check("os_schedule: SRT 3 15 8 20 10, SPN 3 9 15 20 11 y FB q=2^i 4 17 18 20 14 (tabla 9.5)", fines(srt) === "3 15 8 20 10" && fines(spn) === "3 9 15 20 11" && fines(fb) === "4 17 18 20 14", [fines(srt), fines(spn), fines(fb)]);
+    const pri = await call("os_schedule", { processes: STALLINGS, algorithm: "PRIORITY" });
+    check("os_schedule: PRIORITY sin prioridades lo dice, no inventa", pri.isError && /fourth number/.test(pri.text), pri.text);
+    const REFS = "7 0 1 2 0 3 0 4 2 3 0 3 2 1 2 0 1 7 0 1";
+    const pg = await call("os_page_replace", { references: REFS, frames: 3 });
+    const f: any = Object.fromEntries((pg.o?.results ?? []).map((x: any) => [x.algorithm, x.faults]));
+    check("os_page_replace: Silberschatz, 3 marcos \u2192 FIFO 15, LRU 12, OPT 9 (diap. 8.33\u20138.37)", f.FIFO === 15 && f.LRU === 12 && f.OPT === 9, f);
+    const lru = await call("os_page_replace", { references: REFS, frames: 3, algorithm: "LRU" });
+    check("os_page_replace: con un algoritmo, la tabla paso a paso; y las dos formas de contar (12 y 9 tras llenar)", lru.o?.results?.[0]?.steps?.length === 20 && lru.o.results[0].faultsAfterFramesFilled === 9, lru.o?.results?.[0]);
+    const ALLOC = [[0, 1, 0], [2, 0, 0], [3, 0, 2], [2, 1, 1], [0, 0, 2]];
+    const MAX = [[7, 5, 3], [3, 2, 2], [9, 0, 2], [2, 2, 2], [4, 3, 3]];
+    const bk = await call("os_banker", { allocation: ALLOC, max: MAX, available: [3, 3, 2] });
+    check("os_banker: Silberschatz 7.30 es seguro, Necesidad de P0 = 7 4 3 y la secuencia empieza por P1", bk.o?.safe === true && bk.o.need[0].join(" ") === "7 4 3" && bk.o.sequence[0] === "P1", bk.o);
+    const rq = await call("os_banker", { allocation: ALLOC, max: MAX, available: [3, 3, 2], request: { process: "P1", vector: [1, 0, 2] } });
+    check("os_banker: la petici\u00F3n (1,0,2) de P1 se concede (7.30)", /^GRANTED/.test(rq.o?.request?.verdict), rq.o?.request);
+    const DET = [[0, 1, 0], [2, 0, 0], [3, 0, 3], [2, 1, 1], [0, 0, 2]];
+    const d1 = await call("os_banker", { allocation: DET, available: [0, 0, 0], requestMatrix: [[0, 0, 0], [2, 0, 2], [0, 0, 0], [1, 0, 0], [0, 0, 2]] });
+    const d2 = await call("os_banker", { allocation: DET, available: [0, 0, 0], requestMatrix: [[0, 0, 0], [2, 0, 2], [0, 0, 1], [1, 0, 0], [0, 0, 2]] });
+    check("os_banker: detecci\u00F3n de 7.40 \u2014 sin interbloqueo; si P2 pide una de C, P1\u2013P4 quedan en interbloqueo", d1.o?.deadlock === false && d2.o?.deadlock === true && d2.o.stuck.join(" ") === "P1 P2 P3 P4", [d1.o, d2.o]);
+    const au = await call("automata_from_regex", { regex: "(a|b)*abb", words: ["abb", "aabb", "ab", ""] });
+    check("automata_from_regex: (a|b)*abb \u2192 AFN de Thompson con 11 estados, AFD de 5 y m\u00EDnimo de 4 (drag\u00F3n, 3.34\u20133.36)", au.o?.nfa?.states === 11 && au.o.dfa.states === 5 && au.o.minimalDfa.states === 4, au.o ?? au.text);
+    check("automata_from_regex: abb y aabb s\u00ED; ab y \u03B5 no", JSON.stringify(au.o?.words?.map((w: any) => w.accepted)) === "[true,true,false,false]", au.o?.words);
+    const mal = await call("automata_from_regex", { regex: "(a|b" });
+    check("automata_from_regex: un par\u00E9ntesis sin cerrar se dice", mal.isError && /parenthes/i.test(mal.text), mal.text);
+    const G = "S -> AB | BC\nA -> BA | a\nB -> CC | b\nC -> AB | a";
+    const ck = await call("cyk_parse", { grammar: G, word: "baaba" });
+    const x15 = ck.o?.table?.[0]?.["X1,5"];
+    check("cyk_parse: baaba est\u00E1 en el lenguaje y X1,5 = {S,A,C} (UC Davis)", ck.o?.accepted === true && x15 === "{S,A,C}", ck.o ?? ck.text);
+    const nf = await call("cyk_parse", { grammar: "S -> aB\nB -> b", word: "ab" });
+    check("cyk_parse: una regla fuera de FNC se se\u00F1ala con su l\u00EDnea", nf.isError && /Line 1/.test(nf.text) && /normal form/.test(nf.text), nf.text);
+}
+{
     const CODIGO = `class Shop {
   static getInstance() { return Shop.i; }
   price(item) {
@@ -1348,7 +1395,7 @@ const segTodas = segSalidas.flatMap((o) => [...(o?.findings ?? []), ...(o?.runsW
 check(`security: los ${segTodas.length} hallazgos llevan rule/severity EN INGLÉS (ninguno en español)`, segTodas.filter((x) => x.rule).length > 10
     && segTodas.every((x) => (x.rule === undefined || segEnIngles.has(x.rule)) && (x.severity === undefined || segSeveridades.has(x.severity))), segTodas.filter((x) => !(x.rule === undefined || segEnIngles.has(x.rule)) || !(x.severity === undefined || segSeveridades.has(x.severity))));
 check("security: ninguna salida contiene las claves del motor en espa\u00F1ol (hallazgos, gravedad, fragmento\u2026)", !/"(hallazgos|gravedad|fragmento|regla|porGravedad|datos)"/.test(JSON.stringify(segSalidas)), JSON.stringify(segSalidas).match(/"(hallazgos|gravedad|fragmento|regla|porGravedad|datos)"/));
-check("security: el dominio publica exactamente sus diez tools", mapaDeDominios().size > 0 && [...mapaDeDominios()].filter(([, d]) => d === "security").length === 10);
+check("security: el dominio publica exactamente sus once tools (document_hygiene, la und\u00E9cima, el 2026-11-23)", mapaDeDominios().size > 0 && [...mapaDeDominios()].filter(([, d]) => d === "security").length === 11);
 const K8S = `apiVersion: v1
 kind: Pod
 metadata: { name: frontend, namespace: shop, labels: { app: fe } }
@@ -1728,6 +1775,193 @@ action view appliesTo { principal: [User], resource: [Doc, Folder] };`;
     check("semantic_cache_threshold: el enlace a archsim lleva la curva en el formato v1 que lee (base64url)", json?.v === 1 && json.n === 10 && json.elegido === 0.89 && json.umbral.length === 50 && json.aciertos.length === 50, json);
     const pocos = (await call("semantic_cache_threshold", { pairs: pares, maxWrong: 0, chosen: 0.8 })).o;
     check("semantic_cache_threshold: \u00ABchosen\u00BB se eval\u00FAa y viaja; con pocos pares, avisa", pocos?.chosen?.threshold === 0.8 && pocos.archsim.threshold === 0.8 && pocos.notes.some((n: string) => /Only 10 pairs/.test(n)), pocos);
+}
+{
+    const c1 = (await call("business_days", { from: "2026-03-30", to: "2026-04-10", country: "ES", region: "ES-MD" })).o;
+    check("business_days: Madrid, Semana Santa de 2026 \u2192 8 laborables, con Jueves y Viernes Santo por su nombre", c1?.workingDays === 8 && c1.holidaysOnWorkingDays.map((h: any) => h.name).join() === "Jueves Santo,Viernes Santo", c1);
+    const s4 = (await call("business_days", { from: "2027-01-25", add: 10, country: "MX" })).o;
+    check("business_days: M\u00E9xico, 10 laborables desde el 25-ene-2027 saltan el D\u00EDa de la Constituci\u00F3n (1-feb) \u2192 9-feb", s4?.result?.date === "2027-02-09" && s4.skipped.some((d: any) => d.date === "2027-02-01" && d.reason === "holiday"), s4);
+    const malo = await call("business_days", { from: "2026-01-01", to: "2026-02-01", country: "ES", region: "ES-XX" });
+    check("business_days: regi\u00F3n desconocida \u2192 error que lista las v\u00E1lidas", malo.isError === true && /ES-MD/.test(malo.text ?? JSON.stringify(malo)), malo);
+    const a1 = (await call("legal_deadline", { notified: "2026-12-02", amount: 10, unit: "days", regime: "administrative", region: "ES-MD" })).o;
+    check("legal_deadline: administrativo en Madrid salta el lunes 7-dic (Constituci\u00F3n trasladada) \u2192 18-dic, y avisa de los locales", a1?.lastDay?.date === "2026-12-18" && a1.skipped.some((d: any) => d.date === "2026-12-07") && a1.warnings.some((w: string) => /Local/.test(w)), a1);
+    const j2 = (await call("legal_deadline", { notified: "2026-12-15", amount: 10, unit: "days", regime: "judicial", region: "ES-CT" })).o;
+    check("legal_deadline: judicial, 24-dic \u2192 6-ene inh\u00E1bil (LOPJ 183, LO 1/2025) \u2192 12-ene-2027, margen de las 15:00 el 13", j2?.lastDay?.date === "2027-01-12" && j2.filingUntil15h?.date === "2027-01-13" && j2.rules.some((r: string) => /LO 1\/2025/.test(r)), j2);
+    const urg = (await call("legal_deadline", { notified: "2026-12-15", amount: 10, unit: "days", regime: "judicial", region: "ES-CT", urgent: true })).o;
+    check("legal_deadline: urgente, la Navidad s\u00ED cuenta \u2192 acaba antes", urg?.lastDay?.date < "2027-01-12", urg?.lastDay);
+    const a4 = (await call("legal_deadline", { notified: "2026-01-30", amount: 1, unit: "months", regime: "administrative", region: "ES-MD" })).o;
+    check("legal_deadline: un mes desde el 30-ene vence el 28-feb (s\u00E1bado) y se prorroga al lunes 2-mar", a4?.lastDay?.date === "2026-03-02" && a4.wouldEndOn?.date === "2026-02-28", a4);
+}
+{
+    let sem = 7;
+    const azar = () => ((sem = (sem * 1103515245 + 12345) % 2147483648) / 2147483648);
+    const filasC = ["id,edad,plan,constante,copia,compra"];
+    const filasR = ["x,ruido,y"], filasN = ["a,b,c,objetivo"];
+    for (let i = 0; i < 240; i++) {
+        const edad = 18 + Math.floor(azar() * 50), plan = ["basic", "pro", "team"][Math.floor(azar() * 3)];
+        const compra = edad + (plan === "pro" ? 15 : 0) + azar() * 10 > 50 ? "yes" : "no";
+        filasC.push(`${1000 + i},${edad},${plan},1,${compra === "yes" ? "Y" : "N"},${compra}`);
+        const x = azar() * 10;
+        filasR.push(`${x.toFixed(3)},${azar().toFixed(3)},${(3 * x + azar()).toFixed(3)}`);
+        filasN.push(`${azar().toFixed(3)},${azar().toFixed(3)},${azar().toFixed(3)},${azar() < 0.5 ? "a" : "b"}`);
+    }
+    const csvC = filasC.join("\n");
+    const t1 = (await call("ml_triage", { csv: csvC.replace(/,?copia|,[YN](?=,(yes|no)$)/gm, "") })).o;
+    const codigos = (t: any) => (t?.warnings ?? []).map((w: any) => `${w.code}:${w.column ?? ""}`);
+    check("ml_triage: clasificaci\u00F3n binaria, objetivo = \u00FAltima columna; id y constante se\u00F1alados y no usados", t1?.task === "binary classification" && t1.targetChosenBy === "last column" && codigos(t1).includes("identifier:id") && codigos(t1).includes("constant:constante")
+        && t1.columns.find((c: any) => c.name === "id")?.used === false && t1.columns.find((c: any) => c.name === "edad")?.used === true, t1);
+    check("ml_triage: con se\u00F1al real, alg\u00FAn modelo bate a la l\u00EDnea base, que va siempre primera", t1?.models?.[0]?.model === "baseline" && t1.models.length === 5 && t1.recommended.beatsBaseline === true && /beats the baseline/.test(t1.verdict), t1?.models);
+    const t2 = (await call("ml_triage", { csv: csvC, target: "compra" })).o;
+    check("ml_triage: la columna que copia el objetivo sale como FUGA, y el veredicto lo dice primero", t2?.targetChosenBy === "given" && codigos(t2).includes("leak:copia") && /^Suspected leak in "copia"/.test(t2.verdict), t2?.warnings);
+    const t3 = (await call("ml_triage", { csv: filasN.join("\n") })).o;
+    check("ml_triage: ruido puro \u2192 ning\u00FAn modelo bate a la l\u00EDnea base, y se recomienda la base", t3?.recommended?.beatsBaseline === false && /baseline/.test(t3.recommended.model) && /No model beats/.test(t3.verdict), t3?.models);
+    const t4 = (await call("ml_triage", { csv: filasR.join("\n"), folds: 4 })).o;
+    check("ml_triage: regresi\u00F3n con R\u00B2 (y MAE de secundaria), 4 pliegues, lineal muy por encima de la base", t4?.task === "regression" && t4.models[0].metric === "r2" && t4.models[0].secondary?.metric === "mae" && t4.models[0].folds === 4
+        && t4.models.find((m: any) => m.model === "linear")?.mean > 0.95, t4?.models);
+    const empates = [t1, t2, t4].filter((t: any) => t?.recommended?.tiesWith);
+    const etiqueta = (t: any, l: string) => t.models.find((m: any) => m.label === l);
+    check("ml_triage: un empate nombra al de m\u00E1s media (tiesWith) y el veredicto dice que se elige el m\u00E1s sencillo", empates.length >= 1 && empates.every((t: any) => etiqueta(t, t.recommended.tiesWith).mean >= etiqueta(t, t.recommended.model).mean && /they tie, so the simpler model/.test(t.verdict))
+        && [t1, t2, t4].filter((t: any) => !t?.recommended?.tiesWith).every((t: any) => !/they tie/.test(t.verdict)), empates.map((t: any) => t.recommended));
+    const otra = (await call("ml_triage", { csv: filasR.join("\n"), folds: 4 })).o;
+    check("ml_triage: determinista con la misma semilla", JSON.stringify(otra?.models) === JSON.stringify(t4?.models));
+    const e1 = await call("ml_triage", { csv: csvC, target: "Compra" });
+    check("ml_triage: objetivo que no existe \u2192 error que lo nombra", e1.isError === true && /"Compra"/.test(e1.text ?? ""), e1);
+    const e2 = await call("ml_triage", { csv: "a,b\n1,2" });
+    check("ml_triage: dos filas \u2192 error de pocas filas", e2.isError === true && /Too few rows/.test(e2.text ?? ""), e2);
+    const { mkdtempSync, writeFileSync } = await import("node:fs");
+    const { tmpdir } = await import("node:os");
+    const fichero = join(mkdtempSync(join(tmpdir(), "jt-triaje-")), "clientes.csv");
+    writeFileSync(fichero, csvC);
+    const t5 = (await call("ml_triage", { path: fichero, target: "compra" })).o;
+    check("ml_triage: lee el CSV por ruta y da lo mismo que pegado", JSON.stringify(t5?.models) === JSON.stringify(t2?.models), t5 ?? null);
+    const e3 = await call("ml_triage", { path: fichero, csv: csvC });
+    check("ml_triage: path y csv a la vez \u2192 error", e3.isError === true, e3);
+}
+{
+    const { mkdtempSync, writeFileSync } = await import("node:fs");
+    const { tmpdir } = await import("node:os");
+    const dir = mkdtempSync(join(tmpdir(), "jt-lote-"));
+    const sinEspanol = /autor|último|empresa|vencid|factura|cobro|tramo|semestre|hoja|comentario/i;
+    const k1 = (await call("checksum", { text: "123456789" })).o;
+    const hexDe = (id: string) => k1?.results?.find((r: any) => r.algorithm === id)?.hex;
+    check("checksum: CRC-32 CBF43926, CRC-16/MODBUS 4B37, CRC-32C E3069283 y CRC-64/XZ (valores check de reveng)", hexDe("crc32") === "CBF43926" && hexDe("crc16-modbus") === "4B37" && hexDe("crc32c") === "E3069283" && hexDe("crc64-xz") === "995DC9BBDF1939FA", k1?.results);
+    check("checksum: toda fila lleva su uso en ingl\u00E9s (si @calculator a\u00F1ade un CRC, falta su entrada en sumas.mts)", k1?.results?.length >= 16 && k1.results.every((r: any) => typeof r.usedIn === "string" && !/habitual|cintas/.test(r.usedIn)), k1?.results?.filter((r: any) => !r.usedIn));
+    const k2 = (await call("checksum", { hex: "31 32 33 34 35 36 37 38 39", expected: "0x374B" })).o;
+    check("checksum: el valor de Modbus con los bytes al rev\u00E9s (374B) se identifica como crc16-modbus, \u00ABbytes swapped\u00BB", k2?.matches?.found?.some((m: any) => m.algorithm === "crc16-modbus" && /swapped/.test(m.byteOrder)), k2?.matches);
+    const k3 = (await call("checksum", { text: "123456789", expected: "CBF43926", algorithm: "CRC-32" })).o;
+    check("checksum: por alias y con el valor tal cual \u2192 crc32 \u00ABas given\u00BB", k3?.results?.length === 1 && k3.matches.found[0]?.byteOrder === "as given", k3);
+    const k4 = (await call("checksum", { text: "123456789", custom: { width: 16, poly: "0x1021", init: "0xFFFF" } })).o;
+    check("checksum: par\u00E1metros propios (= CCITT-FALSE) dan 29B1, y el check coincide", k4?.results?.[0]?.hex === "29B1" && k4.check.value === "29B1", k4);
+    const k5 = await call("checksum", { hex: "123" });
+    check("checksum: hex impar \u2192 error", k5.isError === true, k5);
+    const texto = "Presupuesto:\nTotal: 12 \u00D7 3,5 = 42 \u20AC\nCon IVA: 200 + 21 % = 245\nMargen: 30/200 = 15 %\nRedondeo: 10 / 3 = 3,33";
+    const a1 = (await call("arithmetic_check", { text: texto })).o;
+    const linea = (n: number) => a1?.checks?.find((c: any) => c.line === n);
+    check("arithmetic_check: coma decimal detectada; 12 \u00D7 3,5 = 42 bien; 200 + 21 % = 245 MAL y deber\u00EDa ser 242; 15 % bien; 3,33 redondeado", a1?.decimalSeparator === "comma" && linea(2)?.status === "correct" && linea(3)?.status === "wrong" && linea(3)?.shouldBe === "242"
+        && linea(4)?.status === "correct" && linea(5)?.status === "rounded" && a1.summary.wrong === 1, a1);
+    const a2 = (await call("arithmetic_check", { text: "Revenue 1,250.50 + 249.50 = 1,500.00 and 7 x 8 = 54" })).o;
+    check("arithmetic_check: punto decimal y miles con coma; 7 x 8 = 54 sale mal (56)", a2?.decimalSeparator === "point" && a2.summary.correct === 1 && a2.checks.find((c: any) => c.status === "wrong")?.shouldBe === "56", a2);
+    const a3 = (await call("arithmetic_check", { text: "Sin cuentas aqu\u00ED." })).o;
+    check("arithmetic_check: sin operaciones \u2192 lista vac\u00EDa y la nota dice que eso no es \u00ABest\u00E1 bien\u00BB", a3?.summary?.checked === 0 && /does not mean/.test(a3.notes[0]), a3);
+    const PizZip = (await import("pizzip")).default;
+    const zipA = (ficheros: Record<string, string>, nombre: string) => {
+        const z = new PizZip();
+        for (const [r, c] of Object.entries(ficheros))
+            z.file(r, c);
+        const ruta = join(dir, nombre);
+        writeFileSync(ruta, z.generate({ type: "nodebuffer" }));
+        return ruta;
+    };
+    const docx = zipA({
+        "word/document.xml": "<w:document><w:body><w:p><w:ins w:id=\"1\"><w:r><w:t>precio m\u00EDnimo 900</w:t></w:r></w:ins><w:del w:id=\"2\"><w:r><w:delText>viejo</w:delText></w:r></w:del></w:p></w:body></w:document>",
+        "word/comments.xml": "<w:comments><w:comment w:id=\"0\"/><w:comment w:id=\"1\"/></w:comments>",
+        "docProps/core.xml": "<cp:coreProperties><dc:creator>Ana</dc:creator><cp:lastModifiedBy>Luis</cp:lastModifiedBy></cp:coreProperties>",
+    }, "oferta.docx");
+    const d1 = (await call("document_hygiene", { path: docx })).o;
+    const cod = (r: any) => (r?.findings ?? []).map((f: any) => `${f.code}:${f.severity}`);
+    check("document_hygiene: Word con cambios sin aceptar (cr\u00EDtico, con la muestra), 2 comentarios y metadatos \u2192 NO limpio", d1?.clean === false && cod(d1).includes("tracked-changes:critical") && cod(d1).includes("comments:high")
+        && d1.findings[0].sample === "precio m\u00EDnimo 900" && /1 insertion\(s\) and 1 deletion/.test(d1.findings[0].detail), d1);
+    check("document_hygiene: los metadatos (del `detalle` del motor) con nombres en ingl\u00E9s, como objeto y como l\u00EDnea, y el nombre tal cual", d1?.findings?.find((f: any) => f.code === "metadata")?.sample === "author: Ana \u00B7 last modified by: Luis"
+        && JSON.stringify(d1.findings.find((f: any) => f.code === "metadata").properties) === "{\"author\":\"Ana\",\"lastModifiedBy\":\"Luis\"}", d1?.findings);
+    const xlsx = zipA({
+        "xl/workbook.xml": "<workbook><sheets><sheet name=\"Resumen\" sheetId=\"1\" r:id=\"rId1\"/><sheet name=\"N\u00F3minas\" sheetId=\"2\" state=\"veryHidden\" r:id=\"rId2\"/></sheets></workbook>",
+        "xl/_rels/workbook.xml.rels": "<Relationships><Relationship Id=\"rId1\" Target=\"worksheets/sheet1.xml\"/><Relationship Id=\"rId2\" Target=\"worksheets/sheet2.xml\"/></Relationships>",
+        "xl/worksheets/sheet1.xml": "<worksheet><sheetData><row r=\"1\"><c r=\"A1\"><v>1</v></c></row><row r=\"2\" hidden=\"1\"><c r=\"A2\"><v>2</v></c></row></sheetData></worksheet>",
+        "xl/worksheets/sheet2.xml": "<worksheet><sheetData><row r=\"1\"><c r=\"A1\"><v>31000</v></c></row></sheetData></worksheet>",
+        "xl/pivotCache/pivotCacheRecords1.xml": "<pivotCacheRecords><r/><r></r><r>x</r></pivotCacheRecords>",
+    }, "resumen.xlsx");
+    const x1 = (await call("document_hygiene", { path: xlsx })).o;
+    check("document_hygiene: Excel con una hoja MUY oculta con datos (cr\u00EDtico, nombrada), fila oculta con datos y cach\u00E9 de din\u00E1mica", x1?.clean === false && x1.findings[0]?.code === "very-hidden-sheet" && x1.findings[0].sheet === "N\u00F3minas"
+        && cod(x1).includes("hidden-rows:high") && cod(x1).some((c: string) => c.startsWith("pivot-cache")), x1);
+    const limpio = zipA({ "word/document.xml": "<w:document><w:body><w:p><w:r><w:t>Hola</w:t></w:r></w:p></w:body></w:document>" }, "limpio.docx");
+    const d2 = (await call("document_hygiene", { path: limpio })).o;
+    check("document_hygiene: un Word sin nada \u2192 limpio", d2?.clean === true && d2.findings.length === 0, d2);
+    const e1 = await call("document_hygiene", { path: join(dir, "algo.pdf") });
+    check("document_hygiene: un .pdf \u2192 error que remite a lo que s\u00ED lee", e1.isError === true && /\.docx/.test(e1.text ?? ""), e1);
+    writeFileSync(join(dir, "falso.docx"), "no soy un zip");
+    const e2 = await call("document_hygiene", { path: join(dir, "falso.docx") });
+    check("document_hygiene: un .docx que no es ZIP \u2192 error en ingl\u00E9s", e2.isError === true && /not a ZIP-based Office file/.test(e2.text ?? ""), e2);
+    check("document_hygiene lee por ruta \u2192 openWorldHint", anotacionesDe("document_hygiene").openWorldHint === true);
+    const m1 = (await call("late_payment_interest", { amount: 10000, dueDate: "2026-05-31", until: "2026-07-31" })).o;
+    check("late_payment_interest: 61 d\u00EDas en DOS tramos (30 a 10,15 % y 31 a 10,40 %) = 171,75 \u20AC + 40 \u20AC de costes", m1?.daysLate === 61 && m1.stretches.length === 2 && m1.stretches[0].days === 30 && m1.stretches[0].ratePct === 10.15
+        && m1.stretches[1].ratePct === 10.4 && m1.interest === 171.75 && m1.collectionCosts === 40 && m1.total === 211.75, m1);
+    const m2 = (await call("late_payment_interest", { amount: 1000, dueDate: "2026-12-01", until: "2027-03-01" })).o;
+    check("late_payment_interest: d\u00EDas despu\u00E9s del \u00FAltimo semestre publicado \u2192 aviso de supuesto", m2?.warnings?.length === 1 && /last known rate/.test(m2.warnings[0]), m2);
+    const libro = [
+        "N\u00FAmero;Cliente;Fecha;Vencimiento;Fecha de cobro;Total",
+        "F1;Acme;2026-08-01;2026-08-31;;1.210,00",
+        "F2;Acme;2026-10-15;2026-11-14;;500,00",
+        "F3;Beta;2026-11-20;2026-12-20;;300,00",
+        "F4;Beta;2026-06-01;2026-07-01;2026-07-21;800,00",
+        "F5;Gamma;2026-01-10;2026-05-10;;100,00",
+        "F6;Gamma;no es fecha;;;10",
+    ].join("\n");
+    const rutaLibro = join(dir, "facturas.csv");
+    writeFileSync(rutaLibro, libro);
+    const m3 = (await call("late_payment_interest", { path: rutaLibro, until: "2026-11-30" })).o;
+    check("late_payment_interest: libro \u2192 reclama F1, F2 y F5 (las vencidas pendientes), con 40 \u20AC cada una; la l\u00EDnea mala, saltada", m3?.totals?.invoices === 3 && m3.totals.collectionCosts === 120 && m3.claims.map((c: any) => c.number).sort().join() === "F1,F2,F5"
+        && m3.reading.skippedLines?.[0]?.line === 7, m3);
+    const m4 = (await call("late_payment_interest", { invoices: libro, until: "2026-11-30", includePaid: true })).o;
+    check("late_payment_interest: includePaid a\u00F1ade F4, pagada 20 d\u00EDas tarde", m4?.totals?.invoices === 4 && m4.claims.find((c: any) => c.number === "F4")?.daysLate === 20, m4?.claims);
+    const e3 = await call("late_payment_interest", { amount: 5, dueDate: "2026-01-01", until: "2026-02-01", invoices: libro });
+    check("late_payment_interest: importe y libro a la vez \u2192 error", e3.isError === true, e3);
+    const g1 = (await call("receivables_aging", { path: rutaLibro, cutoff: "2026-11-30" })).o;
+    check("receivables_aging: 2.110 \u20AC pendientes, 1.810 vencidos; F1 en 90+, F2 en 1-30, F3 al d\u00EDa", g1?.outstanding === 2110 && g1.overdue === 1810 && g1.byAge["90+"] === 1310 && g1.byAge["1-30"] === 500 && g1.byAge["not due"] === 300, g1);
+    check("receivables_aging: Acme primero (m\u00E1s euros \u00D7 d\u00EDas), y F5 pactada a 120 d\u00EDas sale como plazo ilegal", g1?.byParty?.[0]?.party === "Acme" && g1.termsOverLegalMaximum?.invoices?.[0]?.number === "F5", g1?.byParty);
+    check("receivables_aging: DSO simple y countback num\u00E9ricos; F4 cobrada (1 factura, 800 \u20AC) en el periodo medio de cobro", typeof g1?.dso?.simple === "number" && typeof g1.dso.countback === "number" && g1.averageCollection.invoicesCollected === 1 && g1.averageCollection.collected === 800, g1?.dso);
+    check("cobros: nada en espa\u00F1ol cruza la frontera (salvo los datos: nombres de clientes)", !sinEspanol.test(JSON.stringify([m1, m3, g1]).replace(/"(Acme|Beta|Gamma)"/g, "")), JSON.stringify([m1, m3, g1]).match(sinEspanol));
+    const manifiestoDatos = join(here, "..", "..", "public", "datos", "manifiesto.json");
+    if (existsSync(manifiestoDatos)) {
+        const actual = JSON.parse(readFileSync(manifiestoDatos, "utf8")).entradas.find((d: any) => d.id === "interes-demora")?.actual;
+        check(`late_payment_interest usa la captura de tipos vigente (${actual}); si cambia, importar la nueva en mcp/src/cobros.mts`, actual === "2026-11-16.json", actual);
+    }
+    else
+        console.log("\u00B7 late_payment_interest: sin manifiesto de datos (espejo p\u00FAblico), no se compara la captura");
+    const cestas: string[][] = [];
+    for (let i = 0; i < 200; i++) {
+        const c: string[] = [];
+        if (i % 10)
+            c.push("pan");
+        if (i % 5 === 0)
+            c.push("cerveza", "pa\u00F1ales");
+        if (i % 3 === 0)
+            c.push("leche");
+        if (i % 7 === 0)
+            c.push("huevos");
+        if (!c.length)
+            c.push("agua");
+        cestas.push(c);
+    }
+    const b1 = (await call("market_basket", { data: cestas.map((c) => c.join(",")).join("\n"), minSupport: 0.05 })).o;
+    check("market_basket: la regla de arriba es cerveza \u2194 pa\u00F1ales con lift 5 y confianza 1", b1?.baskets === 200 && ["cerveza", "pa\u00F1ales"].includes(b1.rules[0]?.then) && b1.rules[0].lift === 5 && b1.rules[0].confidence === 1, b1?.rules?.slice(0, 3));
+    check("market_basket: \u00AB\u2192 pan\u00BB tiene confianza alta y lift \u2248 1, por debajo", b1?.rules?.filter((r: any) => r.then === "pan").every((r: any) => r.lift < 1.2), b1?.rules);
+    const largoCsv = ["pedido,producto", ...cestas.flatMap((c, i) => c.map((p) => `P${i},${p}`))].join("\n");
+    const rutaLargo = join(dir, "lineas.csv");
+    writeFileSync(rutaLargo, largoCsv);
+    const b2 = (await call("market_basket", { path: rutaLargo, format: "long", minSupport: 0.05 })).o;
+    check("market_basket: el formato largo (pedido, producto) por ruta da las mismas reglas", JSON.stringify(b2?.rules) === JSON.stringify(b1?.rules), b2?.rules?.slice(0, 3));
+    const e4 = await call("market_basket", { path: rutaLargo, format: "long", itemColumn: "sku" });
+    check("market_basket: columna que no existe \u2192 error que la nombra", e4.isError === true && /"sku"/.test(e4.text ?? ""), e4);
 }
 const { probarHuerfano, CONTROL_ROTO } = await import("./huerfano.mjs");
 const control = await probarHuerfano("node", CONTROL_ROTO);

@@ -36,7 +36,7 @@ import { esHar, leerHar } from "../../src/app/services/api-har";
 import { LENGUAJES, type Lenguaje as LenguajeApi, generar } from "../../src/app/services/api-codegen";
 import { comparar, informeMarkdown } from "../../src/app/services/api-diff";
 import { necesitaPreflight } from "../../src/app/services/api-envio";
-import { buscarSecretos, campo, type ApiColeccion } from "../../src/app/services/api-ir";
+import { buscarSecretos, campo, type ApiColeccion, type MsgConv } from "../../src/app/services/api-ir";
 import { BondEnergyService } from "../../src/app/services/bond-energy.service";
 import { BandFormationService } from "../../src/app/services/band-formation.service";
 import { SingleElectronService, R_QUANTUM } from "../../src/app/services/single-electron.service";
@@ -94,7 +94,7 @@ import { kafkaAssign } from "../../src/app/services/brokers/kafka-assign";
 import { snsFilter } from "../../src/app/services/brokers/sns-filter";
 import { rabbitEn, kafkaAssignEn, snsFilterEn } from "./brokers";
 import { informeCatalogoEn } from "./mcp-audit-en";
-import { secretosEn, informeApiEn } from "./api-en";
+import { secretosEn, informeApiEn, convEn, TEXTOS_INFORME_EN } from "./api-en";
 import { hallazgoPromptEn } from "./prompt-en";
 import { pensionBase } from "./pension";
 import { CodeGenService, type CodeTarget } from "../../src/app/services/code-gen.service";
@@ -389,12 +389,12 @@ function conPresupuesto<T>(fn: () => T, ms: number): {
     }
 }
 const DOMINIO_EN: Record<Dominio, string> = {
-    core: "core utilities (hash, regex, unit/base/CIDR conversion, JWT decode, timestamps\u2026)",
+    core: "core utilities (hash, CRC, regex, unit/base/CIDR conversion, JWT decode, timestamps\u2026)",
     calc: "math with units, equations, and sheets",
     diagram: "diagrams (JTD: validate, render, build incrementally; Mermaid: check it parses)",
     kg: "knowledge graphs (SPARQL/RDF query and validation)",
     db: "databases (SQL translation, schema review, docs, measured migration locks)",
-    ai: "AI-on-AI review (prompt/RAG/claim checks, MCP catalogue audit) and serving math (does an LLM fit a GPU, semantic-cache threshold)",
+    ai: "AI-on-AI review (prompt/RAG/claim/arithmetic checks, MCP catalogue audit) and serving math (LLM memory, semantic-cache threshold)",
     logs: "log analysis (parsing, patterns, stack traces, rotation)",
     queue: "queueing and capacity math, RabbitMQ routing and Kafka partitioning",
     project: "project build tooling (Makefile/Docker simulation and lint, DORA metrics from gh/git, Maven/Gradle plans, JS/TS code smells)",
@@ -403,11 +403,14 @@ const DOMINIO_EN: Record<Dominio, string> = {
     api: "HTTP APIs (collections, CORS, breaking-change detection)",
     chip: "chip design (timing, IR drop, SRAM margins)",
     access: "identity/RBAC reasoning across Azure, AWS, GCP and Kubernetes on one neutral model",
-    archsim: "architecture simulation (load, queues and lag, bottlenecks, cost; the archsim format)",
-    experiments: "A/B experiment statistics (analysis with the right test and SRM, sample size, sequential looks)",
-    business: "business in Spain (retirement pension, work calendar against the collective agreement, shift rotas against the Workers' Statute, 13-week cash forecast from a bank statement)",
-    forecast: "time-series forecasting (Holt-Winters, ARIMA, naive baselines) checked by backtest, with holidays",
-    security: "security checks before acting (hidden Unicode instructions, secrets in a paste/HAR, GitHub Actions, HTTP headers, SPF/DKIM/DMARC, SAML, agent configs)",
+    archsim: "architecture simulation (load, queues, bottlenecks, cost)",
+    experiments: "A/B test statistics (right test and SRM, sample size, sequential looks)",
+    business: "business in Spain (pension, work calendar, shift rotas vs the Workers' Statute, cash forecast, late-payment interest, receivables aging)",
+    forecast: "time-series forecasting (Holt-Winters, ARIMA, naive baselines) checked by backtest",
+    dates: "working days with official holidays (Spain by region, six more countries) and Spanish legal deadlines",
+    cs: "OS and automata coursework",
+    ml: "ML triage of a CSV (data problems, leaks, models vs a baseline) and market-basket rules",
+    security: "security checks before acting (hidden Unicode instructions, secrets in a paste/HAR, GitHub Actions, HTTP headers, SPF/DKIM/DMARC, SAML, agent configs, Office files before sending)",
 };
 function instructionsDe(pedidos: Dominio[] | null): string {
     const { porDominio } = recuento();
@@ -3207,7 +3210,7 @@ function leerColeccion(texto: string): {
     ok: true;
     coleccion: ApiColeccion;
     formato: string;
-    avisos: string[];
+    avisos: MsgConv[];
 } | {
     ok: false;
     error: string;
@@ -3228,7 +3231,7 @@ function leerColeccion(texto: string): {
                         : /^\s*(openapi|swagger)\s*:/m.test(t) ? { f: "openapi", r: leerOpenApi(t) }
                             : { f: "curl", r: leerCurl(t) };
     if (!intento.r.ok)
-        return { ok: false, error: intento.r.error };
+        return { ok: false, error: convEn(intento.r.error) };
     return { ok: true, coleccion: intento.r.coleccion, formato: intento.f, avisos: intento.r.avisos };
 }
 function unBruSuelto(t: string) {
@@ -3251,7 +3254,7 @@ server.tool("api_collection_convert", "Convert an API collection between formats
         detectedFormat: r.formato,
         requests: r.coleccion.peticiones.length,
         variables: r.coleccion.variables.length,
-        warnings: r.avisos,
+        warnings: r.avisos.map(convEn),
         ...salida,
     });
 });
@@ -3295,13 +3298,13 @@ server.tool("api_breaking_changes", "Compare two OpenAPI specifications and say 
 }, async ({ before, after, format }) => {
     const a = leerEspec(before);
     if (!a.ok)
-        return err(`before: ${a.error}`);
+        return err(`before: ${convEn(a.error)}`);
     const b = leerEspec(after);
     if (!b.ok)
-        return err(`after: ${b.error}`);
+        return err(`after: ${convEn(b.error)}`);
     const inf = comparar(a.espec, b.espec);
     return format === "markdown"
-        ? { content: [{ type: "text" as const, text: informeMarkdown(inf) }] }
+        ? { content: [{ type: "text" as const, text: informeMarkdown(inf, TEXTOS_INFORME_EN) }] }
         : ok(informeApiEn(inf));
 });
 server.tool("api_cors_preflight", "Will the browser send an OPTIONS preflight before this request, and WHY? Answers without touching the network. Half of \"it works in curl but not in my page\" is a preflight the server does not answer, and knowing which of the three things triggers it (the method, the Content-Type or a custom header) changes where to look. Also lists the headers the browser refuses to let a page set.", {
@@ -3910,6 +3913,63 @@ server.tool("code_smells", "Find code smells in JavaScript or TypeScript and say
         return err("Analysis took over 10 s and was stopped.");
     return ok({ ...r.valor, note: r.valor.smells.length ? undefined : "No smell over the thresholds. That is not a clean bill of health: these eight are the ones a parser can see." });
 });
+const csMod = diferido(() => import("./informatica.mjs"));
+const csOk = (r: object) => ("error" in r ? err((r as {
+    error: string;
+}).error) : ok(r));
+server.tool("os_schedule", "CPU scheduling worked out exactly like the textbook: Gantt chart and per-process finish, turnaround, waiting and response time, plus averages, for FCFS, SJF (SPN), SRTF (SRT), Round Robin, HRRN, non-preemptive priority and multilevel feedback (FB). Checked against the published solutions (Stallings 9th ed. table 9.5, Silberschatz slides 5.11\u20135.20). The tie-breaking rules that books leave unsaid are stated in `conventions` \u2014 that is where hand-made answers and models usually disagree. Returns a link that replays it step by step.", {
+    processes: z.string().max(2000).describe("One per process, comma separated: name:arrival:burst, or name:arrival:burst:priority for PRIORITY (lower number = higher priority). E.g. \"A:0:3, B:2:6, C:4:4, D:6:5, E:8:2\""),
+    algorithm: z.enum(["FCFS", "SJF", "SRTF", "RR", "HRRN", "PRIORITY", "FB"]).describe("Scheduling algorithm"),
+    quantum: z.number().int().min(1).max(100).optional().describe("RR only. Default 1"),
+    fbQuantum: z.enum(["1", "2^i"]).optional().describe("FB only: quantum 1 in every queue, or 2^i in queue i (Stallings). Default 1"),
+}, async ({ processes, algorithm, quantum, fbQuantum }) => {
+    const c = await csMod();
+    if ("error" in c)
+        return c.error;
+    return csOk(c.m.planificacion(processes, algorithm, quantum, fbQuantum));
+});
+server.tool("os_page_replace", "Page replacement on a reference string: FIFO, LRU, OPT (Belady) and CLOCK (second chance), or ALL to compare. Gives the faults counted BOTH ways in use \u2014 every fault including the cold start (Silberschatz) and only after the frames are full (Stallings) \u2014 so the number matches the course. With one algorithm and up to 60 references it also gives the frame table step by step (victim, use bits and hand for CLOCK). Returns a link that replays it.", {
+    references: z.string().max(10000).describe("Page numbers separated by spaces or commas, e.g. \"7 0 1 2 0 3 0 4 2 3 0 3 2 1 2 0 1 7 0 1\""),
+    frames: z.number().int().min(1).max(64).describe("Number of frames"),
+    algorithm: z.enum(["FIFO", "LRU", "OPT", "CLOCK", "ALL"]).optional().describe("Default ALL"),
+}, async ({ references, frames, algorithm }) => {
+    const c = await csMod();
+    if ("error" in c)
+        return c.error;
+    return csOk(c.m.paginas(references, frames, algorithm ?? "ALL"));
+});
+server.tool("os_banker", "Deadlock questions solved like Silberschatz ch. 7: with `max`, the banker's algorithm (need matrix, is the state safe, a safe sequence and every check of Work against Need); add `request` to decide whether a request is granted, must wait, would be unsafe, or exceeds the declared need. With `requestMatrix` instead, deadlock detection: which processes are deadlocked now. Each step says why a process can or cannot run.", {
+    allocation: z.array(z.array(z.number().int().min(0))).max(10).describe("Allocation matrix, one row per process, one column per resource type"),
+    available: z.array(z.number().int().min(0)).max(6).describe("Available vector, one per resource type"),
+    max: z.array(z.array(z.number().int().min(0))).max(10).optional().describe("Max matrix (banker). Same shape as allocation"),
+    requestMatrix: z.array(z.array(z.number().int().min(0))).max(10).optional().describe("Current requests (detection). Alternative to max"),
+    request: z.object({ process: z.string(), vector: z.array(z.number().int().min(0)) }).optional().describe("With max: a request to evaluate, e.g. {process:\"P1\", vector:[1,0,2]}"),
+    processes: z.array(z.string()).max(10).optional().describe("Process names. Default P0, P1\u2026"),
+    resources: z.array(z.string()).max(6).optional().describe("Resource names. Default A, B, C\u2026"),
+}, async (e) => {
+    const c = await csMod();
+    if ("error" in c)
+        return c.error;
+    return csOk(c.m.banquero(e));
+});
+server.tool("automata_from_regex", "From a regular expression to automata, as in the Dragon book: the Thompson epsilon-NFA, the DFA by subset construction (with the set of NFA states behind each DFA state) and the minimal DFA by partition refinement, each as a transition table (\u2192 start, * accepting). Optionally tests words against it. Syntax: single-letter or digit symbols, | * + ? ( ) and \u03B5. Returns a link that shows every construction step.", {
+    regex: z.string().max(60).describe("E.g. \"(a|b)*abb\""),
+    words: z.array(z.string().max(60)).max(50).optional().describe("Words to test; \"\" or \"\u03B5\" is the empty word"),
+}, async ({ regex, words }) => {
+    const c = await csMod();
+    if ("error" in c)
+        return c.error;
+    return csOk(c.m.automataDeRegex(regex, words ?? []));
+});
+server.tool("cyk_parse", "CYK membership for a context-free grammar in Chomsky normal form: the full triangular table (which variables derive each substring) and whether the word is in the language. Rules like \"S -> AB | BC\" one per line (\u2192 or ::= also work); single-character symbols, or space-separated words if any variable has several letters. Says which rule is not in CNF if one is not. Returns a link that fills the table cell by cell.", {
+    grammar: z.string().max(2000).describe("One rule per line, first left side is the start symbol. E.g. \"S -> AB | BC\nA -> BA | a\nB -> CC | b\nC -> AB | a\""),
+    word: z.string().max(60).describe("The word, e.g. \"baaba\" (or space-separated tokens)"),
+}, async ({ grammar, word }) => {
+    const c = await csMod();
+    if ("error" in c)
+        return c.error;
+    return csOk(c.m.cykTabla(grammar, word));
+});
 const forecastMod = diferido(() => import("./forecast.mjs"));
 server.registerTool("forecast", {
     title: "Forecast a time series, with an honest backtest",
@@ -3938,6 +3998,271 @@ server.registerTool("forecast", {
     if ("agotado" in r)
         return err("The forecast took over 20 s and was stopped: try a shorter series or a fixed arimaOrder.");
     return "error" in r.valor ? err(r.valor.error!) : ok(r.valor);
+});
+const triajeMod = diferido(() => import("./ml-triaje.mjs"));
+server.registerTool("ml_triage", {
+    title: "Triage a CSV for machine learning: task, data problems, models vs a baseline",
+    description: "Before training anything on a table: give a CSV and the target column, and get what kind of problem it is (binary classification or regression), what is wrong with the data \u2014 class imbalance, constant columns, gaps, identifier columns, high-cardinality categories and LEAKS (a column that alone predicts the target) \u2014 and how four models (linear, decision tree, random forest, gradient boosting) score in k-fold cross-validation NEXT TO THE BASELINE (majority class or mean), with the fold-to-fold spread. It says plainly when no model beats the baseline. Prefer `path`: the data then never enters the conversation. Deterministic (seeded); nothing leaves the machine.",
+    inputSchema: {
+        path: z.string().min(1).optional().describe("Path to the CSV file (header in the first line; separator , ; or tab). Alternative to csv"),
+        csv: z.string().max(5000000).optional().describe("The CSV pasted, if there is no file. Alternative to path"),
+        target: z.string().max(500).optional().describe("Column to predict, exactly as in the header. Default: the last column"),
+        seed: z.number().int().min(0).max(2 ** 31 - 1).default(1).describe("Seed for the folds and the sample"),
+        folds: z.number().int().min(2).max(10).default(5).describe("Cross-validation folds"),
+    },
+}, async (a) => {
+    if ((a.path === undefined) === (a.csv === undefined))
+        return err("Give either path or csv, not both.");
+    let csv = a.csv ?? "";
+    if (a.path !== undefined) {
+        const { readFile } = await import("node:fs/promises");
+        try {
+            csv = await readFile(a.path, "utf8");
+        }
+        catch (e) {
+            return err(noSeLee(a.path, e));
+        }
+    }
+    const c = await triajeMod();
+    if ("error" in c)
+        return c.error;
+    const r = conPresupuesto(() => c.m.triajeMl({ csv, target: a.target, seed: a.seed, folds: a.folds }), 20000);
+    if ("agotado" in r)
+        return err("The triage took over 20 s and was stopped: try fewer folds.");
+    return "error" in r.valor ? err(r.valor.error!) : ok(r.valor);
+});
+const DIA_ISO = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD");
+async function textoORuta(ruta: string | undefined, texto: string | undefined, nombre: string): Promise<{
+    t: string;
+} | {
+    e: ReturnType<typeof err>;
+}> {
+    if ((ruta === undefined) === (texto === undefined))
+        return { e: err(`Give either path or ${nombre}, not both.`) };
+    if (ruta === undefined)
+        return { t: texto! };
+    const { readFile } = await import("node:fs/promises");
+    try {
+        return { t: await readFile(ruta, "utf8") };
+    }
+    catch (e) {
+        return { e: err(noSeLee(ruta, e)) };
+    }
+}
+const sumasMod = diferido(() => import("./sumas.mjs"));
+server.registerTool("checksum", {
+    title: "CRC, Adler-32 and Fletcher checksums \u2014 or which CRC gives this value",
+    description: "Compute the CRCs of the reveng catalogue (CRC-8/SMBUS and MAXIM, CRC-16 ARC/MODBUS/CCITT-FALSE/XMODEM/KERMIT/X-25, CRC-32, CRC-32C, BZIP2, MPEG-2, CRC-64 ECMA and XZ), Adler-32 and Fletcher-16 of some bytes; or, given the value a device or file expects, say WHICH algorithm produces it \u2014 also trying the bytes swapped, the usual reason nothing matches (Modbus sends the CRC low byte first). Custom Rocksoft parameters (width, poly, init, refin, refout, xorout) for anything else. Every algorithm is verified against its official check value. Language models cannot compute a CRC reliably by hand: use this instead.",
+    inputSchema: {
+        text: z.string().max(1000000).optional().describe("Data as text, encoded as UTF-8. One of text, hex or path"),
+        hex: z.string().max(2000000).optional().describe("Data as hex bytes: \"01 03 00 00 00 0A\", \"0x01,0x03\" or \"0103\""),
+        path: z.string().min(1).optional().describe("Path to a file: its raw bytes (up to 10 MB)"),
+        algorithm: z.string().max(40).optional().describe("Only this one (id, name or alias: crc16-modbus, CRC-32C\u2026). Default: all"),
+        expected: z.string().max(20).optional().describe("The checksum you have (hex): says which algorithm gives it, in either byte order"),
+        custom: z.object({
+            width: z.number().int().min(8).max(64),
+            poly: z.string().max(18),
+            init: z.string().max(18).default("0"),
+            refin: z.boolean().default(false),
+            refout: z.boolean().default(false),
+            xorout: z.string().max(18).default("0"),
+        }).optional().describe("Rocksoft model parameters (hex), as in the reveng catalogue or a datasheet: {\"width\":16,\"poly\":\"0x1021\",\"init\":\"0xFFFF\"}"),
+    },
+}, async (a) => {
+    if ([a.text, a.hex, a.path].filter((x) => x !== undefined).length !== 1)
+        return err("Give exactly one of text, hex or path.");
+    const c = await sumasMod();
+    if ("error" in c)
+        return c.error;
+    let bytes: Uint8Array;
+    if (a.text !== undefined)
+        bytes = new TextEncoder().encode(a.text);
+    else if (a.hex !== undefined) {
+        const b = c.m.leerBytesHex(a.hex);
+        if (!b)
+            return err("hex must be whole bytes in hexadecimal (an even number of digits; spaces, commas and 0x are ignored).");
+        bytes = b;
+    }
+    else {
+        const { readFile, stat } = await import("node:fs/promises");
+        try {
+            if ((await stat(a.path!)).size > 10000000)
+                return err("The file is over 10 MB: checksum the part you need.");
+            bytes = new Uint8Array(await readFile(a.path!));
+        }
+        catch (e) {
+            return err(noSeLee(a.path!, e));
+        }
+    }
+    const r = conPresupuesto(() => c.m.sumas({ bytes, algorithm: a.algorithm, expected: a.expected, custom: a.custom }), 20000);
+    if ("agotado" in r)
+        return err("The checksums took over 20 s and were stopped: pass `algorithm` to compute only one.");
+    return "error" in r.valor ? err(r.valor.error!) : ok(r.valor);
+});
+const cuentasMod = diferido(() => import("./cuentas.mjs"));
+server.registerTool("arithmetic_check", {
+    title: "Recalculate every \"=\" operation written in a text",
+    description: "Find every operation written with digits and an \"=\" or \"\u2248\" in a text \u2014 an email, a report, an invoice, your own draft or another model's answer \u2014 and recalculate it: correct, rounded, or WRONG with what it should say, each with its line. Understands \u00D7 \u00B7 x \u00F7 :, powers, roots, real-life percentages (\"200 + 21 % = 242\", \"15 % of 200 = 30\"), currency signs, thousands separators and decimal comma or point (detected). Use it before trusting or sending a text with numbers in it: a model gets arithmetic wrong with the same confidence as when it is right. Sentences in words are not read, and it says so.",
+    inputSchema: {
+        text: z.string().max(500000).optional().describe("The text. Alternative to path"),
+        path: z.string().min(1).optional().describe("Path to a text or Markdown file. Alternative to text"),
+        decimal: z.enum(["auto", "comma", "point"]).default("auto").describe("Decimal separator; auto detects it from the numbers (1.234,56 vs 1,234.56)"),
+    },
+}, async (a) => {
+    const t = await textoORuta(a.path, a.text, "text");
+    if ("e" in t)
+        return t.e;
+    const c = await cuentasMod();
+    if ("error" in c)
+        return c.error;
+    const r = conPresupuesto(() => c.m.cuentas({ text: t.t, decimal: a.decimal }), 10000);
+    return "agotado" in r ? err("Checking took over 10 s and was stopped: pass a shorter text.") : ok(r.valor);
+});
+const higieneMod = diferido(() => import("./higiene.mjs"));
+server.registerTool("document_hygiene", {
+    title: "Is this Word or Excel file clean before sending it outside?",
+    description: "Before a .docx or .xlsx leaves the organisation: find what is still IN the file though it does not show \u2014 tracked changes neither accepted nor rejected (the \"No Markup\" view only hides them), comments and their leftovers, custom XML, image EXIF, VERY hidden sheets (invisible in Excel and skipped by Office's Document Inspector), pivot caches that keep the source rows after the source sheet is deleted, hidden rows with data, and author/company metadata. Each finding has a severity; \"clean\" means nothing critical or high. Read only: it cleans nothing. Reads the file by path, so the document never enters the conversation.",
+    inputSchema: {
+        path: z.string().min(1).describe("Path to the .docx/.docm or .xlsx/.xlsm file"),
+    },
+}, async (a) => {
+    const c = await higieneMod();
+    if ("error" in c)
+        return c.error;
+    const tipo = c.m.tipoDe(a.path);
+    if (!tipo)
+        return err("Only Word (.docx, .docm, .dotx) and Excel (.xlsx, .xlsm, .xltx) files. For formulas that no longer match their saved values, use spreadsheet_audit.");
+    const { readFile, stat } = await import("node:fs/promises");
+    let bytes: Uint8Array;
+    try {
+        if ((await stat(a.path)).size > 100000000)
+            return err("The file is over 100 MB.");
+        bytes = new Uint8Array(await readFile(a.path));
+    }
+    catch (e) {
+        return err(noSeLee(a.path, e));
+    }
+    const r = await c.m.higiene(bytes, tipo);
+    return "error" in r ? err(r.error!) : ok(r);
+});
+const cobrosMod = diferido(() => import("./cobros.mjs"));
+const INVOICES_DESC = "CSV of invoices as exported by any accounting program or spreadsheet: header in Spanish or English; separator , ; or tab; one row per invoice with its date and total (or net + VAT % \u2212 withholding %), and optionally number, customer, due date, payment date and outstanding amount";
+server.registerTool("late_payment_interest", {
+    title: "Spanish late-payment interest (Ley 3/2004) on an invoice or a whole ledger",
+    description: "Statutory late-payment interest between businesses in Spain (Ley 3/2004): from the day after the due date, at the official rate of EACH calendar half-year (ECB + 8 points, shipped from the BOE back to 2003), stretch by stretch, plus the fixed 40 \u20AC collection costs per overdue invoice. For one amount and due date, or for a whole CSV of issued invoices (outstanding ones up to the cutoff, and optionally those paid late). Models get this wrong by using one rate for the whole delay or not knowing the current half-year's rate. Prefer `path` for a ledger: customer data then never enters the conversation.",
+    inputSchema: {
+        amount: z.number().positive().max(1000000000000).optional().describe("Amount owed (with VAT), for a single invoice"),
+        dueDate: DIA_ISO.optional().describe("Due date of that invoice"),
+        until: DIA_ISO.describe("Payment date, or the date to compute up to (the cutoff for a ledger)"),
+        path: z.string().min(1).optional().describe("Path to the invoices CSV, instead of amount + dueDate"),
+        invoices: z.string().max(5000000).optional().describe(INVOICES_DESC + ". Alternative to path"),
+        includePaid: z.boolean().default(false).describe("Ledger: also claim invoices that were paid, but late (up to their payment date)"),
+        collectionCosts: z.boolean().default(true).describe("Add the 40 \u20AC per invoice of art. 8.1"),
+    },
+}, async (a) => {
+    let invoices: string | undefined;
+    if (a.path !== undefined || a.invoices !== undefined) {
+        if (a.amount !== undefined || a.dueDate !== undefined)
+            return err("Give amount + dueDate, or a ledger (path or invoices), not both.");
+        const t = await textoORuta(a.path, a.invoices, "invoices");
+        if ("e" in t)
+            return t.e;
+        invoices = t.t;
+    }
+    const c = await cobrosMod();
+    if ("error" in c)
+        return c.error;
+    const r = c.m.demora({ amount: a.amount, dueDate: a.dueDate, until: a.until, invoices, includePaid: a.includePaid, collectionCosts: a.collectionCosts });
+    return "error" in r ? err(r.error!) : ok(r);
+});
+server.registerTool("receivables_aging", {
+    title: "Receivables aging, DSO and average collection period from a CSV of invoices",
+    description: "From the issued invoices exported by any accounting program: what is owed on a cutoff date by age past the DUE date (not due, 1-30, 31-60, 61-90, 90+), per customer sorted by who to chase first (amount \u00D7 days overdue), the oldest invoices, DSO both simple and countback (which is not fooled by growing or seasonal sales), the average collection period of the last year, and the invoices agreed with more than the 60 days Spanish law allows between businesses. Prefer `path`: the ledger then never enters the conversation.",
+    inputSchema: {
+        path: z.string().min(1).optional().describe("Path to the invoices CSV"),
+        invoices: z.string().max(5000000).optional().describe(INVOICES_DESC + ". Alternative to path"),
+        cutoff: DIA_ISO.describe("Date of the snapshot (usually today or the end of a month)"),
+        dsoDays: z.number().int().min(28).max(366).default(90).describe("Period of sales for the simple DSO"),
+    },
+}, async (a) => {
+    const t = await textoORuta(a.path, a.invoices, "invoices");
+    if ("e" in t)
+        return t.e;
+    const c = await cobrosMod();
+    if ("error" in c)
+        return c.error;
+    const r = c.m.aging({ invoices: t.t, cutoff: a.cutoff, dsoDays: a.dsoDays });
+    return "error" in r ? err(r.error!) : ok(r);
+});
+const cestaMod = diferido(() => import("./cesta.mjs"));
+server.registerTool("market_basket", {
+    title: "Market-basket analysis: items bought together and association rules with lift",
+    description: "Which items go together in real transactions: frequent itemsets and rules \"A \u2192 B\" with support, confidence and LIFT (Apriori), sorted by lift so the \"everyone buys bread\" trap does not top the list. Reads one basket per line (items separated by commas) or the long format every shop or database exports (one row per order line: order id, product). Prefer `path`: the transactions then never enter the conversation. Deterministic.",
+    inputSchema: {
+        path: z.string().min(1).optional().describe("Path to the file. Alternative to data"),
+        data: z.string().max(5000000).optional().describe("The baskets pasted. Alternative to path"),
+        format: z.enum(["baskets", "long"]).default("baskets").describe("baskets: one basket per line, items separated by , ; or tab. long: a CSV with a header, one row per (transaction, item)"),
+        transactionColumn: z.string().max(200).optional().describe("long: the transaction/order id column (default: the first)"),
+        itemColumn: z.string().max(200).optional().describe("long: the item/product column (default: the second)"),
+        minSupport: z.number().min(0.0001).max(1).default(0.01).describe("Minimum share of baskets an itemset must appear in"),
+        minConfidence: z.number().min(0).max(1).default(0.3).describe("Minimum confidence of a rule"),
+        maxSize: z.number().int().min(2).max(4).default(3).describe("Largest itemset considered"),
+        limit: z.number().int().min(1).max(200).default(30).describe("Rules and itemsets returned"),
+    },
+}, async (a) => {
+    const t = await textoORuta(a.path, a.data, "data");
+    if ("e" in t)
+        return t.e;
+    const c = await cestaMod();
+    if ("error" in c)
+        return c.error;
+    const r = conPresupuesto(() => c.m.cesta({ ...a, data: t.t }), 20000);
+    if ("agotado" in r)
+        return err("The analysis took over 20 s and was stopped: raise minSupport or lower maxSize.");
+    return "error" in r.valor ? err(r.valor.error!) : ok(r.valor);
+});
+const fechasMod = diferido(() => import("./fechas-motores.mjs"));
+const FECHA_ISO = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD");
+server.registerTool("business_days", {
+    title: "Count or add working days, with official holidays",
+    description: "Working days between two dates, or the date N working days after (or before) one, skipping weekends and the OFFICIAL public holidays of a country or region: Spain by autonomous community (from the BOE, including holidays moved to Monday), Germany by Land, France (incl. Alsace-Moselle and overseas), the UK by nation, Portugal (incl. Azores and Madeira), Mexico and the US federal calendar. Returns every holiday or weekend skipped, by name, so the result can be checked by hand. Measured: language models get these wrong mostly by not knowing which holidays were moved or published after their cutoff. Deterministic; nothing leaves the machine.",
+    inputSchema: {
+        from: FECHA_ISO.describe("Start date"),
+        to: FECHA_ISO.optional().describe("End date: count the working days between from and to. Alternative to add"),
+        add: z.number().int().min(-36500).max(36500).optional().describe("Move this many working days from \"from\" (negative = backwards). Counting starts the day after. Alternative to to"),
+        country: z.string().regex(/^[A-Z]{2}$/).describe("ES, DE, FR, GB, PT, MX or US"),
+        region: z.string().regex(/^[A-Z]{2}-[A-Z0-9]{1,3}$/).optional().describe("Region whose holidays also apply: ES-MD, ES-CT, ES-AN\u2026 \u00B7 DE-BY, DE-BE\u2026 \u00B7 GB-SCT\u2026 \u00B7 PT-AC\u2026 \u00B7 FR-67\u2026"),
+        holidays: z.array(FECHA_ISO).max(500).optional().describe("Extra non-working days (local holidays, company closures)"),
+        weekend: z.array(z.number().int().min(0).max(6)).max(6).optional().describe("Non-working weekdays, 0 = Sunday \u2026 6 = Saturday. Default [0, 6]"),
+        includeStart: z.boolean().optional().describe("Count mode: count \"from\" itself if it is a working day. Default true"),
+        includeEnd: z.boolean().optional().describe("Count mode: count \"to\" itself. Default true"),
+    },
+}, async (a) => {
+    const c = await fechasMod();
+    if ("error" in c)
+        return c.error;
+    const r = c.m.diasLaborables(a);
+    return "error" in r ? err(r.error) : ok(r);
+});
+server.registerTool("legal_deadline", {
+    title: "Spanish legal deadline (administrative or court)",
+    description: "Last day of a deadline in Spain counted from a notification: administrative (Ley 39/2015: business days exclude Saturdays, Sundays and holidays; months from date to date; extended to the next business day; a holiday in either the person's or the authority's region counts, art. 30.6) or court (LEC/LOPJ: also August and 24 December \u2013 6 January non-business since LO 1/2025, unless urgent; plus the 15:00 next-day filing margin of LEC art. 135). Uses the official BOE holidays of the region, including the ones moved to Monday. Returns the last day, the days skipped by name, the extension if it fell on a non-business day, and the rules applied with their articles. Measured: Sonnet and Haiku miss the 2025 court-holiday reform even when given the holidays. Deterministic; it is a calculation, not legal advice.",
+    inputSchema: {
+        notified: FECHA_ISO.describe("Date of notification (counting starts the next day)"),
+        amount: z.number().int().min(1).max(1000),
+        unit: z.enum(["days", "months", "years"]).describe("days = business days"),
+        regime: z.enum(["administrative", "judicial"]),
+        region: z.string().regex(/^ES-[A-Z]{2}$/).optional().describe("Autonomous community of the authority/court: ES-MD, ES-CT, ES-AN\u2026"),
+        secondRegion: z.string().regex(/^ES-[A-Z]{2}$/).optional().describe("Administrative: the person's region if different (its holidays also count, art. 30.6)"),
+        localHolidays: z.array(FECHA_ISO).max(10).optional().describe("Municipal holidays of the place (there is no single official source)"),
+        urgent: z.boolean().optional().describe("Judicial: urgent proceedings, where August and Christmas do count"),
+    },
+}, async (a) => {
+    const c = await fechasMod();
+    if ("error" in c)
+        return c.error;
+    const r = c.m.plazoLegal(a);
+    return "error" in r ? err(r.error) : ok(r);
 });
 server.registerTool("llm_memory", {
     title: "Does this LLM fit in my GPU?",

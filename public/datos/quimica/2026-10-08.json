@@ -20,7 +20,8 @@
           "verificado": "compilacion"
         }
       ],
-      "nota": "Valor seleccionado por Goldberg et al. (evaluación AAA), que adoptan las medidas con pilas sin unión líquida de Harned y Ehlers (pK = 4.756 a 298.15 K, I = 0) como «el conjunto definitivo». El artículo de ACS no se pudo abrir (antibot); DOI y páginas comprobados en Crossref. El valor se leyó en la tabla de Goldberg, que reproduce el de Harned y Ehlers."
+      "nota": "Valor seleccionado por Goldberg et al. (evaluación AAA), que adoptan las medidas con pilas sin unión líquida de Harned y Ehlers (pK = 4.756 a 298.15 K, I = 0) como «el conjunto definitivo». El artículo de ACS no se pudo abrir (antibot); DOI y páginas comprobados en Crossref. El valor se leyó en la tabla de Goldberg, que reproduce el de Harned y Ehlers.",
+      "notaEn": "Selected value from Goldberg et al. (AAA evaluation), who adopt the measurements with cells without liquid junction by Harned and Ehlers (pK = 4.756 at 298.15 K, I = 0) as “the definitive set.” The ACS article could not be accessed; DOI and pages checked in Crossref. The value was read from Goldberg's table, which reproduces that of Harned and Ehlers."
     },
     {
       "id": "fosforico",
@@ -56,7 +57,8 @@
           "verificado": "compilacion"
         }
       ],
-      "nota": "pK1 y pK2 leídos en el texto de los artículos del NBS (pilas sin unión líquida). pK3 = 12.35 es el valor SELECCIONADO por Goldberg et al. como consenso de varios estudios (Beutler 12.36, Vanderzee y Quist 12.375, Papoff 12.39…); no procede de un único artículo. El artículo de Vanderzee y Quist (ACS) no se pudo abrir: su valor se leyó en la tabla de Goldberg; DOI comprobado en Crossref. Discrepancia de pK3 entre fuentes de hasta ~0.04."
+      "nota": "pK1 y pK2 leídos en el texto de los artículos del NBS (pilas sin unión líquida). pK3 = 12.35 es el valor SELECCIONADO por Goldberg et al. como consenso de varios estudios (Beutler 12.36, Vanderzee y Quist 12.375, Papoff 12.39…); no procede de un único artículo. El artículo de Vanderzee y Quist (ACS) no se pudo abrir: su valor se leyó en la tabla de Goldberg; DOI comprobado en Crossref. Discrepancia de pK3 entre fuentes de hasta ~0.04.",
+      "notaEn": "pK1 and pK2 read in the text of the NBS articles (cells without liquid junction). pK3 = 12.35 is the value SELECTED by Goldberg et al. as a consensus of several studies (Beutler 12.36, Vanderzee and Quist 12.375, Papoff 12.39…); it does not come from a single article. The article by Vanderzee and Quist (ACS) could not be accessed: its value was read from Goldberg's table; DOI checked in Crossref. Discrepancy in pK3 between sources of up to ~0.04."
     },
     {
       "id": "carbonico",
@@ -84,7 +86,8 @@
           "verificado": "compilacion"
         }
       ],
-      "nota": "pKa1 es el APARENTE, referido a CO2 disuelto total (CO2(aq) + H2CO3), que es el que se usa en problemas de pH. El pKa del H2CO3 «verdadero» es ~3.6 y no se incluye. Goldberg et al. basan los valores seleccionados en el estudio y revisión de Berg y Vanderzee (también base de los CODATA Key Values); Peiper y Pitzer (1982) seleccionaron 6.355 y 10.337 (diferencia dentro de la incertidumbre). Las medidas clásicas por fem son Harned y Davis, J. Am. Chem. Soc. 1943, 65, 2030 (doi 10.1021/ja01250a059) para pKa1 y Harned y Scholes, J. Am. Chem. Soc. 1941, 63, 1706 (doi 10.1021/ja01851a058) para pKa2; DOIs comprobados en Crossref pero sus textos (ACS) no se pudieron abrir, así que no se citan como fuente del número. El artículo de Berg y Vanderzee tampoco se pudo abrir (Elsevier, 403): el valor se leyó en Goldberg. Martell y Smith (1976) seleccionan 6.352 y 10.329, coincidentes."
+      "nota": "pKa1 es el APARENTE, referido a CO2 disuelto total (CO2(aq) + H2CO3), que es el que se usa en problemas de pH. El pKa del H2CO3 «verdadero» es ~3.6 y no se incluye. Goldberg et al. basan los valores seleccionados en el estudio y revisión de Berg y Vanderzee (también base de los CODATA Key Values); Peiper y Pitzer (1982) seleccionaron 6.355 y 10.337 (diferencia dentro de la incertidumbre). Las medidas clásicas por fem son Harned y Davis, J. Am. Chem. Soc. 1943, 65, 2030 (doi 10.1021/ja01250a059) para pKa1 y Harned y Scholes, J. Am. Chem. Soc. 1941, 63, 1706 (doi 10.1021/ja01851a058) para pKa2; DOIs comprobados en Crossref pero sus textos (ACS) no se pudieron abrir, así que no se citan como fuente del número. El artículo de Berg y Vanderzee tampoco se pudo abrir (Elsevier, 403): el valor se leyó en Goldberg. Martell y Smith (1976) seleccionan 6.352 y 10.329, coincidentes.",
+      "notaEn": "pKa1 is the APPARENT one, referred to total dissolved CO2 (CO2(aq) + H2CO3), which is the one used in pH problems. The pKa of “true” H2CO3 is ~3.6 and is not included. Goldberg et al. base the selected values on the study and review by Berg and Vanderzee (also the basis of the CODATA Key Values); Peiper and Pitzer (1982) selected 6.355 and 10.337 (difference within the uncertainty). The classic emf measurements are Harned and Davis, J. Am. Chem. Soc. 1943, 65, 2030 (doi 10.1021/ja01250a059) for pKa1 and Harned and Scholes, J. Am. Chem. Soc. 1941, 63, 1706 (doi 10.1021/ja01851a058) for pKa2; DOIs checked in Crossref, but their texts (ACS) could not be accessed, so they are not cited as the source of the number. The article by Berg and Vanderzee could not be accessed either (Elsevier, 403): the value was read from Goldberg. Martell and Smith (1976) select 6.352 and 10.329, in agreement."
     },
     {
       "id": "amonio",
@@ -107,7 +110,8 @@
           "verificado": "compilacion"
         }
       ],
-      "nota": "Pila sin unión líquida, disoluciones equimolales NH3/NH4Cl. El mismo artículo da Kb(NH3) = 1.77e-5 (pKb 4.751) a 25 °C. Owen, con electrodo de plata-yoduro de plata, obtuvo 9.239."
+      "nota": "Pila sin unión líquida, disoluciones equimolales NH3/NH4Cl. El mismo artículo da Kb(NH3) = 1.77e-5 (pKb 4.751) a 25 °C. Owen, con electrodo de plata-yoduro de plata, obtuvo 9.239.",
+      "notaEn": "Cell without liquid junction, equimolal NH3/NH4Cl solutions. The same article gives Kb(NH3) = 1.77e-5 (pKb 4.751) at 25 °C. Owen, with a silver–silver iodide electrode, obtained 9.239."
     },
     {
       "id": "citrico",
@@ -131,7 +135,8 @@
           "verificado": "compilacion"
         }
       ],
-      "nota": "Goldberg et al. consideran el estudio de Bates y Pinching (pila sin unión líquida) el más cuidadoso y adoptan sus pK: 3.128, 4.761, 6.396. El artículo (ACS) no se pudo abrir; los valores se leyeron en la tabla de Goldberg atribuidos a 49BAT/PIN; DOI comprobado en Crossref. Hay una fe de erratas en J. Am. Chem. Soc. 1949, 71, 4165 (doi 10.1021/ja01180a622) cuyo contenido no se pudo ver."
+      "nota": "Goldberg et al. consideran el estudio de Bates y Pinching (pila sin unión líquida) el más cuidadoso y adoptan sus pK: 3.128, 4.761, 6.396. El artículo (ACS) no se pudo abrir; los valores se leyeron en la tabla de Goldberg atribuidos a 49BAT/PIN; DOI comprobado en Crossref. Hay una fe de erratas en J. Am. Chem. Soc. 1949, 71, 4165 (doi 10.1021/ja01180a622) cuyo contenido no se pudo ver.",
+      "notaEn": "Goldberg et al. consider the study by Bates and Pinching (cell without liquid junction) the most careful and adopt its pK values: 3.128, 4.761, 6.396. The article (ACS) could not be accessed; the values were read from Goldberg's table, attributed to 49BAT/PIN; DOI checked in Crossref. There is an erratum in J. Am. Chem. Soc. 1949, 71, 4165 (doi 10.1021/ja01180a622) whose content could not be seen."
     },
     {
       "id": "formico",
@@ -152,7 +157,8 @@
           "verificado": "compilacion"
         }
       ],
-      "nota": "pKa = -log(1.772e-4) = 3.752. El valor 1.772e-4 se leyó en el texto de Bates (1951), que lo toma de Harned y Owen (1950, cap. 15); Harned y Owen recogen las medidas con pila sin unión líquida de Harned y Embree (1934). El artículo de Harned y Embree (ACS) no se pudo abrir; DOI comprobado en Crossref."
+      "nota": "pKa = -log(1.772e-4) = 3.752. El valor 1.772e-4 se leyó en el texto de Bates (1951), que lo toma de Harned y Owen (1950, cap. 15); Harned y Owen recogen las medidas con pila sin unión líquida de Harned y Embree (1934). El artículo de Harned y Embree (ACS) no se pudo abrir; DOI comprobado en Crossref.",
+      "notaEn": "pKa = -log(1.772e-4) = 3.752. The value 1.772e-4 was read in the text of Bates (1951), who takes it from Harned and Owen (1950, ch. 15); Harned and Owen report the measurements with cells without liquid junction by Harned and Embree (1934). The article by Harned and Embree (ACS) could not be accessed; DOI checked in Crossref."
     },
     {
       "id": "oxalico",
@@ -186,7 +192,8 @@
           "verificado": "compilacion"
         }
       ],
-      "nota": "pK2 leído en el texto de Pinching y Bates (pila sin unión líquida; la ecuación del resumen da 4.266 a 298.15 K). pK1 = 1.27 es el que selecciona Goldberg a partir de las medidas de conductividad de Darken y de McDougall y Long (artículos ACS no accesibles: valores leídos en la tabla de Goldberg; DOIs comprobados en Crossref). Al ser un ácido moderadamente fuerte, pK1 es más incierto: Parton y Gibbons (1939) dan 1.299 (1.27 al recalcularlo Kettler et al., 1998). Harned y Fallon (1939) dieron pK2 0.02-0.03 más alto; Kettler et al. recalculan 4.262."
+      "nota": "pK2 leído en el texto de Pinching y Bates (pila sin unión líquida; la ecuación del resumen da 4.266 a 298.15 K). pK1 = 1.27 es el que selecciona Goldberg a partir de las medidas de conductividad de Darken y de McDougall y Long (artículos ACS no accesibles: valores leídos en la tabla de Goldberg; DOIs comprobados en Crossref). Al ser un ácido moderadamente fuerte, pK1 es más incierto: Parton y Gibbons (1939) dan 1.299 (1.27 al recalcularlo Kettler et al., 1998). Harned y Fallon (1939) dieron pK2 0.02-0.03 más alto; Kettler et al. recalculan 4.262.",
+      "notaEn": "pK2 read in the text of Pinching and Bates (cell without liquid junction; the equation in the abstract gives 4.266 at 298.15 K). pK1 = 1.27 is the one Goldberg selects from the conductivity measurements of Darken and of McDougall and Long (ACS articles could not be accessed: values read from Goldberg's table; DOIs checked in Crossref). Since it is a moderately strong acid, pK1 is more uncertain: Parton and Gibbons (1939) give 1.299 (1.27 when recalculated by Kettler et al., 1998). Harned and Fallon (1939) gave a pK2 0.02-0.03 higher; Kettler et al. recalculate 4.262."
     },
     {
       "id": "fluorhidrico",
@@ -213,7 +220,8 @@
           "verificado": "compilacion"
         }
       ],
-      "nota": "Las fuentes oscilan entre 3.165 (K = 6.84e-4, conductividad, Hamer y Wu 1970, que consideran preferibles los datos de conductividad) y 3.173 (6.71e-4, fem, Broene y De Vries 1947); se toma 3.17, que es también el valor seleccionado por Martell y Smith (3.17 ± 0.01). Hefter (J. Solution Chem. 1984, 13, 457) recomienda 3.18 ± 0.02 tras revisar la literatura (solo visto en un resumen de búsqueda, no citado como fuente). El valor de Broene y De Vries se leyó en el texto de Hamer y Wu, no en el artículo original (ACS, no accesible). Ojo: HF forma además HF2- (k ≈ 0.26-0.38 mol/kg según el método), relevante solo en disoluciones concentradas."
+      "nota": "Las fuentes oscilan entre 3.165 (K = 6.84e-4, conductividad, Hamer y Wu 1970, que consideran preferibles los datos de conductividad) y 3.173 (6.71e-4, fem, Broene y De Vries 1947); se toma 3.17, que es también el valor seleccionado por Martell y Smith (3.17 ± 0.01). Hefter (J. Solution Chem. 1984, 13, 457) recomienda 3.18 ± 0.02 tras revisar la literatura (solo visto en un resumen de búsqueda, no citado como fuente). El valor de Broene y De Vries se leyó en el texto de Hamer y Wu, no en el artículo original (ACS, no accesible). Ojo: HF forma además HF2- (k ≈ 0.26-0.38 mol/kg según el método), relevante solo en disoluciones concentradas.",
+      "notaEn": "Sources range from 3.165 (K = 6.84e-4, conductivity, Hamer and Wu 1970, who consider the conductivity data preferable) to 3.173 (6.71e-4, emf, Broene and De Vries 1947); 3.17 is taken, which is also the value selected by Martell and Smith (3.17 ± 0.01). Hefter (J. Solution Chem. 1984, 13, 457) recommends 3.18 ± 0.02 after reviewing the literature (seen only in a search abstract, not cited as a source). The value of Broene and De Vries was read in the text of Hamer and Wu, not in the original article (ACS, could not be accessed). Note: HF also forms HF2- (k ≈ 0.26-0.38 mol/kg depending on the method), relevant only in concentrated solutions."
     },
     {
       "id": "hipocloroso",
@@ -234,7 +242,8 @@
           "verificado": "no"
         }
       ],
-      "nota": "Martell y Smith seleccionan 7.53 ± 0.02. La ecuación de Morris (1966), pKa = 3000/T - 10.0686 + 0.0253·T, da 7.537 a 298.15 K y es la más usada en química del agua; coincide dentro de la incertidumbre. El artículo de Morris (ACS) no se pudo abrir: su ecuación solo se vio citada en fuentes secundarias (cita y DOI comprobados en Crossref)."
+      "nota": "Martell y Smith seleccionan 7.53 ± 0.02. La ecuación de Morris (1966), pKa = 3000/T - 10.0686 + 0.0253·T, da 7.537 a 298.15 K y es la más usada en química del agua; coincide dentro de la incertidumbre. El artículo de Morris (ACS) no se pudo abrir: su ecuación solo se vio citada en fuentes secundarias (cita y DOI comprobados en Crossref).",
+      "notaEn": "Martell and Smith select 7.53 ± 0.02. Morris's equation (1966), pKa = 3000/T - 10.0686 + 0.0253·T, gives 7.537 at 298.15 K and is the most widely used in water chemistry; it agrees within the uncertainty. Morris's article (ACS) could not be accessed: his equation was only seen cited in secondary sources (citation and DOI checked in Crossref)."
     },
     {
       "id": "nitroso",
@@ -256,7 +265,8 @@
           "verificado": "compilacion"
         }
       ],
-      "nota": "Medida potenciométrica (electrodo de vidrio) en NaClO4 extrapolada a I = 0. El PDF del artículo es un escaneo: el valor se leyó en la imagen de la página 2184. Martell y Smith (1976) seleccionan 3.15."
+      "nota": "Medida potenciométrica (electrodo de vidrio) en NaClO4 extrapolada a I = 0. El PDF del artículo es un escaneo: el valor se leyó en la imagen de la página 2184. Martell y Smith (1976) seleccionan 3.15.",
+      "notaEn": "Potentiometric measurement (glass electrode) in NaClO4 extrapolated to I = 0. The article's PDF is a scan: the value was read from the image of page 2184. Martell and Smith (1976) select 3.15."
     },
     {
       "id": "cianhidrico",
@@ -277,7 +287,8 @@
           "verificado": "compilacion"
         }
       ],
-      "nota": "Valor seleccionado por Martell y Smith (9.21 ± 0.01). El estudio de Izatt et al. (1962) es la medida de referencia habitualmente citada para este valor, pero su texto (ACS) no se pudo abrir: cita y DOI comprobados en Crossref, número no leído en él."
+      "nota": "Valor seleccionado por Martell y Smith (9.21 ± 0.01). El estudio de Izatt et al. (1962) es la medida de referencia habitualmente citada para este valor, pero su texto (ACS) no se pudo abrir: cita y DOI comprobados en Crossref, número no leído en él.",
+      "notaEn": "Value selected by Martell and Smith (9.21 ± 0.01). The study by Izatt et al. (1962) is the reference measurement usually cited for this value, but its text (ACS) could not be accessed: citation and DOI checked in Crossref, number not read in it."
     },
     {
       "id": "sulfurico",
@@ -304,7 +315,8 @@
           "verificado": "compilacion"
         }
       ],
-      "nota": "Solo la segunda disociación (HSO4- ⇌ H+ + SO4 2-); la primera es completa. Goldberg et al. dan 1.987 (CODATA, confirmado por la conductimetría de Wu y Feng, 1995); Martell y Smith 1.99 ± 0.01; Clegg, Rard y Pitzer (1994) adoptan 1.979. Se apunta 1.99 (todas dentro de ±0.01). El artículo de Wu y Feng (Springer) no se pudo abrir: su valor se leyó en Goldberg; DOI comprobado en Crossref."
+      "nota": "Solo la segunda disociación (HSO4- ⇌ H+ + SO4 2-); la primera es completa. Goldberg et al. dan 1.987 (CODATA, confirmado por la conductimetría de Wu y Feng, 1995); Martell y Smith 1.99 ± 0.01; Clegg, Rard y Pitzer (1994) adoptan 1.979. Se apunta 1.99 (todas dentro de ±0.01). El artículo de Wu y Feng (Springer) no se pudo abrir: su valor se leyó en Goldberg; DOI comprobado en Crossref.",
+      "notaEn": "Only the second dissociation (HSO4- ⇌ H+ + SO4 2-); the first is complete. Goldberg et al. give 1.987 (CODATA, confirmed by the conductometry of Wu and Feng, 1995); Martell and Smith 1.99 ± 0.01; Clegg, Rard and Pitzer (1994) adopt 1.979. 1.99 is recorded (all within ±0.01). The article by Wu and Feng (Springer) could not be accessed: its value was read from Goldberg; DOI checked in Crossref."
     },
     {
       "id": "benzoico",
@@ -326,7 +338,8 @@
           "verificado": "resumen"
         }
       ],
-      "nota": "Partanen et al. (2001) reevalúan los datos de conductividad de Brockman y Kilpatrick (el conjunto más preciso) y obtienen Ka = 6.326e-5, pKa = 4.199, apoyado por Dippy y Williams (conductividad) y Jones y Parton (fem con quinhidrona). Otros valores muy citados: 4.204 (Ka = 6.25e-5, tablas de texto) y 4.206 ± 0.006 (potenciometría con electrodo de hidrógeno); se apunta 4.20. El artículo de Brockman y Kilpatrick (ACS) no se pudo abrir; su valor original no se ha leído."
+      "nota": "Partanen et al. (2001) reevalúan los datos de conductividad de Brockman y Kilpatrick (el conjunto más preciso) y obtienen Ka = 6.326e-5, pKa = 4.199, apoyado por Dippy y Williams (conductividad) y Jones y Parton (fem con quinhidrona). Otros valores muy citados: 4.204 (Ka = 6.25e-5, tablas de texto) y 4.206 ± 0.006 (potenciometría con electrodo de hidrógeno); se apunta 4.20. El artículo de Brockman y Kilpatrick (ACS) no se pudo abrir; su valor original no se ha leído.",
+      "notaEn": "Partanen et al. (2001) reevaluate the conductivity data of Brockman and Kilpatrick (the most precise set) and obtain Ka = 6.326e-5, pKa = 4.199, supported by Dippy and Williams (conductivity) and Jones and Parton (emf with quinhydrone). Other widely cited values: 4.204 (Ka = 6.25e-5, textbook tables) and 4.206 ± 0.006 (potentiometry with a hydrogen electrode); 4.20 is recorded. The article by Brockman and Kilpatrick (ACS) could not be accessed; its original value has not been read."
     },
     {
       "id": "succinico",
@@ -356,7 +369,8 @@
           "verificado": "compilacion"
         }
       ],
-      "nota": "Pilas sin unión líquida. Goldberg et al. adoptan exactamente estos valores (4.207 y 5.636)."
+      "nota": "Pilas sin unión líquida. Goldberg et al. adoptan exactamente estos valores (4.207 y 5.636).",
+      "notaEn": "Cells without liquid junction. Goldberg et al. adopt exactly these values (4.207 and 5.636)."
     },
     {
       "id": "ftalico",
@@ -386,7 +400,8 @@
           "verificado": "compilacion"
         }
       ],
-      "nota": "Ácido o-ftálico (benceno-1,2-dicarboxílico). Pilas sin unión líquida; Goldberg et al. adoptan los mismos valores (2.950 y 5.408)."
+      "nota": "Ácido o-ftálico (benceno-1,2-dicarboxílico). Pilas sin unión líquida; Goldberg et al. adoptan los mismos valores (2.950 y 5.408).",
+      "notaEn": "o-Phthalic acid (benzene-1,2-dicarboxylic acid). Cells without liquid junction; Goldberg et al. adopt the same values (2.950 and 5.408)."
     },
     {
       "id": "tartarico",
@@ -410,7 +425,8 @@
           "verificado": "compilacion"
         }
       ],
-      "nota": "Ácido d-(L-(+))-tartárico, el natural. Las dos disociaciones se solapan mucho (K1/K2 ≈ 20), lo que hace delicada la resolución; Goldberg et al. consideran este estudio el definitivo. La media de otros estudios da 3.04 y 4.40."
+      "nota": "Ácido d-(L-(+))-tartárico, el natural. Las dos disociaciones se solapan mucho (K1/K2 ≈ 20), lo que hace delicada la resolución; Goldberg et al. consideran este estudio el definitivo. La media de otros estudios da 3.04 y 4.40.",
+      "notaEn": "d-(L-(+))-tartaric acid, the natural one. The two dissociations overlap heavily (K1/K2 ≈ 20), which makes resolving them delicate; Goldberg et al. consider this study the definitive one. The mean of other studies gives 3.04 and 4.40."
     },
     {
       "id": "sulfuroso",
@@ -433,7 +449,8 @@
           "verificado": "compilacion"
         }
       ],
-      "nota": "«H2SO3» es en realidad SO2(aq): pKa1 se refiere a SO2(aq) + H2O ⇌ H+ + HSO3-. Goldberg y Parker, en su evaluación crítica, prefieren K1 de Huss y Eckert (1977) a la de Tartar y Garretson (pila electroquímica, que daban otras evaluaciones anteriores); K2 es su valor «tentativo» ajustado por consistencia termodinámica (6.72e-8; 6.5e-8 antes del ajuste). pKa = -log K. Goldberg et al. (2002, Tabla 7.59) mantienen 1.857 y 7.172. El valor de Huss y Eckert se leyó en Goldberg y Parker (ACS no accesible)."
+      "nota": "«H2SO3» es en realidad SO2(aq): pKa1 se refiere a SO2(aq) + H2O ⇌ H+ + HSO3-. Goldberg y Parker, en su evaluación crítica, prefieren K1 de Huss y Eckert (1977) a la de Tartar y Garretson (pila electroquímica, que daban otras evaluaciones anteriores); K2 es su valor «tentativo» ajustado por consistencia termodinámica (6.72e-8; 6.5e-8 antes del ajuste). pKa = -log K. Goldberg et al. (2002, Tabla 7.59) mantienen 1.857 y 7.172. El valor de Huss y Eckert se leyó en Goldberg y Parker (ACS no accesible).",
+      "notaEn": "“H2SO3” is actually SO2(aq): pKa1 refers to SO2(aq) + H2O ⇌ H+ + HSO3-. Goldberg and Parker, in their critical evaluation, prefer the K1 of Huss and Eckert (1977) to that of Tartar and Garretson (electrochemical cell, which earlier evaluations gave); K2 is their “tentative” value adjusted for thermodynamic consistency (6.72e-8; 6.5e-8 before the adjustment). pKa = -log K. Goldberg et al. (2002, Table 7.59) keep 1.857 and 7.172. The value of Huss and Eckert was read in Goldberg and Parker (ACS, could not be accessed)."
     },
     {
       "id": "borico",
@@ -461,7 +478,8 @@
           "verificado": "compilacion"
         }
       ],
-      "nota": "El ácido bórico es un ácido de Lewis: B(OH)3 + H2O ⇌ B(OH)4- + H+. Goldberg et al. seleccionan 9.237 a partir de los trabajos de Owen (1934, 1935; Owen y King 1943), con pila sin unión líquida; Manov et al. (1944) dan 9.235 y Mesmer y Baes (1972) algo distinto, diferencias que Goldberg considera «algo mayores de lo deseable». En disoluciones concentradas (> 0.025 M) se forman poliboratos. El artículo de Owen (ACS) no se pudo abrir: su valor se toma de Goldberg."
+      "nota": "El ácido bórico es un ácido de Lewis: B(OH)3 + H2O ⇌ B(OH)4- + H+. Goldberg et al. seleccionan 9.237 a partir de los trabajos de Owen (1934, 1935; Owen y King 1943), con pila sin unión líquida; Manov et al. (1944) dan 9.235 y Mesmer y Baes (1972) algo distinto, diferencias que Goldberg considera «algo mayores de lo deseable». En disoluciones concentradas (> 0.025 M) se forman poliboratos. El artículo de Owen (ACS) no se pudo abrir: su valor se toma de Goldberg.",
+      "notaEn": "Boric acid is a Lewis acid: B(OH)3 + H2O ⇌ B(OH)4- + H+. Goldberg et al. select 9.237 from the work of Owen (1934, 1935; Owen and King 1943), with cells without liquid junction; Manov et al. (1944) give 9.235 and Mesmer and Baes (1972) something somewhat different, differences that Goldberg considers “somewhat larger than desirable.” In concentrated solutions (> 0.025 M) polyborates form. Owen's article (ACS) could not be accessed: his value is taken from Goldberg."
     },
     {
       "id": "glicina",
@@ -489,7 +507,8 @@
           "verificado": "compilacion"
         }
       ],
-      "nota": "Forma más protonada: catión glicinio H3N+-CH2-COOH (H2Gly+). pK1: COOH; pK2: NH3+ del zwitterión. Goldberg et al. consideran los estudios de King (1945, 1951; pila sin unión líquida) los más exactos, en excelente acuerdo con Owen (1934) y Datta y Grzybowski (1958, pK2 = 9.778). Los artículos (ACS) no se pudieron abrir: valores leídos en la tabla de Goldberg; DOIs comprobados en Crossref."
+      "nota": "Forma más protonada: catión glicinio H3N+-CH2-COOH (H2Gly+). pK1: COOH; pK2: NH3+ del zwitterión. Goldberg et al. consideran los estudios de King (1945, 1951; pila sin unión líquida) los más exactos, en excelente acuerdo con Owen (1934) y Datta y Grzybowski (1958, pK2 = 9.778). Los artículos (ACS) no se pudieron abrir: valores leídos en la tabla de Goldberg; DOIs comprobados en Crossref.",
+      "notaEn": "Most protonated form: the glycinium cation H3N+-CH2-COOH (H2Gly+). pK1: COOH; pK2: NH3+ of the zwitterion. Goldberg et al. consider the studies of King (1945, 1951; cell without liquid junction) the most accurate, in excellent agreement with Owen (1934) and Datta and Grzybowski (1958, pK2 = 9.778). The articles (ACS) could not be accessed: values read from Goldberg's table; DOIs checked in Crossref."
     },
     {
       "id": "metilamina",
@@ -516,7 +535,8 @@
           "verificado": "compilacion"
         }
       ],
-      "nota": "pKa del ion metilamonio. Goldberg et al. adoptan 10.645 de Harned y Robinson (1928). Everett y Wynne-Jones (1941) dan 10.62, leído en Lumme, P.; Lahermo, P.; Tummavuori, J. Acta Chem. Scand. 1965, 19, 2175-2188; Tabla 14, p. 2185, que recoge los valores de Everett y Wynne-Jones (ref. 28) (artículo de la Royal Society bloqueado por antibot). Diferencia 0.025, dentro del margen."
+      "nota": "pKa del ion metilamonio. Goldberg et al. adoptan 10.645 de Harned y Robinson (1928). Everett y Wynne-Jones (1941) dan 10.62, leído en Lumme, P.; Lahermo, P.; Tummavuori, J. Acta Chem. Scand. 1965, 19, 2175-2188; Tabla 14, p. 2185, que recoge los valores de Everett y Wynne-Jones (ref. 28) (artículo de la Royal Society bloqueado por antibot). Diferencia 0.025, dentro del margen.",
+      "notaEn": "pKa of the methylammonium ion. Goldberg et al. adopt 10.645 from Harned and Robinson (1928). Everett and Wynne-Jones (1941) give 10.62, read in Lumme, P.; Lahermo, P.; Tummavuori, J. Acta Chem. Scand. 1965, 19, 2175-2188; Table 14, p. 2185, which lists the values of Everett and Wynne-Jones (ref. 28) (Royal Society article could not be accessed). Difference 0.025, within the margin."
     },
     {
       "id": "dimetilamina",
@@ -538,7 +558,8 @@
           "verificado": "compilacion"
         }
       ],
-      "nota": "pKa del ion dimetilamonio. El artículo original (Royal Society) no se pudo abrir por antibot; el valor se leyó en la Tabla 14 de Lumme et al. (1965), que lo atribuye a Everett y Wynne-Jones. DOI comprobado en Crossref."
+      "nota": "pKa del ion dimetilamonio. El artículo original (Royal Society) no se pudo abrir por antibot; el valor se leyó en la Tabla 14 de Lumme et al. (1965), que lo atribuye a Everett y Wynne-Jones. DOI comprobado en Crossref.",
+      "notaEn": "pKa of the dimethylammonium ion. The original article (Royal Society) could not be accessed; the value was read in Table 14 of Lumme et al. (1965), which attributes it to Everett and Wynne-Jones. DOI checked in Crossref."
     },
     {
       "id": "trimetilamina",
@@ -560,7 +581,8 @@
           "verificado": "compilacion"
         }
       ],
-      "nota": "pKa del ion trimetilamonio. Es menor que el de la dimetilamina pese a tener más grupos donadores (efecto de solvatación, que discute el propio Lumme). El artículo original (Royal Society) no se pudo abrir por antibot; el valor se leyó en la Tabla 14 de Lumme et al. (1965). DOI comprobado en Crossref."
+      "nota": "pKa del ion trimetilamonio. Es menor que el de la dimetilamina pese a tener más grupos donadores (efecto de solvatación, que discute el propio Lumme). El artículo original (Royal Society) no se pudo abrir por antibot; el valor se leyó en la Tabla 14 de Lumme et al. (1965). DOI comprobado en Crossref.",
+      "notaEn": "pKa of the trimethylammonium ion. It is lower than that of dimethylamine despite having more donor groups (a solvation effect, which Lumme himself discusses). The original article (Royal Society) could not be accessed; the value was read in Table 14 of Lumme et al. (1965). DOI checked in Crossref."
     },
     {
       "id": "hidracina",
@@ -586,7 +608,8 @@
           "verificado": "compilacion"
         }
       ],
-      "nota": "pKa del ion hidracinio N2H5+ (N2H4 + H+). La segunda protonación (N2H6 2+) tiene pKa ≈ -1 y no se incluye. Martell y Smith seleccionan 7.98 ± 0.01; Goldberg et al. adoptan la media de la literatura, 8.02, que incluye medidas a otras temperaturas y fuerzas iónicas. Las medidas individuales a 25 °C e I = 0 que recoge Goldberg van de 7.95 (Yui 1941) a 7.99 (Ware et al. 1936); se toma 7.98. Discrepancia entre compilaciones: 0.04. La cita de Ware et al. no tiene DOI comprobado."
+      "nota": "pKa del ion hidracinio N2H5+ (N2H4 + H+). La segunda protonación (N2H6 2+) tiene pKa ≈ -1 y no se incluye. Martell y Smith seleccionan 7.98 ± 0.01; Goldberg et al. adoptan la media de la literatura, 8.02, que incluye medidas a otras temperaturas y fuerzas iónicas. Las medidas individuales a 25 °C e I = 0 que recoge Goldberg van de 7.95 (Yui 1941) a 7.99 (Ware et al. 1936); se toma 7.98. Discrepancia entre compilaciones: 0.04. La cita de Ware et al. no tiene DOI comprobado.",
+      "notaEn": "pKa of the hydrazinium ion N2H5+ (N2H4 + H+). The second protonation (N2H6 2+) has pKa ≈ -1 and is not included. Martell and Smith select 7.98 ± 0.01; Goldberg et al. adopt the literature mean, 8.02, which includes measurements at other temperatures and ionic strengths. The individual measurements at 25 °C and I = 0 listed by Goldberg range from 7.95 (Yui 1941) to 7.99 (Ware et al. 1936); 7.98 is taken. Discrepancy between compilations: 0.04. The citation of Ware et al. does not have a checked DOI."
     },
     {
       "id": "hidroxilamina",
@@ -608,7 +631,8 @@
           "verificado": "compilacion"
         }
       ],
-      "nota": "pKa del ion hidroxilamonio NH3OH+. Medida potenciométrica (electrodo de vidrio) extrapolada a I = 0. Los propios autores recogen en su Tabla 11 valores de la literatura a 25 °C entre 5.8 y 6.60, y señalan como más concordantes los de Robinson y Bower (5.96, espectrofotometría). Martell y Smith: 5.96 ± 0.02."
+      "nota": "pKa del ion hidroxilamonio NH3OH+. Medida potenciométrica (electrodo de vidrio) extrapolada a I = 0. Los propios autores recogen en su Tabla 11 valores de la literatura a 25 °C entre 5.8 y 6.60, y señalan como más concordantes los de Robinson y Bower (5.96, espectrofotometría). Martell y Smith: 5.96 ± 0.02.",
+      "notaEn": "pKa of the hydroxylammonium ion NH3OH+. Potentiometric measurement (glass electrode) extrapolated to I = 0. The authors themselves list in their Table 11 literature values at 25 °C between 5.8 and 6.60, and point to those of Robinson and Bower (5.96, spectrophotometry) as the most consistent. Martell and Smith: 5.96 ± 0.02."
     },
     {
       "id": "sulfhidrico",
@@ -629,7 +653,8 @@
           "verificado": "no"
         }
       ],
-      "nota": "Solo pKa1. El pKa2 (HS- ⇌ H+ + S2-) es controvertido: Martell y Smith (1976) daban 13.9 ± 0.1, pero medidas posteriores (espectroscopia Raman y UV en disoluciones muy alcalinas) lo sitúan entre ~17 y ~19, porque el S2- prácticamente no existe en agua; por eso se omite. Para pKa1, trabajos más recientes como Hershey, Plese y Millero (1988) dan ~6.98; su artículo (Elsevier) no se pudo abrir (cita y DOI comprobados en Crossref, número no leído). Diferencia con Martell y Smith: 0.04."
+      "nota": "Solo pKa1. El pKa2 (HS- ⇌ H+ + S2-) es controvertido: Martell y Smith (1976) daban 13.9 ± 0.1, pero medidas posteriores (espectroscopia Raman y UV en disoluciones muy alcalinas) lo sitúan entre ~17 y ~19, porque el S2- prácticamente no existe en agua; por eso se omite. Para pKa1, trabajos más recientes como Hershey, Plese y Millero (1988) dan ~6.98; su artículo (Elsevier) no se pudo abrir (cita y DOI comprobados en Crossref, número no leído). Diferencia con Martell y Smith: 0.04.",
+      "notaEn": "Only pKa1. pKa2 (HS- ⇌ H+ + S2-) is controversial: Martell and Smith (1976) gave 13.9 ± 0.1, but later measurements (Raman and UV spectroscopy in very alkaline solutions) place it between ~17 and ~19, because S2- practically does not exist in water; that is why it is omitted. For pKa1, more recent work such as Hershey, Plese and Millero (1988) gives ~6.98; their article (Elsevier) could not be accessed (citation and DOI checked in Crossref, number not read). Difference from Martell and Smith: 0.04."
     }
   ],
   "indicadores": [
@@ -650,7 +675,8 @@
           "verificado": "compilacion"
         }
       ],
-      "nota": "Kolthoff da 8.0-9.8 (incoloro → rojo-violeta). Muchos textos modernos dan 8.2-10.0; la diferencia viene de dónde se fija el límite visual. En medio muy básico (pH > 13) vuelve lentamente a incoloro."
+      "nota": "Kolthoff da 8.0-9.8 (incoloro → rojo-violeta). Muchos textos modernos dan 8.2-10.0; la diferencia viene de dónde se fija el límite visual. En medio muy básico (pH > 13) vuelve lentamente a incoloro.",
+      "notaEn": "Kolthoff gives 8.0-9.8 (colorless → red-violet). Many modern texts give 8.2-10.0; the difference comes from where the visual limit is set. In very basic media (pH > 13) it slowly turns colorless again."
     },
     {
       "id": "naranja-metilo",
@@ -707,7 +733,8 @@
           "verificado": "compilacion"
         }
       ],
-      "nota": "Kolthoff lo escribe «bromthymol blue». A pH intermedio (~7) se ve verde."
+      "nota": "Kolthoff lo escribe «bromthymol blue». A pH intermedio (~7) se ve verde.",
+      "notaEn": "Kolthoff writes it “bromthymol blue.” At intermediate pH (~7) it looks green."
     },
     {
       "id": "azul-timol-acido",
@@ -726,7 +753,8 @@
           "verificado": "compilacion"
         }
       ],
-      "nota": "Primer viraje del azul de timol (forma ácida)."
+      "nota": "Primer viraje del azul de timol (forma ácida).",
+      "notaEn": "First color change of thymol blue (acid form)."
     },
     {
       "id": "azul-timol-basico",
@@ -745,7 +773,8 @@
           "verificado": "compilacion"
         }
       ],
-      "nota": "Segundo viraje del azul de timol (forma básica)."
+      "nota": "Segundo viraje del azul de timol (forma básica).",
+      "notaEn": "Second color change of thymol blue (basic form)."
     },
     {
       "id": "verde-bromocresol",
@@ -764,7 +793,8 @@
           "verificado": "compilacion"
         }
       ],
-      "nota": "Kolthoff lo escribe «bromcresol green»."
+      "nota": "Kolthoff lo escribe «bromcresol green».",
+      "notaEn": "Kolthoff writes it “bromcresol green.”"
     },
     {
       "id": "tornasol",
@@ -783,7 +813,8 @@
           "verificado": "compilacion"
         }
       ],
-      "nota": "Kolthoff lo da para la azolitmina, el componente activo del tornasol, y advierte que el tornasol comercial es una mezcla con grandes errores salino y proteico: sirve como papel indicador, no para medir pH por colorimetría."
+      "nota": "Kolthoff lo da para la azolitmina, el componente activo del tornasol, y advierte que el tornasol comercial es una mezcla con grandes errores salino y proteico: sirve como papel indicador, no para medir pH por colorimetría.",
+      "notaEn": "Kolthoff gives it for azolitmin, the active component of litmus, and warns that commercial litmus is a mixture with large salt and protein errors: it works as indicator paper, not for measuring pH by colorimetry."
     },
     {
       "id": "amarillo-alizarina",
@@ -802,7 +833,8 @@
           "verificado": "compilacion"
         }
       ],
-      "nota": "Kolthoff da 10.1-11.1, amarillo → lila, para el «alizarine yellow». Tablas modernas del amarillo de alizarina R dan 10.1-12.0, amarillo → rojo anaranjado; la tonalidad básica depende del producto concreto (R o GG)."
+      "nota": "Kolthoff da 10.1-11.1, amarillo → lila, para el «alizarine yellow». Tablas modernas del amarillo de alizarina R dan 10.1-12.0, amarillo → rojo anaranjado; la tonalidad básica depende del producto concreto (R o GG).",
+      "notaEn": "Kolthoff gives 10.1-11.1, yellow → lilac, for “alizarine yellow.” Modern tables for alizarin yellow R give 10.1-12.0, yellow → orange-red; the basic hue depends on the specific product (R or GG)."
     },
     {
       "id": "timolftaleina",
@@ -836,7 +868,8 @@
           "verificado": "compilacion"
         }
       ],
-      "nota": "Martell y Smith: -9.74 ± 0.00."
+      "nota": "Martell y Smith: -9.74 ± 0.00.",
+      "notaEn": "Martell and Smith: -9.74 ± 0.00."
     },
     {
       "id": "agbr",
@@ -849,7 +882,8 @@
           "verificado": "compilacion"
         }
       ],
-      "nota": "Martell y Smith: -12.30 ± 0.02."
+      "nota": "Martell y Smith: -12.30 ± 0.02.",
+      "notaEn": "Martell and Smith: -12.30 ± 0.02."
     },
     {
       "id": "agi",
@@ -862,7 +896,8 @@
           "verificado": "compilacion"
         }
       ],
-      "nota": "Martell y Smith: -16.08 (sin incertidumbre indicada)."
+      "nota": "Martell y Smith: -16.08 (sin incertidumbre indicada).",
+      "notaEn": "Martell and Smith: -16.08 (no uncertainty given)."
     },
     {
       "id": "ag2cro4",
@@ -875,7 +910,8 @@
           "verificado": "compilacion"
         }
       ],
-      "nota": "Martell y Smith: -11.92 ± 0.03. Ks = [Ag+]^2[CrO4 2-]."
+      "nota": "Martell y Smith: -11.92 ± 0.03. Ks = [Ag+]^2[CrO4 2-].",
+      "notaEn": "Martell and Smith: -11.92 ± 0.03. Ks = [Ag+]^2[CrO4 2-]."
     },
     {
       "id": "baso4",
@@ -888,7 +924,8 @@
           "verificado": "compilacion"
         }
       ],
-      "nota": "Martell y Smith: -9.96 ± 0.03."
+      "nota": "Martell y Smith: -9.96 ± 0.03.",
+      "notaEn": "Martell and Smith: -9.96 ± 0.03."
     },
     {
       "id": "caso4",
@@ -901,7 +938,8 @@
           "verificado": "compilacion"
         }
       ],
-      "nota": "Martell y Smith: -4.62 ± 0.02 (la tabla no especifica la fase sólida). Al ser bastante soluble, el par iónico CaSO4(aq) (log K = 2.31 en la misma página) pesa mucho en la solubilidad real."
+      "nota": "Martell y Smith: -4.62 ± 0.02 (la tabla no especifica la fase sólida). Al ser bastante soluble, el par iónico CaSO4(aq) (log K = 2.31 en la misma página) pesa mucho en la solubilidad real.",
+      "notaEn": "Martell and Smith: -4.62 ± 0.02 (the table does not specify the solid phase). Since it is fairly soluble, the CaSO4(aq) ion pair (log K = 2.31 on the same page) weighs heavily on the actual solubility."
     },
     {
       "id": "caf2",
@@ -914,7 +952,8 @@
           "verificado": "compilacion"
         }
       ],
-      "nota": "Martell y Smith: -10.41 (valor entre paréntesis en ΔH, sin incertidumbre en log K)."
+      "nota": "Martell y Smith: -10.41 (valor entre paréntesis en ΔH, sin incertidumbre en log K).",
+      "notaEn": "Martell and Smith: -10.41 (value in parentheses for ΔH, no uncertainty for log K)."
     },
     {
       "id": "caco3",
@@ -927,7 +966,8 @@
           "verificado": "compilacion"
         }
       ],
-      "nota": "Calcita: -8.35 ± 0.1. Para aragonito, Martell y Smith dan -8.22. La solubilidad real del CaCO3 depende mucho del pH y del CO2 disuelto (el CO3 2- se protona)."
+      "nota": "Calcita: -8.35 ± 0.1. Para aragonito, Martell y Smith dan -8.22. La solubilidad real del CaCO3 depende mucho del pH y del CO2 disuelto (el CO3 2- se protona).",
+      "notaEn": "Calcite: -8.35 ± 0.1. For aragonite, Martell and Smith give -8.22. The actual solubility of CaCO3 depends strongly on pH and on dissolved CO2 (CO3 2- gets protonated)."
     },
     {
       "id": "pbi2",
@@ -940,7 +980,8 @@
           "verificado": "compilacion"
         }
       ],
-      "nota": "Martell y Smith: -8.10 ± 0.09."
+      "nota": "Martell y Smith: -8.10 ± 0.09.",
+      "notaEn": "Martell and Smith: -8.10 ± 0.09."
     },
     {
       "id": "mgoh2",
@@ -953,7 +994,8 @@
           "verificado": "compilacion"
         }
       ],
-      "nota": "Martell y Smith: -11.15 ± 0.2. Ks = [Mg2+][OH-]^2; depende de la forma cristalina y del envejecimiento del precipitado."
+      "nota": "Martell y Smith: -11.15 ± 0.2. Ks = [Mg2+][OH-]^2; depende de la forma cristalina y del envejecimiento del precipitado.",
+      "notaEn": "Martell and Smith: -11.15 ± 0.2. Ks = [Mg2+][OH-]^2; it depends on the crystal form and on the aging of the precipitate."
     },
     {
       "id": "caoh2",
@@ -966,7 +1008,8 @@
           "verificado": "compilacion"
         }
       ],
-      "nota": "Martell y Smith: -5.19 ± 0.2. Bastante soluble: la formación del par CaOH+ (log K = 1.3) afecta a la solubilidad real."
+      "nota": "Martell y Smith: -5.19 ± 0.2. Bastante soluble: la formación del par CaOH+ (log K = 1.3) afecta a la solubilidad real.",
+      "notaEn": "Martell and Smith: -5.19 ± 0.2. Fairly soluble: the formation of the CaOH+ pair (log K = 1.3) affects the actual solubility."
     },
     {
       "id": "feoh3",
@@ -979,7 +1022,8 @@
           "verificado": "compilacion"
         }
       ],
-      "nota": "Martell y Smith: -38.8 ± 0.2 para el Fe(OH)3 sólido (precipitado amorfo). Para la goethita α-FeOOH dan -41.5 (M.L^3/MOOH) y para la hematites -42.7 (por Fe). Valor muy dependiente del envejecimiento del precipitado; en tablas escolares aparecen valores de 37 a 39."
+      "nota": "Martell y Smith: -38.8 ± 0.2 para el Fe(OH)3 sólido (precipitado amorfo). Para la goethita α-FeOOH dan -41.5 (M.L^3/MOOH) y para la hematites -42.7 (por Fe). Valor muy dependiente del envejecimiento del precipitado; en tablas escolares aparecen valores de 37 a 39.",
+      "notaEn": "Martell and Smith: -38.8 ± 0.2 for solid Fe(OH)3 (amorphous precipitate). For goethite α-FeOOH they give -41.5 (M.L^3/MOOH) and for hematite -42.7 (per Fe). The value depends strongly on the aging of the precipitate; school tables show values from 37 to 39."
     }
   ]
 }

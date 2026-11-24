@@ -1,0 +1,205 @@
+{
+ "fuente": "https://clientebancario.bde.es/pcb/es/menu-horizontal/podemosayudarte/tiposinteres/guia_textual/tiposinteresreferenciaotrostiposfrecuentes/tabla_tipos_interes_demora_operaciones_comerciales.html",
+ "oficial": "Resolución semestral de la Secretaría General del Tesoro en el BOE (art. 7.2 de la Ley 3/2004); el 2.º semestre de 2026, BOE-A-2026-14327",
+ "nota": "Tipo legal de interés de demora en operaciones comerciales, % anual, por semestre natural. Hasta 2026-1 copiado de la tabla del Banco de España el 2026-11-16; 2026-2 (10,40) de la resolución BOE-A-2026-14327, contrastado con SuperContable y Pere Brachfield porque el PDF del BOE no se dejó leer. En 2013 la Ley 11/2013 cambió la fórmula el 24 de febrero.",
+ "capturado": "2026-11-16",
+ "hasta": "2026-12-31",
+ "tramos": [
+  {
+   "desde": "2003-01-01",
+   "tipo": 9.85
+  },
+  {
+   "desde": "2003-07-01",
+   "tipo": 9.1
+  },
+  {
+   "desde": "2004-01-01",
+   "tipo": 9.02
+  },
+  {
+   "desde": "2004-07-01",
+   "tipo": 9.01
+  },
+  {
+   "desde": "2005-01-01",
+   "tipo": 9.09
+  },
+  {
+   "desde": "2005-07-01",
+   "tipo": 9.05
+  },
+  {
+   "desde": "2006-01-01",
+   "tipo": 9.25
+  },
+  {
+   "desde": "2006-07-01",
+   "tipo": 9.83
+  },
+  {
+   "desde": "2007-01-01",
+   "tipo": 10.58
+  },
+  {
+   "desde": "2007-07-01",
+   "tipo": 11.07
+  },
+  {
+   "desde": "2008-01-01",
+   "tipo": 11.2
+  },
+  {
+   "desde": "2008-07-01",
+   "tipo": 11.07
+  },
+  {
+   "desde": "2009-01-01",
+   "tipo": 9.5
+  },
+  {
+   "desde": "2009-07-01",
+   "tipo": 8.0
+  },
+  {
+   "desde": "2010-01-01",
+   "tipo": 8.0
+  },
+  {
+   "desde": "2010-07-01",
+   "tipo": 8.0
+  },
+  {
+   "desde": "2011-01-01",
+   "tipo": 8.0
+  },
+  {
+   "desde": "2011-07-01",
+   "tipo": 8.25
+  },
+  {
+   "desde": "2012-01-01",
+   "tipo": 8.0
+  },
+  {
+   "desde": "2012-07-01",
+   "tipo": 8.0
+  },
+  {
+   "desde": "2013-01-01",
+   "tipo": 7.75
+  },
+  {
+   "desde": "2013-02-24",
+   "tipo": 8.75
+  },
+  {
+   "desde": "2013-07-01",
+   "tipo": 8.5
+  },
+  {
+   "desde": "2014-01-01",
+   "tipo": 8.25
+  },
+  {
+   "desde": "2014-07-01",
+   "tipo": 8.15
+  },
+  {
+   "desde": "2015-01-01",
+   "tipo": 8.05
+  },
+  {
+   "desde": "2015-07-01",
+   "tipo": 8.05
+  },
+  {
+   "desde": "2016-01-01",
+   "tipo": 8.05
+  },
+  {
+   "desde": "2016-07-01",
+   "tipo": 8.0
+  },
+  {
+   "desde": "2017-01-01",
+   "tipo": 8.0
+  },
+  {
+   "desde": "2017-07-01",
+   "tipo": 8.0
+  },
+  {
+   "desde": "2018-01-01",
+   "tipo": 8.0
+  },
+  {
+   "desde": "2018-07-01",
+   "tipo": 8.0
+  },
+  {
+   "desde": "2019-01-01",
+   "tipo": 8.0
+  },
+  {
+   "desde": "2019-07-01",
+   "tipo": 8.0
+  },
+  {
+   "desde": "2020-01-01",
+   "tipo": 8.0
+  },
+  {
+   "desde": "2020-07-01",
+   "tipo": 8.0
+  },
+  {
+   "desde": "2021-01-01",
+   "tipo": 8.0
+  },
+  {
+   "desde": "2021-07-01",
+   "tipo": 8.0
+  },
+  {
+   "desde": "2022-01-01",
+   "tipo": 8.0
+  },
+  {
+   "desde": "2022-07-01",
+   "tipo": 8.0
+  },
+  {
+   "desde": "2023-01-01",
+   "tipo": 10.5
+  },
+  {
+   "desde": "2023-07-01",
+   "tipo": 12.0
+  },
+  {
+   "desde": "2024-01-01",
+   "tipo": 12.5
+  },
+  {
+   "desde": "2024-07-01",
+   "tipo": 12.25
+  },
+  {
+   "desde": "2025-01-01",
+   "tipo": 11.15
+  },
+  {
+   "desde": "2025-07-01",
+   "tipo": 10.15
+  },
+  {
+   "desde": "2026-01-01",
+   "tipo": 10.15
+  },
+  {
+   "desde": "2026-07-01",
+   "tipo": 10.4
+  }
+ ]
+}

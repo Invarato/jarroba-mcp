@@ -148,3 +148,103 @@ export function cargarConstantes(): Promise<TablaConstantes | null> {
         }
     })();
 }
+export interface PotencialTabla {
+    id: string;
+    semirreaccion: string;
+    oxidada: string;
+    reducida: string;
+    n: number;
+    h: number;
+    oh: number;
+    E0: number;
+    dEdT?: number;
+    estimado?: boolean;
+    nota?: string;
+    notaEn?: string;
+    fuentes: FuenteConstante[];
+}
+export interface TablaPotenciales {
+    potenciales: PotencialTabla[];
+}
+export interface DatoTermoTabla {
+    formula: string;
+    estado: "g" | "l" | "s" | "aq";
+    dfH: number;
+    S: number;
+    sdfH?: number;
+    sS?: number;
+    nota?: string;
+    fuentes: FuenteConstante[];
+}
+export interface TablaTermo {
+    datos: DatoTermoTabla[];
+}
+const conFuentes = (f: unknown) => Array.isArray(f) && f.length > 0 && f.every(y => typeof (y as FuenteConstante)?.cita === "string");
+export function esTablaPotenciales(x: unknown): x is TablaPotenciales {
+    const t = x as TablaPotenciales;
+    return !!t && Array.isArray(t.potenciales) && t.potenciales.every(p => typeof p?.id === "string" && typeof p.semirreaccion === "string"
+        && Number.isInteger(p.n) && p.n > 0 && Number.isInteger(p.h) && Number.isInteger(p.oh) && Number.isFinite(p.E0) && conFuentes(p.fuentes));
+}
+export function esTablaTermo(x: unknown): x is TablaTermo {
+    const t = x as TablaTermo;
+    return !!t && Array.isArray(t.datos) && t.datos.every(d => typeof d?.formula === "string" && ["g", "l", "s", "aq"].includes(d.estado)
+        && Number.isFinite(d.dfH) && Number.isFinite(d.S) && conFuentes(d.fuentes));
+}
+const caches = new Map<string, Promise<unknown>>();
+function cargarTabla<T>(id: string, valida: (x: unknown) => x is T): Promise<T | null> {
+    let p = caches.get(id) as Promise<T | null> | undefined;
+    if (!p) {
+        p = (async () => {
+            try {
+                const man = await (await fetch("datos/manifiesto.json")).json() as {
+                    entradas: {
+                        id: string;
+                        carpeta?: string;
+                        actual?: string;
+                    }[];
+                };
+                const e = man.entradas.find(x => x.id === id);
+                if (!e?.carpeta || !e.actual)
+                    return null;
+                const d = await (await fetch(`datos/${e.carpeta}/${e.actual}`)).json();
+                return valida(d) ? d : null;
+            }
+            catch {
+                caches.delete(id);
+                return null;
+            }
+        })();
+        caches.set(id, p);
+    }
+    return p;
+}
+export const cargarPotenciales = () => cargarTabla("quimica-redox", esTablaPotenciales);
+export const cargarTermo = () => cargarTabla("quimica-termo", esTablaTermo);
+export interface IndicadorTramosTabla {
+    id: string;
+    tramos: {
+        pH: number;
+        color: string;
+        hex: string;
+        lambda?: number;
+    }[];
+    nota?: string;
+    notaEn?: string;
+    fuentes: FuenteConstante[];
+}
+export interface TablaIndicadoresTramos {
+    indicadores: IndicadorTramosTabla[];
+}
+export function esTablaIndicadoresTramos(x: unknown): x is TablaIndicadoresTramos {
+    const t = x as TablaIndicadoresTramos;
+    return !!t && Array.isArray(t.indicadores) && t.indicadores.every(i => typeof i?.id === "string" && conFuentes(i.fuentes)
+        && Array.isArray(i.tramos) && i.tramos.length > 1
+        && i.tramos.every((r, k) => Number.isFinite(r?.pH) && typeof r.color === "string" && /^#[0-9a-f]{6}$/i.test(r.hex) && (k === 0 || r.pH > i.tramos[k - 1].pH)));
+}
+export const cargarIndicadoresTramos = () => cargarTabla("quimica-indicadores", esTablaIndicadoresTramos);
+export function notaEnIdioma(x: {
+    nota?: string;
+    notaEn?: string;
+}, localeId: string): string {
+    return (localeId.startsWith("es") ? x.nota : x.notaEn ?? x.nota) ?? "";
+}

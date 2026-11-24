@@ -1,5 +1,5 @@
 import * as jsYaml from "js-yaml";
-import { ApiCampo, ApiColeccion, ApiCuerpo, ApiPeticion, ResultadoImport, campo, cuerpoVacio, authVacia, peticionVacia, } from "./api-ir";
+import { ApiCampo, ApiColeccion, ApiCuerpo, ApiPeticion, ResultadoImport, campo, cuerpoVacio, authVacia, peticionVacia, msg, MsgConv, } from "./api-ir";
 export interface ParamApi {
     nombre: string;
     donde: "query" | "header" | "path" | "cookie";
@@ -42,27 +42,27 @@ export function esOpenApi(x: unknown): boolean {
 export function leerEspec(texto: string): {
     ok: true;
     espec: EspecApi;
-    avisos: string[];
+    avisos: MsgConv[];
 } | {
     ok: false;
-    error: string;
+    error: MsgConv;
 } {
     let raiz: unknown;
     const t = texto.trim();
     if (!t)
-        return { ok: false, error: "No hay nada que leer." };
+        return { ok: false, error: msg("vacio-leer") };
     try {
         raiz = t.startsWith("{") || t.startsWith("[") ? JSON.parse(t) : jsYaml.load(t);
     }
     catch (e) {
-        return { ok: false, error: `No se pudo leer como JSON ni como YAML: ${(e as Error).message}` };
+        return { ok: false, error: msg("json-o-yaml-ilegible", { detalle: (e as Error).message }) };
     }
     if (!esObj(raiz))
-        return { ok: false, error: "El documento no es un objeto." };
+        return { ok: false, error: msg("openapi-no-objeto") };
     if (!esObj(raiz["paths"])) {
-        return { ok: false, error: "No parece OpenAPI ni Swagger: le falta el objeto \u00ABpaths\u00BB." };
+        return { ok: false, error: msg("openapi-sin-paths") };
     }
-    const avisos: string[] = [];
+    const avisos: MsgConv[] = [];
     const v2 = raiz["swagger"] === "2.0";
     const resolver = hazResolver(raiz, avisos);
     const info = esObj(raiz["info"]) ? raiz["info"] : {};
@@ -223,7 +223,7 @@ function servidorDe(raiz: Record<string, unknown>, v2: boolean): string {
     return "";
 }
 type Resolver = (x: unknown) => unknown;
-function hazResolver(raiz: Record<string, unknown>, avisos: string[]): Resolver {
+function hazResolver(raiz: Record<string, unknown>, avisos: MsgConv[]): Resolver {
     const externos = new Set<string>();
     const MAX_SALTOS = 100;
     const resolver: Resolver = (x: unknown) => {
@@ -236,7 +236,7 @@ function hazResolver(raiz: Record<string, unknown>, avisos: string[]): Resolver 
             if (!ref.startsWith("#/")) {
                 if (!externos.has(ref)) {
                     externos.add(ref);
-                    avisos.push(`«${ref}» es una referencia externa: no se resuelve (habría que salir a la red).`);
+                    avisos.push(msg("openapi-ref-externa", { ref }));
                 }
                 break;
             }

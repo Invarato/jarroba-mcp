@@ -1,11 +1,11 @@
 import { EspecApi, OperacionApi, ParamApi, CuerpoApi } from "./api-openapi";
 export type Gravedad = "rompe" | "aviso" | "info";
+export type ReglaDiff = "operacion-eliminada" | "operacion-nueva" | "operacion-obsoleta" | "servidor-cambiado" | "param-requerido-nuevo" | "param-opcional-nuevo" | "param-pasa-a-requerido" | "param-pasa-a-opcional" | "param-cambia-de-tipo" | "param-ruta-eliminado" | "param-eliminado" | "enum-abierto" | "enum-cerrado" | "enum-valor-eliminado" | "enum-valor-nuevo" | "cuerpo-requerido-nuevo" | "cuerpo-opcional-nuevo" | "cuerpo-eliminado" | "cuerpo-pasa-a-requerido" | "content-type-eliminado" | "campo-requerido-nuevo" | "campo-opcional-nuevo" | "campo-pasa-a-requerido" | "campo-cambia-de-tipo" | "campo-eliminado" | "respuesta-exito-eliminada" | "respuesta-eliminada" | "respuesta-nueva" | "seguridad-nueva" | "seguridad-esquema-nuevo" | "seguridad-esquema-eliminado" | "seguridad-eliminada";
 export interface Cambio {
-    regla: string;
+    regla: ReglaDiff;
     gravedad: Gravedad;
     operacion: string;
-    detalle: string;
-    porque?: string;
+    datos: Record<string, string | number>;
 }
 export interface Informe {
     cambios: Cambio[];
@@ -33,8 +33,7 @@ export function comparar(antes: EspecApi, despues: EspecApi): Informe {
                 regla: "operacion-eliminada",
                 gravedad: "rompe",
                 operacion: id,
-                detalle: "La operaci\u00F3n ya no existe.",
-                porque: "Un cliente que la llame recibir\u00E1 404 o 405.",
+                datos: {},
             });
             continue;
         }
@@ -46,8 +45,7 @@ export function comparar(antes: EspecApi, despues: EspecApi): Informe {
                 regla: "operacion-nueva",
                 gravedad: "info",
                 operacion: id,
-                detalle: `Operación nueva${b.resumen ? `: ${b.resumen}` : ""}.`,
-                porque: "A\u00F1adir no rompe a quien no la usa.",
+                datos: { resumen: b.resumen ?? "" },
             });
         }
     }
@@ -56,15 +54,14 @@ export function comparar(antes: EspecApi, despues: EspecApi): Informe {
             regla: "servidor-cambiado",
             gravedad: "rompe",
             operacion: "(global)",
-            detalle: `El servidor pasa de «${antes.servidor}» a «${despues.servidor}».`,
-            porque: "Un cliente con la URL base fija seguir\u00E1 llamando a la direcci\u00F3n vieja.",
+            datos: { antes: antes.servidor, despues: despues.servidor },
         });
     }
     const peso: Record<Gravedad, number> = { rompe: 0, aviso: 1, info: 2 };
     cambios.sort((x, y) => peso[x.gravedad] - peso[y.gravedad]
         || x.operacion.localeCompare(y.operacion)
         || x.regla.localeCompare(y.regla)
-        || x.detalle.localeCompare(y.detalle));
+        || JSON.stringify(x.datos).localeCompare(JSON.stringify(y.datos)));
     const rompe = cambios.filter(c => c.gravedad === "rompe").length;
     return {
         cambios,
@@ -83,8 +80,7 @@ function compararOperacion(a: OperacionApi, b: OperacionApi, out: Cambio[]): voi
             regla: "operacion-obsoleta",
             gravedad: "aviso",
             operacion: id,
-            detalle: "Marcada como obsoleta (deprecated).",
-            porque: "Todav\u00EDa funciona, pero anuncia que va a desaparecer.",
+            datos: {},
         });
     }
     compararParams(a.params, b.params, id, out);
@@ -104,15 +100,13 @@ function compararParams(antes: ParamApi[], despues: ParamApi[], id: string, out:
                     regla: "param-requerido-nuevo",
                     gravedad: "rompe",
                     operacion: id,
-                    detalle: `Parámetro OBLIGATORIO nuevo: «${b.nombre}» (${b.donde}).`,
-                    porque: "El cliente viejo no lo env\u00EDa; la llamada pasar\u00E1 a fallar.",
+                    datos: { nombre: b.nombre, donde: b.donde },
                 }
                 : {
                     regla: "param-opcional-nuevo",
                     gravedad: "info",
                     operacion: id,
-                    detalle: `Parámetro opcional nuevo: «${b.nombre}» (${b.donde}).`,
-                    porque: "El cliente viejo no lo env\u00EDa y sigue funcionando igual.",
+                    datos: { nombre: b.nombre, donde: b.donde },
                 });
             continue;
         }
@@ -121,8 +115,7 @@ function compararParams(antes: ParamApi[], despues: ParamApi[], id: string, out:
                 regla: "param-pasa-a-requerido",
                 gravedad: "rompe",
                 operacion: id,
-                detalle: `«${a.nombre}» (${a.donde}) pasa a ser obligatorio.`,
-                porque: "El cliente que lo omit\u00EDa dejar\u00E1 de funcionar.",
+                datos: { nombre: a.nombre, donde: a.donde },
             });
         }
         if (a.requerido && !b.requerido) {
@@ -130,8 +123,7 @@ function compararParams(antes: ParamApi[], despues: ParamApi[], id: string, out:
                 regla: "param-pasa-a-opcional",
                 gravedad: "info",
                 operacion: id,
-                detalle: `«${a.nombre}» (${a.donde}) pasa a ser opcional.`,
-                porque: "Relajar un requisito no rompe a quien ya lo cumpl\u00EDa.",
+                datos: { nombre: a.nombre, donde: a.donde },
             });
         }
         if (a.tipo !== b.tipo) {
@@ -139,8 +131,7 @@ function compararParams(antes: ParamApi[], despues: ParamApi[], id: string, out:
                 regla: "param-cambia-de-tipo",
                 gravedad: "rompe",
                 operacion: id,
-                detalle: `«${a.nombre}» (${a.donde}) pasa de ${a.tipo} a ${b.tipo}.`,
-                porque: "Lo que el cliente env\u00EDa puede dejar de ser v\u00E1lido.",
+                datos: { nombre: a.nombre, donde: a.donde, de: a.tipo, a: b.tipo },
             });
         }
         compararEnum(a, b, id, out);
@@ -153,15 +144,13 @@ function compararParams(antes: ParamApi[], despues: ParamApi[], id: string, out:
                 regla: "param-ruta-eliminado",
                 gravedad: "rompe",
                 operacion: id,
-                detalle: `Desaparece el parámetro de ruta «${a.nombre}».`,
-                porque: "Cambia la forma de la URL: la que el cliente construye ya no existe.",
+                datos: { nombre: a.nombre },
             }
             : {
                 regla: "param-eliminado",
                 gravedad: "aviso",
                 operacion: id,
-                detalle: `Desaparece el parámetro «${a.nombre}» (${a.donde}).`,
-                porque: "Lo que el cliente siga enviando se ignorar\u00E1; comprueba si depend\u00EDa del efecto.",
+                datos: { nombre: a.nombre, donde: a.donde },
             });
     }
 }
@@ -173,8 +162,7 @@ function compararEnum(a: ParamApi, b: ParamApi, id: string, out: Cambio[]): void
             regla: "enum-abierto",
             gravedad: "info",
             operacion: id,
-            detalle: `«${a.nombre}» deja de estar limitado a una lista de valores.`,
-            porque: "Aceptar m\u00E1s de lo que aceptaba no rompe a nadie.",
+            datos: { nombre: a.nombre },
         });
         return;
     }
@@ -183,8 +171,7 @@ function compararEnum(a: ParamApi, b: ParamApi, id: string, out: Cambio[]): void
             regla: "enum-cerrado",
             gravedad: "rompe",
             operacion: id,
-            detalle: `«${a.nombre}» pasa a estar limitado a: ${b.enumerado!.join(", ")}.`,
-            porque: "Un valor que el cliente enviaba puede haber dejado de valer.",
+            datos: { nombre: a.nombre, valores: b.enumerado!.join(", ") },
         });
         return;
     }
@@ -197,8 +184,7 @@ function compararEnum(a: ParamApi, b: ParamApi, id: string, out: Cambio[]): void
             regla: "enum-valor-eliminado",
             gravedad: "rompe",
             operacion: id,
-            detalle: `«${a.nombre}» ya no acepta: ${quitados.join(", ")}.`,
-            porque: "El cliente que enviaba ese valor pasar\u00E1 a recibir un error.",
+            datos: { nombre: a.nombre, valores: quitados.join(", ") },
         });
     }
     if (puestos.length) {
@@ -206,8 +192,7 @@ function compararEnum(a: ParamApi, b: ParamApi, id: string, out: Cambio[]): void
             regla: "enum-valor-nuevo",
             gravedad: "info",
             operacion: id,
-            detalle: `«${a.nombre}» acepta además: ${puestos.join(", ")}.`,
-            porque: "Aceptar un valor m\u00E1s no afecta a quien no lo env\u00EDa.",
+            datos: { nombre: a.nombre, valores: puestos.join(", ") },
         });
     }
 }
@@ -220,14 +205,13 @@ function compararCuerpo(a: CuerpoApi | undefined, b: CuerpoApi | undefined, id: 
                 regla: "cuerpo-requerido-nuevo",
                 gravedad: "rompe",
                 operacion: id,
-                detalle: "La operaci\u00F3n pasa a exigir un cuerpo.",
-                porque: "El cliente viejo no env\u00EDa ninguno.",
+                datos: {},
             }
             : {
                 regla: "cuerpo-opcional-nuevo",
                 gravedad: "info",
                 operacion: id,
-                detalle: "La operaci\u00F3n acepta ahora un cuerpo opcional.",
+                datos: {},
             });
         return;
     }
@@ -236,8 +220,7 @@ function compararCuerpo(a: CuerpoApi | undefined, b: CuerpoApi | undefined, id: 
             regla: "cuerpo-eliminado",
             gravedad: "aviso",
             operacion: id,
-            detalle: "La operaci\u00F3n ya no declara cuerpo.",
-            porque: "Lo que el cliente env\u00EDe se ignorar\u00E1.",
+            datos: {},
         });
         return;
     }
@@ -248,8 +231,7 @@ function compararCuerpo(a: CuerpoApi | undefined, b: CuerpoApi | undefined, id: 
             regla: "cuerpo-pasa-a-requerido",
             gravedad: "rompe",
             operacion: id,
-            detalle: "El cuerpo pasa a ser obligatorio.",
-            porque: "La llamada sin cuerpo dejar\u00E1 de valer.",
+            datos: {},
         });
     }
     const tiposQuitados = a.tipos.filter(t => !b.tipos.includes(t));
@@ -258,8 +240,7 @@ function compararCuerpo(a: CuerpoApi | undefined, b: CuerpoApi | undefined, id: 
             regla: "content-type-eliminado",
             gravedad: "rompe",
             operacion: id,
-            detalle: `Ya no acepta: ${tiposQuitados.join(", ")}.`,
-            porque: "El cliente que env\u00EDe ese Content-Type recibir\u00E1 415.",
+            datos: { tipos: tiposQuitados.join(", ") },
         });
     }
     const A = new Map(a.campos.map(c => [c.nombre, c]));
@@ -272,8 +253,7 @@ function compararCuerpo(a: CuerpoApi | undefined, b: CuerpoApi | undefined, id: 
                     regla: "campo-requerido-nuevo",
                     gravedad: "rompe",
                     operacion: id,
-                    detalle: `Campo OBLIGATORIO nuevo en el cuerpo: «${n}» (${cb.tipo}).`,
-                    porque: "El cuerpo que env\u00EDa el cliente viejo ya no es v\u00E1lido.",
+                    datos: { nombre: n, tipo: cb.tipo },
                 });
             }
             else {
@@ -281,7 +261,7 @@ function compararCuerpo(a: CuerpoApi | undefined, b: CuerpoApi | undefined, id: 
                     regla: "campo-opcional-nuevo",
                     gravedad: "info",
                     operacion: id,
-                    detalle: `Campo opcional nuevo en el cuerpo: «${n}» (${cb.tipo}).`,
+                    datos: { nombre: n, tipo: cb.tipo },
                 });
             }
             continue;
@@ -291,8 +271,7 @@ function compararCuerpo(a: CuerpoApi | undefined, b: CuerpoApi | undefined, id: 
                 regla: "campo-pasa-a-requerido",
                 gravedad: "rompe",
                 operacion: id,
-                detalle: `El campo «${n}» del cuerpo pasa a ser obligatorio.`,
-                porque: "El cliente que lo omit\u00EDa dejar\u00E1 de funcionar.",
+                datos: { nombre: n },
             });
         }
         if (ca.tipo !== cb.tipo) {
@@ -300,8 +279,7 @@ function compararCuerpo(a: CuerpoApi | undefined, b: CuerpoApi | undefined, id: 
                 regla: "campo-cambia-de-tipo",
                 gravedad: "rompe",
                 operacion: id,
-                detalle: `El campo «${n}» del cuerpo pasa de ${ca.tipo} a ${cb.tipo}.`,
-                porque: "Lo que el cliente env\u00EDa puede dejar de ser v\u00E1lido.",
+                datos: { nombre: n, de: ca.tipo, a: cb.tipo },
             });
         }
     }
@@ -312,8 +290,7 @@ function compararCuerpo(a: CuerpoApi | undefined, b: CuerpoApi | undefined, id: 
             regla: "campo-eliminado",
             gravedad: "aviso",
             operacion: id,
-            detalle: `Desaparece del cuerpo el campo «${n}»${ca.requerido ? " (era obligatorio)" : ""}.`,
-            porque: "Lo que el cliente siga enviando se ignorar\u00E1; comprueba si depend\u00EDa del efecto.",
+            datos: { nombre: n, eraObligatorio: ca.requerido ? 1 : 0 },
         });
     }
 }
@@ -329,8 +306,7 @@ function compararRespuestas(antes: string[], despues: string[], id: string, out:
                 regla: "respuesta-exito-eliminada",
                 gravedad: "rompe",
                 operacion: id,
-                detalle: `Ya no documenta la respuesta ${exito.join(", ")}.`,
-                porque: "El cliente que espera ese c\u00F3digo puede quedarse sin la rama que lo trata.",
+                datos: { codigos: exito.join(", ") },
             });
         }
         const otras = quitadas.filter(c => !/^2/.test(c));
@@ -339,8 +315,7 @@ function compararRespuestas(antes: string[], despues: string[], id: string, out:
                 regla: "respuesta-eliminada",
                 gravedad: "aviso",
                 operacion: id,
-                detalle: `Ya no documenta: ${otras.join(", ")}.`,
-                porque: "Puede ser solo documentaci\u00F3n, pero si el cliente la trataba conviene mirarlo.",
+                datos: { codigos: otras.join(", ") },
             });
         }
     }
@@ -349,7 +324,7 @@ function compararRespuestas(antes: string[], despues: string[], id: string, out:
             regla: "respuesta-nueva",
             gravedad: "info",
             operacion: id,
-            detalle: `Documenta respuestas nuevas: ${nuevas.join(", ")}.`,
+            datos: { codigos: nuevas.join(", ") },
         });
     }
 }
@@ -363,8 +338,7 @@ function compararSeguridad(antes: string[], despues: string[], id: string, out: 
             regla: "seguridad-nueva",
             gravedad: "rompe",
             operacion: id,
-            detalle: `Pasa a exigir autenticación: ${despues.join(", ")}.`,
-            porque: "El cliente que llamaba sin credenciales recibir\u00E1 401.",
+            datos: { esquemas: despues.join(", ") },
         });
     }
     else if (nuevas.length) {
@@ -372,8 +346,7 @@ function compararSeguridad(antes: string[], despues: string[], id: string, out: 
             regla: "seguridad-esquema-nuevo",
             gravedad: "rompe",
             operacion: id,
-            detalle: `Exige además: ${nuevas.join(", ")}.`,
-            porque: "El cliente no env\u00EDa ese esquema y ser\u00E1 rechazado.",
+            datos: { esquemas: nuevas.join(", ") },
         });
     }
     if (quitadas.length && despues.length) {
@@ -381,8 +354,7 @@ function compararSeguridad(antes: string[], despues: string[], id: string, out: 
             regla: "seguridad-esquema-eliminado",
             gravedad: "info",
             operacion: id,
-            detalle: `Ya no exige: ${quitadas.join(", ")}.`,
-            porque: "Relajar un requisito no rompe a quien ya lo cumpl\u00EDa.",
+            datos: { esquemas: quitadas.join(", ") },
         });
     }
     else if (quitadas.length) {
@@ -390,33 +362,32 @@ function compararSeguridad(antes: string[], despues: string[], id: string, out: 
             regla: "seguridad-eliminada",
             gravedad: "info",
             operacion: id,
-            detalle: "Deja de exigir autenticaci\u00F3n.",
-            porque: "El cliente que ya la enviaba sigue funcionando.",
+            datos: {},
         });
     }
 }
-export function informeMarkdown(inf: Informe): string {
+export interface TextosInforme {
+    titulo(inf: Informe): string;
+    veredicto(inf: Informe): string;
+    bloque(g: Gravedad): string;
+    cambio(c: Cambio): {
+        detalle: string;
+        porque?: string;
+    };
+}
+export function informeMarkdown(inf: Informe, t: TextosInforme): string {
     const l: string[] = [];
-    l.push(`# Cambios de API: ${inf.deA.titulo} ${inf.deA.version} → ${inf.aB.version}`, "");
-    l.push(inf.compatible
-        ? `**Compatible.** Ningún cambio rompe a un cliente existente (${inf.avisos} aviso(s), ${inf.info} informativo(s)).`
-        : `**${inf.rompe} cambio(s) ROMPEDOR(es).** Un cliente que ya existe dejará de funcionar.`);
+    l.push(`# ${t.titulo(inf)}`, "");
+    l.push(t.veredicto(inf));
     l.push("");
-    const bloques: [
-        Gravedad,
-        string
-    ][] = [
-        ["rompe", "## Rompe"],
-        ["aviso", "## Avisos"],
-        ["info", "## Informativo"],
-    ];
-    for (const [g, titulo] of bloques) {
+    for (const g of ["rompe", "aviso", "info"] as const) {
         const cs = inf.cambios.filter(c => c.gravedad === g);
         if (!cs.length)
             continue;
-        l.push(titulo, "");
+        l.push(`## ${t.bloque(g)}`, "");
         for (const c of cs) {
-            l.push(`- **${c.operacion}** — ${c.detalle}${c.porque ? ` _${c.porque}_` : ""} \`${c.regla}\``);
+            const { detalle, porque } = t.cambio(c);
+            l.push(`- **${c.operacion}** — ${detalle}${porque ? ` _${porque}_` : ""} \`${c.regla}\``);
         }
         l.push("");
     }

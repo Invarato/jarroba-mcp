@@ -12,10 +12,10 @@ export interface Respuesta {
     ms: number;
     diagnostico: Diagnostico;
 }
+export type CasoDiagnostico = "ok-con-expuestas" | "ok-sin-expuestas" | "plazo" | "cors" | "inalcanzable";
 export interface Diagnostico {
-    titulo: string;
-    detalle: string;
-    arreglo?: string;
+    caso: CasoDiagnostico;
+    datos: Record<string, string | number>;
     medido: boolean;
 }
 export interface OpcionesEnvio {
@@ -63,12 +63,7 @@ export async function enviar(op: OpcionesEnvio): Promise<Respuesta> {
                 veredicto: "cancelada",
                 cabeceras: [],
                 ms,
-                diagnostico: {
-                    titulo: "Sin respuesta a tiempo",
-                    detalle: `Se esperó ${Math.round(plazo / 1000)} s y el servidor no contestó.`,
-                    arreglo: "Comprueba que la direcci\u00F3n es correcta y que el servicio responde.",
-                    medido: true,
-                },
+                diagnostico: { caso: "plazo", datos: { s: Math.round(plazo / 1000) }, medido: true },
             };
         }
         const vivo = await sondaNoCors(f, op.url, plazo);
@@ -96,51 +91,20 @@ async function sondaNoCors(f: typeof fetch, url: string, plazo: number): Promise
 }
 function diagnosticoOk(estado: number, leidas: ApiCampo[]): Diagnostico {
     const expuestas = leidas.filter(h => !SEGURAS.includes(h.nombre.toLowerCase()));
-    const detalle = expuestas.length
-        ? `El servidor expuso ${expuestas.length} cabecera(s) además de las que el navegador deja leer siempre.`
-        : "Solo se ven las cabeceras que el navegador deja leer siempre. Si esperabas otras, al servidor le falta \u00ABAccess-Control-Expose-Headers\u00BB.";
-    return {
-        titulo: `Respondió ${estado}`,
-        detalle,
-        medido: true,
-        arreglo: expuestas.length ? undefined
-            : "A\u00F1ade \u00ABAccess-Control-Expose-Headers: <las tuyas>\u00BB en el servidor para poder leerlas desde el navegador.",
-    };
+    return { caso: expuestas.length ? "ok-con-expuestas" : "ok-sin-expuestas", datos: { estado, n: expuestas.length }, medido: true };
 }
 function diagnosticoCors(op: OpcionesEnvio): Diagnostico {
     const pre = necesitaPreflight(op.metodo, op.cabeceras);
-    const porQue = pre?.metodo ? `el método ${pre.metodo}`
-        : pre?.cabecera ? `la cabecera «${pre.cabecera}»`
-            : pre?.contentType ? `el Content-Type «${pre.contentType}»`
-                : "";
-    return {
-        titulo: "El servidor contest\u00F3, pero el navegador te tap\u00F3 la respuesta",
-        detalle: "La petici\u00F3n LLEG\u00D3 y hubo respuesta: se ha comprobado con una segunda petici\u00F3n opaca, que s\u00ED " +
-            "se complet\u00F3. Lo que fall\u00F3 es la pol\u00EDtica del mismo origen: sin las cabeceras CORS correctas, " +
-            "el navegador no te deja leer lo que vino."
-            + (pre ? ` Además, esta petición obliga a un preflight OPTIONS por ${porQue}: el servidor tiene que contestar también a ese OPTIONS.` : ""),
-        arreglo: "En el servidor: \u00ABAccess-Control-Allow-Origin\u00BB con tu origen (o \u00AB*\u00BB)"
-            + (pre ? ", y que el OPTIONS responda con \u00ABAccess-Control-Allow-Methods\u00BB y \u00ABAccess-Control-Allow-Headers\u00BB" : "")
-            + ". Esto es una restricci\u00F3n del navegador, no un fallo de tu API: desde curl la misma petici\u00F3n funciona.",
-        medido: true,
-    };
+    const datos: Diagnostico["datos"] = pre?.metodo ? { motivo: "metodo", valor: pre.metodo }
+        : pre?.cabecera ? { motivo: "cabecera", valor: pre.cabecera }
+            : pre?.contentType ? { motivo: "content-type", valor: pre.contentType }
+                : {};
+    return { caso: "cors", datos, medido: true };
 }
-function diagnosticoInalcanzable(op: OpcionesEnvio, e: unknown): Diagnostico {
+function diagnosticoInalcanzable(op: OpcionesEnvio, _e: unknown): Diagnostico {
     const host = hostDe(op.url);
     const local = !!host && /^(localhost|127\.0\.0\.1|\[::1\]|0\.0\.0\.0)(:|$)/.test(host);
-    return {
-        titulo: "No se lleg\u00F3 al servidor",
-        detalle: "Ni siquiera una petici\u00F3n opaca se complet\u00F3, as\u00ED que el problema es anterior a CORS: "
-            + "el nombre no resuelve, el puerto no responde, el certificado no vale o no hay red."
-            + (local
-                ? " Y va a \u00AB" + host + "\u00BB: desde una p\u00E1gina web, el navegador restringe las peticiones a la red local "
-                    + "y puede pedir permiso o bloquearlas directamente. Para probar tu API local, un cliente de escritorio o curl."
-                : ""),
-        arreglo: local
-            ? undefined
-            : `Comprueba el nombre y el puerto, y que «${host ?? "ese destino"}» responde desde fuera.`,
-        medido: true,
-    };
+    return { caso: "inalcanzable", datos: { host: host ?? "", local: local ? 1 : 0 }, medido: true };
 }
 export function cabecerasParaFetch(cs: ApiCampo[]): Record<string, string> {
     const prohibidas = new Set([

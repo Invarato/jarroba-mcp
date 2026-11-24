@@ -12,6 +12,7 @@ export interface AcidoTabla {
     pKa: number[];
     fuentes: FuenteConstante[];
     nota?: string;
+    notaEn?: string;
 }
 export interface IndicadorTabla {
     id: string;
@@ -23,6 +24,7 @@ export interface IndicadorTabla {
     colorBasicoHex: string;
     fuentes: FuenteConstante[];
     nota?: string;
+    notaEn?: string;
 }
 export interface SalTabla {
     id: string;
@@ -30,6 +32,7 @@ export interface SalTabla {
     pKs: number;
     fuentes: FuenteConstante[];
     nota?: string;
+    notaEn?: string;
 }
 export interface TablaConstantes {
     acidos: AcidoTabla[];
